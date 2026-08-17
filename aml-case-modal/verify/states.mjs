@@ -72,7 +72,32 @@ const CHECKS = {
   }),
   '06': async (p) => ({
     'decision dialog open': (await p.locator('decision-dialog').count()) === 1,
-    'requirements-met note': (await p.locator('decision-dialog .met').count()) === 1,
+    'requirements-met note is one plain line': await (async () => {
+      const met = p.locator('decision-dialog .met');
+      if ((await met.count()) !== 1) return false;
+      return met.evaluate((el) => {
+        const span = el.querySelector('span');
+        const lines = Math.round(
+          span.getBoundingClientRect().height / parseFloat(getComputedStyle(span).lineHeight),
+        );
+        const bold = [...el.querySelectorAll('*')].some(
+          (e) => Number(getComputedStyle(e).fontWeight) > 400,
+        );
+        const underlined = [...el.querySelectorAll('*')].some(
+          (e) => getComputedStyle(e).textDecorationLine !== 'none',
+        );
+        const cs = getComputedStyle(el);
+        return (
+          lines === 1 &&
+          !bold &&
+          !underlined &&
+          el.querySelectorAll('a').length === 0 &&
+          !!el.querySelector('mat-icon') &&
+          cs.backgroundColor === 'rgb(224, 245, 237)' &&
+          cs.color === 'rgb(15, 110, 87)'
+        );
+      });
+    })(),
     'one textarea': (await p.locator('decision-dialog textarea').count()) === 1,
     'button says Submit and resolve': (await p.locator('decision-dialog button:has-text("Submit and resolve")').count()) === 1,
   }),

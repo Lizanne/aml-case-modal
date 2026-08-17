@@ -18,14 +18,11 @@ import { DialogShellComponent } from './dialog-shell.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog-shell heading="Submit decision" (dismiss)="close()">
+      <!-- One line. The action names were a stacked list restating the chip bar
+           the agent just came from; the sentence is the whole message. -->
       <p class="met">
-        <mat-icon>check_circle</mat-icon>
-        <span>
-          All required actions are recorded.
-          @for (action of store.requiredActions(); track action.id) {
-            <span class="met__item">{{ action.label }}</span>
-          }
-        </span>
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        <span>All required actions are recorded. Submitting will resolve the case.</span>
       </p>
 
       <label class="field">
@@ -39,7 +36,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         ></textarea>
       </label>
 
-      <p class="consequence">Submitting resolves the case. It becomes read-only and cannot be reopened here.</p>
+      <p class="consequence">A resolved case is read-only and cannot be reopened here.</p>
 
       <ng-container dialogActions>
         <button mat-button type="button" (click)="close()">Cancel</button>
@@ -51,10 +48,12 @@ import { DialogShellComponent } from './dialog-shell.component';
   `,
   styles: [
     `
+      /* Plain weight throughout - nothing here is a link or a control. */
       .met {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 8px;
+        font-weight: 400;
         margin: 4px 0 16px;
         padding: 12px 14px;
         border-radius: 10px;
@@ -68,10 +67,6 @@ import { DialogShellComponent } from './dialog-shell.component';
         width: 18px;
         height: 18px;
         flex: none;
-      }
-      .met__item {
-        display: block;
-        font-weight: 600;
       }
       .field {
         display: grid;
