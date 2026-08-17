@@ -235,6 +235,41 @@ check('an outcome card is still boxed and white', await page.evaluate(() => {
   return s.backgroundColor === 'rgb(255, 255, 255)' && parseFloat(s.borderTopWidth) >= 1;
 }));
 
+console.log('\nRules 10 + 11 - a resolved case never advertises an arrival');
+const arrival = () =>
+  page.evaluate(() => ({
+    chip: document.querySelectorAll('trigger-strip .strip__chip--new').length,
+    rows: document.querySelectorAll('trigger-strip .trigger--new').length,
+    markers: document.querySelectorAll('trigger-strip .cell__new').length,
+    count: document.querySelector('trigger-strip .strip__chip')?.textContent.trim(),
+  }));
+
+// Control: an OPEN case must show the arrival, or the test below proves nothing.
+await go('01');
+await page.locator('dev-state-switcher button:has-text("New trigger")').click();
+await page.waitForTimeout(400);
+const openArrival = await arrival();
+check('open case shows the arrival (control)',
+  openArrival.chip === 1 && openArrival.rows === 1 && openArrival.markers === 1);
+
+// Force an arrival onto a RESOLVED case: the data changes, the signal must not.
+await go('07');
+const resolvedBefore = await arrival();
+await page.locator('dev-state-switcher button:has-text("New trigger")').click();
+await page.waitForTimeout(400);
+const resolvedAfter = await arrival();
+check('the trigger really was added to a resolved case',
+  resolvedAfter.count !== resolvedBefore.count,
+  `${resolvedBefore.count} -> ${resolvedAfter.count}`);
+check('resolved: no amber count', resolvedAfter.chip === 0);
+check('resolved: no highlighted row', resolvedAfter.rows === 0);
+check('resolved: no NEW marker', resolvedAfter.markers === 0);
+check('resolved: the strip still expands', await (async () => {
+  await page.locator('trigger-strip .strip__toggle').click();
+  await page.waitForTimeout(350);
+  return (await page.locator('trigger-strip .trigger').count()) > 2;
+})());
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

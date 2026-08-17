@@ -332,6 +332,89 @@ check('expanded: list really does scroll internally', expandedBar.scrolls);
 check('expanded: scroll note appears, naming visible vs total',
   expandedBar.note === 'Showing 10 of 19, scroll for more', expandedBar.note);
 
+console.log('\nTrigger rows are read-only content, not controls');
+await page.setViewportSize({ width: 1180, height: 1000 });
+await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(450);
+const rowSemantics = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('trigger-strip .trigger')];
+  const cells = [...document.querySelectorAll('trigger-strip .cell')];
+  return {
+    tags: [...new Set(rows.map((r) => r.tagName))],
+    roles: [...new Set(rows.map((r) => r.getAttribute('role')))],
+    hasControls: rows.some((r) => r.querySelector('button, a, [role=button], [role=link]')),
+    hasTabbable: rows.some((r) => r.querySelector('[tabindex]:not([tabindex="-1"])')),
+    cursors: [...new Set(cells.map((c) => getComputedStyle(c).cursor))],
+    selects: [...new Set(cells.map((c) => getComputedStyle(c).userSelect))],
+  };
+});
+check('rows carry no button or link semantics',
+  !rowSemantics.hasControls && rowSemantics.roles.every((r) => r === 'listitem'),
+  JSON.stringify(rowSemantics.roles));
+check('rows are not in the tab order', !rowSemantics.hasTabbable);
+check('no pointer cursor on rows', rowSemantics.cursors.every((c) => c === 'default'),
+  rowSemantics.cursors.join(','));
+check('row text stays selectable', rowSemantics.selects.every((v) => v === 'text'),
+  rowSemantics.selects.join(','));
+// Hovering a row must not tint it.
+const rowCell = page.locator('trigger-strip .cell--name').nth(1);
+const bgBefore = await rowCell.evaluate((e) => getComputedStyle(e).backgroundColor);
+await rowCell.hover();
+await page.waitForTimeout(250);
+const bgAfter = await rowCell.evaluate((e) => getComputedStyle(e).backgroundColor);
+check('no hover tint on rows', bgBefore === bgAfter, `${bgBefore} -> ${bgAfter}`);
+check('the toggle is the only control in the strip',
+  (await page.locator('trigger-strip button, trigger-strip a, trigger-strip [role=button]').count()) === 1);
+
+console.log('\nThe toggle is one button with honest expanded state');
+const toggleSemantics = async () =>
+  page.evaluate(() => {
+    const btns = [...document.querySelectorAll('trigger-strip button')];
+    const t = btns[0];
+    const controls = t.getAttribute('aria-controls');
+    return {
+      count: btns.length,
+      type: t.getAttribute('type'),
+      expanded: t.getAttribute('aria-expanded'),
+      controls,
+      controlsResolves: !!(controls && document.getElementById(controls)),
+      label: (t.querySelector('.strip__verb')?.textContent || '').replace(/\s+/g, ' ').trim(),
+      chevronHidden: t.querySelector('mat-icon')?.getAttribute('aria-hidden'),
+      sticky: getComputedStyle(t).position,
+    };
+  });
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+let tg = await toggleSemantics();
+check('exactly one button', tg.count === 1);
+check('type="button"', tg.type === 'button');
+check('collapsed: aria-expanded="false"', tg.expanded === 'false', tg.expanded);
+check('collapsed: label is "Show all"', tg.label.endsWith('Show all'), tg.label);
+check('aria-controls resolves to the list region', tg.controlsResolves, tg.controls);
+check('chevron is aria-hidden decoration', tg.chevronHidden === 'true');
+await page.locator('trigger-strip .strip__toggle').click();
+await page.waitForTimeout(350);
+tg = await toggleSemantics();
+check('still exactly one button after toggling', tg.count === 1);
+check('expanded: aria-expanded="true"', tg.expanded === 'true', tg.expanded);
+check('expanded: label is "Show less"', tg.label.endsWith('Show less'), tg.label);
+
+console.log('\nThe header bar stays put when the list scrolls');
+await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(450);
+const stuck = await page.evaluate(async () => {
+  const t = document.querySelector('trigger-strip .strip__toggle');
+  const list = document.querySelector('trigger-strip .strip__list');
+  const cs = getComputedStyle(t);
+  const before = t.getBoundingClientRect().top;
+  list.scrollTop = list.scrollHeight;
+  await new Promise((r) => setTimeout(r, 300));
+  return { position: cs.position, scrolled: list.scrollTop > 0, moved: Math.round(t.getBoundingClientRect().top - before) };
+});
+check('the list really scrolled', stuck.scrolled);
+check('the toggle did not move', stuck.moved === 0, `moved ${stuck.moved}px`);
+check('and is declared sticky', stuck.position === 'sticky', stuck.position);
+
 console.log('\nTrigger rows align, highlighted row included');
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.setViewportSize({ width: 1180, height: 1000 });

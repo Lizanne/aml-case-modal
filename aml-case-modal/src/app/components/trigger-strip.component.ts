@@ -9,6 +9,9 @@ import {
   TRIGGER_PREVIEW_ROWS,
 } from '../core/models';
 
+/** Unique-id counter, so two strips on one page cannot collide on aria-controls. */
+let stripSeq = 0;
+
 /**
  * One trigger control, identical in every state and at every width.
  *
@@ -52,6 +55,22 @@ import {
  * column widths. The NEW marker sits inside the timestamp cell rather than
  * taking a column of its own, so a highlighted row lines up exactly like every
  * other row.
+ *
+ * ROWS ARE NOT INTERACTIVE IN THIS EPIC. They are read-only content: no button
+ * or link semantics, no pointer cursor, no hover tint, and the text stays
+ * selectable so an agent can copy a trigger name or timestamp.
+ *
+ * FUTURE SCOPE - do not wire these up here without a spec:
+ *   - clicking a row to jump to its related commentary
+ *   - resyncing directly from the new-trigger row
+ * Both would make rows interactive, which changes the semantics of the whole
+ * list (rows would need to become buttons, gain focus styling, and be reachable
+ * in the tab order). The header bar toggle is deliberately the ONLY interactive
+ * element in the strip.
+ *
+ * Resolved cases (state 07): the strip is still read-only and still expandable,
+ * but it never shows an arrival. A resolved case cannot be acted on, so an
+ * amber "act on this" signal would be a lie - see `showsArrival`.
  */
 @Component({
   selector: 'trigger-strip',
@@ -60,14 +79,19 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="strip" aria-label="Case triggers">
+      <!--
+        ONE button whose label and aria-expanded change - never two buttons that
+        swap places. aria-controls points at the region it actually reveals.
+      -->
       <button
         class="strip__toggle"
         type="button"
         [disabled]="!canToggle()"
-        [attr.aria-expanded]="canToggle() ? store.triggersExpanded() : null"
+        [attr.aria-expanded]="isExpanded()"
+        [attr.aria-controls]="visible().length ? listId : null"
         (click)="store.triggersExpanded.set(!store.triggersExpanded())"
       >
-        <span class="strip__chip" [class.strip__chip--new]="store.newTriggerCount() > 0">
+        <span class="strip__chip" [class.strip__chip--new]="showsArrival()">
           {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
         </span>
 
@@ -82,7 +106,10 @@ import {
         <!-- No verb when there is nothing to reveal. -->
         @if (canToggle()) {
           <span class="strip__verb">
-            <mat-icon>{{ store.triggersExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <!-- Decoration: the visible label already carries the meaning. -->
+            <mat-icon aria-hidden="true">
+              {{ store.triggersExpanded() ? 'expand_less' : 'expand_more' }}
+            </mat-icon>
             {{ store.triggersExpanded() ? 'Show less' : 'Show all' }}
           </span>
         }
@@ -93,17 +120,19 @@ import {
              reach the rows below the fold. tabindex only when it scrolls. -->
         <div
           class="strip__list"
+          [id]="listId"
           [class.strip__list--expanded]="store.triggersExpanded()"
           role="list"
           [attr.tabindex]="scrollsInternally() ? 0 : null"
           [attr.aria-label]="scrollsInternally() ? 'Triggers, scrollable list' : null"
         >
           @for (trigger of visible(); track trigger.id) {
-            <div class="trigger" [class.trigger--new]="trigger.isNew" role="listitem">
+            <!-- role="listitem" only. Content, not a control (see class doc). -->
+            <div class="trigger" [class.trigger--new]="isArrival(trigger)" role="listitem">
               <span class="cell cell--name">{{ trigger.name }}</span>
               <span class="cell cell--detail">{{ trigger.detail }}</span>
               <span class="cell cell--meta">
-                @if (trigger.isNew) {
+                @if (isArrival(trigger)) {
                   <span class="cell__new">New</span>
                 }
                 <time class="cell__at" [attr.datetime]="trigger.at">{{ trigger.at | stamp }}</time>
@@ -124,8 +153,14 @@ import {
         border-bottom: 1px solid var(--line);
       }
 
-      /* The single control. Same box, same click target, both states. */
+      /* The single control. Same box, same click target, both states.
+         Sticky so it stays pinned above the rows if the strip is ever placed
+         inside a scrolling ancestor - the toggle must never scroll away from
+         the list it controls. */
       .strip__toggle {
+        position: sticky;
+        top: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -213,6 +248,15 @@ import {
         display: contents;
       }
 
+      /* Read-only content. No pointer, no hover tint, and text stays
+         selectable - a row is something to read and copy, not to click. If a
+         future epic adds per-row actions these become buttons and this block
+         goes with them. */
+      .cell {
+        cursor: default;
+        user-select: text;
+      }
+
       .cell {
         height: var(--trigger-row-height);
         border-bottom: 1px solid var(--line);
@@ -292,6 +336,9 @@ export class TriggerStripComponent {
   readonly store = inject(CaseStore);
   readonly expandedRows = TRIGGER_EXPANDED_ROWS;
 
+  /** Target of the toggle's aria-controls. Unique so two strips cannot collide. */
+  readonly listId = `trigger-list-${++stripSeq}`;
+
   readonly total = computed(() => this.store.sortedTriggers().length);
 
   /** Above the threshold there is something worth hiding, so the strip toggles. */
@@ -318,4 +365,27 @@ export class TriggerStripComponent {
   readonly scrollsInternally = computed(
     () => this.store.triggersExpanded() && this.total() > TRIGGER_EXPANDED_ROWS,
   );
+
+  /**
+   * What aria-expanded reports. Not simply triggersExpanded(): below the
+   * collapse threshold every row is rendered regardless, so the region IS
+   * expanded and saying otherwise would describe the page inaccurately.
+   */
+  readonly isExpanded = computed(() =>
+    this.canToggle() ? this.store.triggersExpanded() : true,
+  );
+
+  /**
+   * Rule 11 arrivals are suppressed once the case is resolved. The amber is an
+   * "act on this before recording" signal, and a resolved case cannot be acted
+   * on (rule 10) - so state 07 shows neither the highlighted row nor the amber
+   * count, whatever the trigger data happens to say.
+   */
+  readonly showsArrival = computed(
+    () => !this.store.isResolved() && this.store.newTriggerCount() > 0,
+  );
+
+  isArrival(trigger: { isNew?: boolean }): boolean {
+    return !!trigger.isNew && !this.store.isResolved();
+  }
 }
