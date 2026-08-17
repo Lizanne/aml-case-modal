@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd aml-case-modal && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci",
+  "buildCommand": "cd aml-case-modal && npm run build",
+  "outputDirectory": "aml-case-modal/dist/aml-case-modal/browser",
+  "framework": null,
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

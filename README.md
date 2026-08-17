@@ -42,6 +42,23 @@ npm start          # in one terminal
 npm run verify     # in another
 ```
 
+## Deploying
+
+`vercel.json` at the repo root does the work. It exists because the Angular app
+lives in a subdirectory, so a default Vercel import finds no `package.json` at
+the root, builds nothing, and serves a 404.
+
+It pins three things that are easy to get wrong:
+
+- the install and build run inside `aml-case-modal/`
+- the output is `aml-case-modal/dist/aml-case-modal/browser` — Angular 17 nests
+  the browser bundle one level deeper than most presets expect
+- `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, because `playwright` is a devDependency
+  and its postinstall would otherwise pull ~200MB of browsers into the build
+
+Leave Vercel's **Root Directory** as the repo root. If you set it to
+`aml-case-modal`, this file stops being read and the 404 comes back.
+
 ## Note on the data
 
 `mock-case.json` is fictional. It models the shape of a real case record — a
