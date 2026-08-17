@@ -456,6 +456,42 @@ check('the highlight paints the full row width, no gaps', await page.evaluate(()
   return tinted && contiguous;
 }));
 
+console.log('\nThe NEW badge sits with the name, not the timestamp');
+const badge = await page.evaluate(() => {
+  const row = document.querySelector('trigger-strip .trigger--new');
+  if (!row) return null;
+  const name = row.querySelector('.cell--name');
+  const label = row.querySelector('.cell__label');
+  const b = row.querySelector('.cell__new');
+  const meta = row.querySelector('.cell--meta');
+  const time = row.querySelector('.cell__at');
+  const br = b.getBoundingClientRect();
+  const lr = label.getBoundingClientRect();
+  return {
+    inColumn1: name.contains(b),
+    inMeta: meta.contains(b),
+    gap: Math.round(br.left - lr.right),
+    afterName: br.left >= lr.right - 1,
+    tag: b.tagName,
+    rowFs: parseFloat(getComputedStyle(row.querySelector('.cell')).fontSize),
+    badgeFs: parseFloat(getComputedStyle(b).fontSize),
+    metaOnlyHasTime: [...meta.children].every((c) => c.tagName === 'TIME'),
+    timeFlushRight:
+      Math.round(meta.getBoundingClientRect().right - time.getBoundingClientRect().right) <= 20,
+    centred: Math.abs(br.top + br.height / 2 - (lr.top + lr.height / 2)) < 1.5,
+  };
+});
+check('the highlighted row exists to test', !!badge);
+check('badge is in column 1 with the name', badge.inColumn1 && !badge.inMeta);
+check('badge follows the name', badge.afterName);
+check('6px gap between name and badge', badge.gap === 6, `${badge.gap}px`);
+check('badge is still the status-badge span', badge.tag === 'SPAN');
+check('badge is one size step below the row text',
+  badge.badgeFs === 12 && badge.rowFs === 14, `${badge.badgeFs} vs ${badge.rowFs}`);
+check('badge is vertically centred on the name', badge.centred);
+check('timestamp column holds nothing but the time', badge.metaOnlyHasTime);
+check('timestamp stays right-aligned', badge.timeFlushRight);
+
 console.log('\nTriggers sort by timestamp, not array order');
 check('rendered newest first', await page.evaluate(() => {
   const times = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) =>

@@ -56,9 +56,10 @@ let stripSeq = 0;
  *
  * List layout: three columns - name, detail, timestamp. The list is a single
  * grid and each row is `display: contents`, so every row shares one set of
- * column widths. The NEW marker sits inside the timestamp cell rather than
- * taking a column of its own, so a highlighted row lines up exactly like every
- * other row.
+ * column widths. The NEW badge sits with the trigger name in column 1 - it
+ * describes the trigger, not its time - and takes no column of its own, so a
+ * highlighted row lines up exactly like every other row. The timestamp column
+ * stays right-aligned with nothing beside it.
  *
  * ROWS ARE NOT INTERACTIVE IN THIS EPIC. They are read-only content: no button
  * or link semantics, no pointer cursor, no hover tint, and the text stays
@@ -137,12 +138,17 @@ let stripSeq = 0;
           @for (trigger of visible(); track trigger.id) {
             <!-- role="listitem" only. Content, not a control (see class doc). -->
             <div class="trigger" [class.trigger--new]="isArrival(trigger)" role="listitem">
-              <span class="cell cell--name">{{ trigger.name }}</span>
-              <span class="cell cell--detail">{{ trigger.detail }}</span>
-              <span class="cell cell--meta">
+              <!-- The badge belongs to the trigger, so it sits with the name.
+                   The name itself is wrapped so it can ellipsise without the
+                   badge being squeezed or pushed out of the cell. -->
+              <span class="cell cell--name">
+                <span class="cell__label">{{ trigger.name }}</span>
                 @if (isArrival(trigger)) {
                   <span class="cell__new">New</span>
                 }
+              </span>
+              <span class="cell cell--detail">{{ trigger.detail }}</span>
+              <span class="cell cell--meta">
                 <time class="cell__at" [attr.datetime]="trigger.at">{{ trigger.at | stamp }}</time>
               </span>
             </div>
@@ -276,11 +282,23 @@ let stripSeq = 0;
         color: var(--ink-2);
         background: var(--panel);
       }
-      /* Block cells so text-overflow works directly on the cell. */
-      .cell--name,
+      /* Block cell so text-overflow works directly on the cell. */
       .cell--detail {
         display: block;
         line-height: var(--trigger-row-height);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Name cell is a flex row: name then badge, 6px apart. */
+      .cell--name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      /* The name is what gives way, never the badge. */
+      .cell__label {
+        min-width: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -296,11 +314,11 @@ let stripSeq = 0;
         padding: 0 12px 0 0;
         color: var(--ink-3);
       }
+      /* Timestamp only, hard right, with nothing beside it. */
       .cell--meta {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 8px;
         padding: 0 20px 0 0;
       }
       .cell__at {
@@ -327,7 +345,8 @@ let stripSeq = 0;
       }
       .cell__new {
         flex: none;
-        font-size: 10px;
+        font-size: 12px;
+        line-height: 16px;
         font-weight: 700;
         letter-spacing: 0.06em;
         text-transform: uppercase;
