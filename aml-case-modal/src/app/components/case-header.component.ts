@@ -69,7 +69,7 @@ import { PillComponent } from './ui-pill.component';
           @switch (store.lockState()) {
             @case ('unlocked') {
               <button mat-flat-button color="primary" type="button" (click)="store.lock()">
-                Lock case
+                Lock to me
               </button>
             }
             @case ('locked-to-me') {
@@ -146,10 +146,14 @@ import { PillComponent } from './ui-pill.component';
         background: rgba(0, 0, 0, 0.05);
         color: var(--ink);
       }
+      /* Fixed height: the band swaps a filled button for a stroked one and its
+         copy changes length, and none of that may move the content below it. */
       .head__lock {
         display: flex;
         align-items: center;
         gap: 10px;
+        min-height: 56px;
+        box-sizing: border-box;
         padding: 10px 20px 12px;
       }
       .head__lock-icon {
@@ -230,21 +234,25 @@ export class CaseHeaderComponent {
       case 'locked-to-other':
         return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'}`;
       default:
-        return 'Not locked';
+        return 'Unassigned';
     }
   });
 
+  /**
+   * States the fact and stops. The button beside it already says what you can
+   * do about it, so "You can record outcomes" was the sentence saying it twice.
+   */
   readonly lockLine = computed(() => {
     if (this.store.isResolved()) return 'This case is resolved and read-only.';
     const since = this.store.lockedSince();
     const stamp = since ? new StampPipe().transform(since) : '';
     switch (this.store.lockState()) {
       case 'locked-to-me':
-        return `Locked to you since ${stamp}. You can record outcomes.`;
+        return `Locked to you since ${stamp}`;
       case 'locked-to-other':
-        return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'} since ${stamp}.`;
+        return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'} since ${stamp}`;
       default:
-        return 'Not locked. Lock the case to record outcomes.';
+        return 'Unassigned';
     }
   });
 }

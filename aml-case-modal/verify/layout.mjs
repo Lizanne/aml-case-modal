@@ -145,6 +145,73 @@ await page.setViewportSize({ width: 1260, height: 1040 });
 await page.waitForTimeout(700);
 await streamFit('dual-modal at the narrowest allowed');
 
+console.log('\nThe lock band holds its height across every lock state');
+const bandState = () =>
+  page.evaluate(() => {
+    const el = document.querySelector('case-header .head__lock');
+    const strip = document.querySelector('trigger-strip .strip');
+    const btn = el.querySelector('button');
+    const text = el.querySelector('.head__lock-text');
+    return {
+      h: Math.round(el.getBoundingClientRect().height),
+      stripTop: Math.round(strip.getBoundingClientRect().top),
+      text: text.textContent.trim(),
+      textColour: getComputedStyle(text).color,
+      iconColour: getComputedStyle(el.querySelector('.head__lock-icon')).color,
+      button: btn ? btn.textContent.trim() : null,
+      btnColour: btn ? getComputedStyle(btn).color : null,
+    };
+  });
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+const bands = [];
+await page.goto(`${BASE}/?state=00a`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(450);
+bands.push(['unassigned', await bandState()]);
+await page.locator('case-header button:has-text("Lock to me")').click();
+await page.waitForTimeout(400);
+bands.push(['locked to you', await bandState()]);
+await page.goto(`${BASE}/?state=00b`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(450);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+bands.push(['locked to other', await bandState()]);
+await page.goto(`${BASE}/?state=07`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(450);
+bands.push(['resolved', await bandState()]);
+
+const byName = Object.fromEntries(bands);
+check('band height is identical in every state',
+  new Set(bands.map(([, b]) => b.h)).size === 1,
+  bands.map(([n, b]) => `${n}:${b.h}`).join(' '));
+check('nothing below the band ever moves',
+  new Set(bands.map(([, b]) => b.stripTop)).size === 1,
+  bands.map(([n, b]) => `${n}:${b.stripTop}`).join(' '));
+
+check('unassigned offers a primary "Lock to me"',
+  byName['unassigned'].button === 'Lock to me' && byName['unassigned'].text === 'Unassigned');
+// Green is the only "you can act here" signal, so it must appear here and
+// NOWHERE else in this band.
+check('locked to you is the only green state', await (async () => {
+  const green = byName['locked to you'];
+  const others = ['unassigned', 'locked to other', 'resolved'].map((k) => byName[k]);
+  return (
+    green.textColour === 'rgb(15, 110, 87)' &&
+    green.iconColour === 'rgb(15, 110, 87)' &&
+    others.every((o) => o.textColour !== 'rgb(15, 110, 87)' && o.iconColour !== 'rgb(15, 110, 87)')
+  );
+})());
+check('locked to you says only the fact',
+  /^Locked to you since /.test(byName['locked to you'].text) &&
+    !/record outcomes/i.test(byName['locked to you'].text),
+  byName['locked to you'].text);
+check('locked to you offers Unlock', byName['locked to you'].button === 'Unlock');
+check('locked to other is neutral text with a red Force unlock',
+  byName['locked to other'].textColour === 'rgb(82, 82, 91)' &&
+    byName['locked to other'].button === 'Force unlock' &&
+    byName['locked to other'].btnColour === 'rgb(179, 38, 30)',
+  `${byName['locked to other'].textColour} / ${byName['locked to other'].btnColour}`);
+
 console.log('\nOne pill component: uniform box, colours preserved');
 const pills = new Map();
 for (const state of ['01', '03', '05', '07', '10', '11']) {

@@ -23,7 +23,7 @@ mkdirSync(OUT, { recursive: true });
 const CHECKS = {
   '00a': async (p) => ({
     'header shows the opening severity': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === OPENING_SEVERITY,
-    'lock button says Lock case': (await p.locator('case-header button:has-text("Lock case")').count()) === 1,
+    'lock button says Lock to me': (await p.locator('case-header button:has-text("Lock to me")').count()) === 1,
     'record buttons disabled': await p.locator('action-placeholder button').first().isDisabled(),
     'two placeholders': (await p.locator('action-placeholder').count()) === 2,
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),

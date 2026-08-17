@@ -40,7 +40,7 @@ async function fillForm({ note, lockChoice }) {
 console.log('\nRule 3 - lock is what gates action');
 await go('00a');
 check('unlocked: Record is disabled', await page.locator('action-placeholder button').first().isDisabled());
-await page.locator('case-header button:has-text("Lock case")').click();
+await page.locator('case-header button:has-text("Lock to me")').click();
 await page.waitForTimeout(200);
 check('after locking: Record is enabled', await page.locator('action-placeholder button').first().isEnabled());
 // Lock and unlock are case history, not workflow: Timeline only.
@@ -61,7 +61,7 @@ await go('00b');
 check('self-unlock path not offered for another’s lock', (await page.locator('case-header button:has-text("Force unlock")').count()) === 1);
 await page.locator('confirm-unlock-dialog button:has-text("Unlock case")').click();
 await page.waitForTimeout(200);
-check('case is now unlocked', (await page.locator('case-header button:has-text("Lock case")').count()) === 1);
+check('case is now unlocked', (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
 check('force unlock wrote NO stream event', (await page.locator('event-row').count()) === 0);
 check('force unlock named the previous owner in the Timeline', await (async () => {
   await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
@@ -200,8 +200,8 @@ await page.locator('severity-dialog button:has-text("Save severity")').click();
 await page.waitForTimeout(300);
 check('header pill now Compliance',
   (await page.locator('case-header ui-pill[data-sev]').innerText()).trim() === 'Compliance');
-check('lock was lifted', (await page.locator('case-header button:has-text("Lock case")').count()) === 1);
-check('re-lock is one click away', await page.locator('case-header button:has-text("Lock case")').isEnabled());
+check('lock was lifted', (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
+check('re-lock is one click away', await page.locator('case-header button:has-text("Lock to me")').isEnabled());
 check('event row logged', (await page.locator('event-row .row').count()) === 2);
 check('adjust severity still enabled while open',
   await page.locator('.footer button:has-text("Adjust severity")').isEnabled());

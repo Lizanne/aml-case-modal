@@ -211,7 +211,7 @@ const directionFor = async (from, to) => {
     await page.locator('severity-dialog button:has-text("Save severity")').click();
     await page.waitForTimeout(350);
     // Severity change lifts the lock (rule 8); re-lock to reopen the dialog.
-    await page.locator('case-header button:has-text("Lock case")').click();
+    await page.locator('case-header button:has-text("Lock to me")').click();
     await page.waitForTimeout(250);
   }
   const current = (await page.locator('case-header ui-pill[data-sev]').innerText()).trim();
