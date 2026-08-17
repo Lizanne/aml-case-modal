@@ -18,6 +18,9 @@ import { AttachmentListComponent } from './attachment-list.component';
  * Rule 6. A saved outcome. Immutable - no edit affordance anywhere on this card,
  * attachments are frozen, and the snapshot reference it captured is offered as
  * a read-only view.
+ *
+ * The card header already carries the moment (actor + timestamp), so the button
+ * is just "View snapshot"; it does not restate when the snapshot was taken.
  */
 @Component({
   selector: 'outcome-card',
@@ -48,9 +51,6 @@ import { AttachmentListComponent } from './attachment-list.component';
             <mat-icon>history</mat-icon>
             View snapshot
           </button>
-          @if (!store.layoutNarrow()) {
-            <span class="card__snapshot">Captured {{ outcome.snapshotAt | stamp }}</span>
-          }
         </div>
       </footer>
     </article>
@@ -141,14 +141,6 @@ import { AttachmentListComponent } from './attachment-list.component';
         flex-wrap: wrap;
         min-width: 0;
         gap: 12px;
-      }
-      .card__snapshot {
-        font-size: 12px;
-        color: var(--ink-3);
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       /* Narrow: tighter card, and the footer loses its rule - the attachment

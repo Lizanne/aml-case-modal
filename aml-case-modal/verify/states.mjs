@@ -110,6 +110,15 @@ const CHECKS = {
     'two tabs only': (await p.locator('player-info-panel .mat-mdc-tab').count()) === 2,
     'no snapshot selected': (await p.locator('player-info-panel .empty').innerText()).includes('No snapshot selected'),
     'decision card present': (await p.locator('outcome-card .card--decision').count()) === 1,
+    // The header meta carries the moment; the footer must not restate it.
+    'no card restates the snapshot time': await (async () => {
+      const cards = await p.locator('outcome-card').all();
+      for (const c of cards) if (/Captured/i.test(await c.innerText())) return false;
+      return cards.length > 0;
+    })(),
+    'View snapshot is the whole label': (
+      await p.locator('outcome-card .card__actions').first().innerText()
+    ).replace(/\s+/g, ' ').trim().endsWith('View snapshot'),
   }),
   '08': async (p) => ({
     'menu panel open': (await p.locator('.mat-mdc-menu-panel').count()) === 1,
