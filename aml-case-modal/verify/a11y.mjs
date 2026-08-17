@@ -93,7 +93,7 @@ check('a focusable path exists through the page', reachable > 10, String(reachab
 
 // The trigger control is a real button, so Enter and Space must both work.
 await go('01');
-await page.locator('trigger-strip .strip__toggle').focus();
+await page.locator('trigger-strip .strip__verb').focus();
 await page.keyboard.press('Enter');
 await page.waitForTimeout(300);
 check('Enter expands the trigger strip', (await page.locator('trigger-strip .trigger').count()) > 2);

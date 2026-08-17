@@ -199,10 +199,10 @@ check('the icon is the same size in all of them', new Set(adjustShapes).size ===
 
 console.log('\nOne trigger control, identical in every state and at both widths');
 const controlShape = async () => {
-  const c = page.locator('trigger-strip .strip__toggle');
+  const c = page.locator('trigger-strip .strip__bar');
   if ((await c.count()) !== 1) return null;
   return page.evaluate(() => {
-    const el = document.querySelector('trigger-strip .strip__toggle');
+    const el = document.querySelector('trigger-strip .strip__bar');
     const strip = document.querySelector('trigger-strip .strip');
     const box = el.getBoundingClientRect();
     const stripBox = strip.getBoundingClientRect();
@@ -222,6 +222,8 @@ const controlShape = async () => {
       hasChip: !!el.querySelector('.strip__chip'),
       hasVerb: !!el.querySelector('.strip__verb'),
       hasNote: !!el.querySelector('.strip__count'),
+      barIsNotAControl: el.tagName === 'DIV' && !el.closest('button'),
+      verbIsButton: el.querySelector('.strip__verb')?.tagName === 'BUTTON',
     };
   });
 };
@@ -235,15 +237,26 @@ for (const [state, width] of [
   await page.waitForTimeout(400);
   const s = await controlShape();
   check(`${state}: exactly one control, at the top, full width`, !!s && s.atTopOfStrip && s.fullWidth);
-  check(`${state}: same anatomy (badge + control)`, !!s && s.hasChip && s.hasVerb && s.tag === 'button');
+  check(`${state}: same anatomy (badge + control)`, !!s && s.hasChip && s.hasVerb);
+  check(`${state}: the bar is a label strip, only the verb is a button`,
+    !!s && s.barIsNotAControl && s.verbIsButton);
   if (s) shapes.push({ state, key: `${s.tag}|${s.parts}|${s.height}` });
 }
 check(
   'the control is structurally identical across all of them',
   new Set(shapes.map((s) => s.key)).size === 1,
 );
-check('no second trigger control anywhere', await page.evaluate(() =>
-  !document.querySelector('trigger-strip .strip__bar, trigger-strip .summary'),
+// This guarded against the old split UI: a bottom "+N more" bar and a separate
+// narrow-mode summary row. Both are gone. The invariant that still matters is
+// that the strip contains exactly ONE control, and that it is the verb.
+check('exactly one control in the strip', await page.evaluate(() => {
+  const controls = document.querySelectorAll(
+    'trigger-strip button, trigger-strip a, trigger-strip [role=button], trigger-strip [role=link]',
+  );
+  return controls.length === 1 && controls[0].classList.contains('strip__verb');
+}));
+check('no legacy summary row survives', await page.evaluate(() =>
+  !document.querySelector('trigger-strip .summary'),
 ));
 
 // The control must not move or resize when it toggles - that is what made the
@@ -251,10 +264,10 @@ check('no second trigger control anywhere', await page.evaluate(() =>
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-const boxBefore = await page.locator('trigger-strip .strip__toggle').boundingBox();
-await page.locator('trigger-strip .strip__toggle').click();
+const boxBefore = await page.locator('trigger-strip .strip__bar').boundingBox();
+await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
-const boxAfter = await page.locator('trigger-strip .strip__toggle').boundingBox();
+const boxAfter = await page.locator('trigger-strip .strip__bar').boundingBox();
 // boundingBox() returns x/y/width/height - there is no .top, and comparing it
 // silently compares NaN to NaN, which is always false.
 check(
@@ -277,12 +290,12 @@ for (const width of [1180, 700]) {
   check(`${width}px: starts collapsed with a 2-row preview`, collapsedRows === 2);
   check(`${width}px: collapsed control says Show all`,
     (await page.locator('trigger-strip .strip__verb').innerText()).includes('Show all'));
-  await page.locator('trigger-strip .strip__toggle').click();
+  await page.locator('trigger-strip .strip__verb').click();
   await page.waitForTimeout(300);
   check(`${width}px: the badge expands the strip`, (await rows()) > collapsedRows);
   check(`${width}px: expanded says Show less`,
     (await page.locator('trigger-strip .strip__verb').innerText()).includes('Show less'));
-  await page.locator('trigger-strip .strip__toggle').click();
+  await page.locator('trigger-strip .strip__verb').click();
   await page.waitForTimeout(300);
   check(`${width}px: clicking the same row collapses it again`, (await rows()) === 2);
 }
@@ -294,7 +307,7 @@ await page.waitForTimeout(450);
 
 const bar = async () =>
   page.evaluate(() => {
-    const t = document.querySelector('trigger-strip .strip__toggle');
+    const t = document.querySelector('trigger-strip .strip__bar');
     const list = document.querySelector('trigger-strip .strip__list');
     const verb = t.querySelector('.strip__verb');
     return {
@@ -322,7 +335,7 @@ check('collapsed: the number appears exactly once',
 check('collapsed: control sits hard right', collapsedBar.verbFlushRight);
 check('collapsed: bar sits above the rows', collapsedBar.aboveRows);
 
-await page.locator('trigger-strip .strip__toggle').click();
+await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(400);
 const expandedBar = await bar();
 check('expanded: same badge', expandedBar.chip === '19 triggers');
@@ -378,9 +391,9 @@ const toggleSemantics = async () =>
       expanded: t.getAttribute('aria-expanded'),
       controls,
       controlsResolves: !!(controls && document.getElementById(controls)),
-      label: (t.querySelector('.strip__verb')?.textContent || '').replace(/\s+/g, ' ').trim(),
+      label: (t.textContent || '').replace(/\s+/g, ' ').trim(),
       chevronHidden: t.querySelector('mat-icon')?.getAttribute('aria-hidden'),
-      sticky: getComputedStyle(t).position,
+      barSticky: getComputedStyle(document.querySelector('trigger-strip .strip__bar')).position,
     };
   });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
@@ -392,7 +405,7 @@ check('collapsed: aria-expanded="false"', tg.expanded === 'false', tg.expanded);
 check('collapsed: label is "Show all"', tg.label.endsWith('Show all'), tg.label);
 check('aria-controls resolves to the list region', tg.controlsResolves, tg.controls);
 check('chevron is aria-hidden decoration', tg.chevronHidden === 'true');
-await page.locator('trigger-strip .strip__toggle').click();
+await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(350);
 tg = await toggleSemantics();
 check('still exactly one button after toggling', tg.count === 1);
@@ -403,7 +416,7 @@ console.log('\nThe header bar stays put when the list scrolls');
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(450);
 const stuck = await page.evaluate(async () => {
-  const t = document.querySelector('trigger-strip .strip__toggle');
+  const t = document.querySelector('trigger-strip .strip__bar');
   const list = document.querySelector('trigger-strip .strip__list');
   const cs = getComputedStyle(t);
   const before = t.getBoundingClientRect().top;

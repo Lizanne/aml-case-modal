@@ -102,7 +102,7 @@ const CHECKS = {
     })(),
     'segmented control shown': (await p.locator('mat-button-toggle-group').count()) === 1,
     'only one panel rendered': (await p.locator('workflow-panel').count()) + (await p.locator('player-info-panel').count()) === 1,
-    'trigger strip shows the same single control': (await p.locator('trigger-strip .strip__toggle').count()) === 1,
+    'trigger strip shows the same single control': (await p.locator('trigger-strip .strip__verb').count()) === 1,
     'chips use short labels': (await p.locator('required-chips .chip').first().innerText()).includes('Searches'),
     'footer buttons share the width': await (async () => {
       const a = await p.locator('workflow-panel .footer button').first().boundingBox();

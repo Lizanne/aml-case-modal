@@ -38,9 +38,13 @@ let stripSeq = 0;
  * entirely, because "+0 more" is noise and a toggle that reveals nothing is
  * worse than no toggle.
  *
- * The control never moves and never changes shape: it is the same row, in the
- * same place, in every state and at both layout widths. Only the secondary
- * text and the verb change.
+ * The bar is a LABEL STRIP, not a control. Only the Show all / Show less verb
+ * is a button - the count chip and the scroll note are plain, selectable text.
+ * Making the whole bar the hit target meant the strip's first row looked and
+ * behaved like a clickable row, which is exactly what rows must not be.
+ *
+ * The control never moves and never changes shape: same place, every state,
+ * both layout widths. Only its label and aria-expanded change.
  *
  * Rule 11: an unresynced arrival is pinned to the top row in BOTH modes - it is
  * sorted first, so it is always inside the collapsed preview, never hidden
@@ -80,17 +84,11 @@ let stripSeq = 0;
   template: `
     <section class="strip" aria-label="Case triggers">
       <!--
-        ONE button whose label and aria-expanded change - never two buttons that
-        swap places. aria-controls points at the region it actually reveals.
+        The bar itself is NOT a control - it is a label strip. Only the verb is
+        a button, so the count and the scroll note stay plain, selectable text
+        and the hit target is exactly the thing that does something.
       -->
-      <button
-        class="strip__toggle"
-        type="button"
-        [disabled]="!canToggle()"
-        [attr.aria-expanded]="isExpanded()"
-        [attr.aria-controls]="visible().length ? listId : null"
-        (click)="store.triggersExpanded.set(!store.triggersExpanded())"
-      >
+      <div class="strip__bar">
         <span class="strip__chip" [class.strip__chip--new]="showsArrival()">
           {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
         </span>
@@ -103,17 +101,27 @@ let stripSeq = 0;
           </span>
         }
 
-        <!-- No verb when there is nothing to reveal. -->
+        <!--
+          ONE button whose label and aria-expanded change - never two buttons
+          that swap places. aria-controls points at the region it reveals.
+          Absent entirely when there is nothing to reveal.
+        -->
         @if (canToggle()) {
-          <span class="strip__verb">
+          <button
+            class="strip__verb"
+            type="button"
+            [attr.aria-expanded]="isExpanded()"
+            [attr.aria-controls]="visible().length ? listId : null"
+            (click)="store.triggersExpanded.set(!store.triggersExpanded())"
+          >
             <!-- Decoration: the visible label already carries the meaning. -->
             <mat-icon aria-hidden="true">
               {{ store.triggersExpanded() ? 'expand_less' : 'expand_more' }}
             </mat-icon>
             {{ store.triggersExpanded() ? 'Show less' : 'Show all' }}
-          </span>
+          </button>
         }
-      </button>
+      </div>
 
       @if (visible().length) {
         <!-- A scrollable region must be focusable or keyboard users cannot
@@ -153,11 +161,11 @@ let stripSeq = 0;
         border-bottom: 1px solid var(--line);
       }
 
-      /* The single control. Same box, same click target, both states.
+      /* A label strip, not a control: no cursor, no hover, nothing focusable.
          Sticky so it stays pinned above the rows if the strip is ever placed
          inside a scrolling ancestor - the toggle must never scroll away from
          the list it controls. */
-      .strip__toggle {
+      .strip__bar {
         position: sticky;
         top: 0;
         z-index: 2;
@@ -165,23 +173,12 @@ let stripSeq = 0;
         align-items: center;
         gap: 10px;
         width: 100%;
-        height: var(--trigger-row-height);
+        min-height: var(--trigger-row-height);
         padding: 0 12px 0 20px;
-        border: 0;
+        box-sizing: border-box;
         background: var(--panel);
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-      }
-      .strip__toggle:hover:not(:disabled) {
-        background: var(--page);
-      }
-      .strip__toggle:disabled {
         cursor: default;
-      }
-      .strip__toggle:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: -2px;
+        user-select: text;
       }
       .strip__chip {
         flex: none;
@@ -207,18 +204,32 @@ let stripSeq = 0;
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      /* margin-left: auto, not a flexing sibling - the verb stays hard right
-         whether or not the optional scroll note is there. */
+      /* The only control in the strip. margin-left: auto, not a flexing
+         sibling - it stays hard right whether or not the scroll note is there.
+         Padding gives it a real hit target rather than bare text. */
       .strip__verb {
         flex: none;
         margin-left: auto;
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        padding: 6px 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        font: inherit;
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
         color: var(--primary);
+        cursor: pointer;
+      }
+      .strip__verb:hover {
+        background: var(--primary-bg);
+      }
+      .strip__verb:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
       }
       .strip__verb mat-icon {
         font-size: 18px;

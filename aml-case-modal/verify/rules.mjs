@@ -123,11 +123,11 @@ check('collapsed: the arrival is the top preview row',
   (await page.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'));
 check('collapsed: it is inside the preview, not behind the badge',
   (await page.locator('trigger-strip .trigger--new').count()) === 1);
-await page.locator('trigger-strip .strip__toggle').click();
+await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
 check('expanded: still pinned top with the NEW marker',
   (await page.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'));
-await page.locator('trigger-strip .strip__toggle').click();
+await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
 
 // Open question 2: a draft open when the trigger lands survives, Save does not.
@@ -265,7 +265,7 @@ check('resolved: no amber count', resolvedAfter.chip === 0);
 check('resolved: no highlighted row', resolvedAfter.rows === 0);
 check('resolved: no NEW marker', resolvedAfter.markers === 0);
 check('resolved: the strip still expands', await (async () => {
-  await page.locator('trigger-strip .strip__toggle').click();
+  await page.locator('trigger-strip .strip__verb').click();
   await page.waitForTimeout(350);
   return (await page.locator('trigger-strip .trigger').count()) > 2;
 })());
