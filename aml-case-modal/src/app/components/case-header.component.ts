@@ -98,7 +98,7 @@ import { PillComponent } from './ui-pill.component';
         display: flex;
         align-items: flex-start;
         gap: 16px;
-        padding: 18px 20px 12px;
+        padding: 16px 20px;
       }
       .head__titles {
         flex: 1;
@@ -154,7 +154,7 @@ import { PillComponent } from './ui-pill.component';
         gap: 10px;
         min-height: 56px;
         box-sizing: border-box;
-        padding: 10px 20px 12px;
+        padding: 12px;
       }
       .head__lock-icon {
         font-size: 18px;
