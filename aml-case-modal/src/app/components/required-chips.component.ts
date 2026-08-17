@@ -64,6 +64,14 @@ import { PillComponent } from './ui-pill.component';
         padding: 8px 16px;
         gap: 6px;
       }
+      /* mat-icon.<class>, not just .<class>: Material's own .mat-icon rule sets
+         24px at the same class specificity, so the element tag is what wins. */
+      mat-icon.chip__icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       .chip-bar__label {
         font-size: 12px;
         font-weight: 600;

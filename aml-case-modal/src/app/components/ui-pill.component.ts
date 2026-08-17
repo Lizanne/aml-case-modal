@@ -117,13 +117,15 @@ export type PillShape = 'pill' | 'badge';
         font-weight: 700;
       }
 
-      /* Icons projected in are chrome: fixed size, never the thing that gives. */
-      ::ng-deep mat-icon {
-        flex: none;
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
+      /**
+       * Projected icons are sized by the CALLER, not here.
+       *
+       * ::ng-deep would be the obvious tool and it is a trap: it de-scopes the
+       * rule to a bare global "mat-icon" element selector, so it leaks to every
+       * icon in the app AND still loses to Material's own ".mat-icon" class
+       * rule. Sizing at the call site is scoped, wins on specificity, and lets
+       * different pills carry different icon sizes if they ever need to.
+       */
     `,
   ],
 })

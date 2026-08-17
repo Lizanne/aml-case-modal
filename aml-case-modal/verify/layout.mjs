@@ -184,6 +184,23 @@ check('colours were preserved, not flattened',
   String(new Set(P.map((r) => r.bg + r.fg)).size) + ' distinct');
 check('no pill is interactive', P.every((r) => !r.role && !r.tabindex));
 // Nothing should still be styling a pill outside the component.
+check('required-action chip icons are 16x16', await page.evaluate(() => {
+  const icons = [...document.querySelectorAll('required-chips ui-pill mat-icon')];
+  return icons.length > 0 && icons.every((i) => {
+    const r = i.getBoundingClientRect();
+    return Math.round(r.width) === 16 && Math.round(r.height) === 16;
+  });
+}));
+// ::ng-deep de-scopes to a bare element selector, so a rule meant for one
+// component silently resizes every icon in the app. Nothing may declare one.
+check('no global bare mat-icon rule exists', await page.evaluate(() => {
+  for (const sheet of document.styleSheets) {
+    let rules;
+    try { rules = sheet.cssRules; } catch { continue; }
+    for (const r of rules) if (r.selectorText === 'mat-icon') return false;
+  }
+  return true;
+}));
 check('no stray pill CSS survives elsewhere', await page.evaluate(() => {
   const legacy = document.querySelectorAll(
     '.pill, .chip, .strip__chip, .cell__new, .widget__tag, .bar__tag, .sg__tag, .badge',
