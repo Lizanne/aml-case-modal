@@ -147,7 +147,7 @@ let stripSeq = 0;
               <span class="cell cell--name">
                 <span class="cell__label">{{ trigger.name }}</span>
                 @if (isArrival(trigger)) {
-                  <ui-pill tone="warn-solid" shape="badge">New</ui-pill>
+                  <ui-pill tone="warn-solid">New</ui-pill>
                 }
               </span>
               <span class="cell cell--detail">{{ trigger.detail }}</span>

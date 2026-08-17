@@ -240,7 +240,7 @@ const arrival = () =>
   page.evaluate(() => ({
     chip: document.querySelectorAll('trigger-strip .strip__bar ui-pill[data-tone="warn"]').length,
     rows: document.querySelectorAll('trigger-strip .trigger--new').length,
-    markers: document.querySelectorAll('trigger-strip ui-pill[data-shape="badge"]').length,
+    markers: document.querySelectorAll('trigger-strip ui-pill[data-tone="warn-solid"]').length,
     count: document.querySelector('trigger-strip .strip__bar ui-pill')?.textContent.trim(),
   }));
 

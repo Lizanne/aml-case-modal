@@ -155,7 +155,7 @@ for (const state of ['01', '03', '05', '07', '10', '11']) {
     [...document.querySelectorAll('ui-pill')].map((e) => {
       const cs = getComputedStyle(e);
       return {
-        key: `${e.getAttribute('data-sev') || e.getAttribute('data-tone')}|${e.getAttribute('data-shape')}`,
+        key: `${e.getAttribute('data-sev') || e.getAttribute('data-tone')}`,
         h: Math.round(e.getBoundingClientRect().height),
         padL: cs.paddingLeft, padR: cs.paddingRight,
         fs: cs.fontSize, lh: cs.lineHeight, radius: cs.borderTopLeftRadius,
@@ -176,8 +176,8 @@ check('every pill has 8px horizontal padding',
 check('every pill is 14px/20px',
   P.every((r) => r.fs === '14px' && r.lh === '20px'),
   [...new Set(P.map((r) => r.fs + '/' + r.lh))].join(' '));
-check('only two radii survive: pill 999px and badge 4px',
-  [...new Set(P.map((r) => r.radius))].sort().join(',') === '4px,999px',
+check('every pill shares one radius',
+  [...new Set(P.map((r) => r.radius))].join(',') === '999px',
   [...new Set(P.map((r) => r.radius))].join(','));
 check('colours were preserved, not flattened',
   new Set(P.map((r) => r.bg + r.fg)).size >= 7,
@@ -525,7 +525,7 @@ const badge = await page.evaluate(() => {
   if (!row) return null;
   const name = row.querySelector('.cell--name');
   const label = row.querySelector('.cell__label');
-  const b = row.querySelector('ui-pill[data-shape="badge"]');
+  const b = row.querySelector('ui-pill[data-tone="warn-solid"]');
   const meta = row.querySelector('.cell--meta');
   const time = row.querySelector('.cell__at');
   const br = b.getBoundingClientRect();
@@ -550,7 +550,7 @@ check('badge is in column 1 with the name', badge.inColumn1 && !badge.inMeta);
 check('badge follows the name', badge.afterName);
 check('6px gap between name and badge', badge.gap === 6, `${badge.gap}px`);
 check('badge is the shared pill component', badge.tag === 'UI-PILL');
-check('badge keeps its square-ish corner', badge.radius === '4px', badge.radius);
+check('badge is fully rounded like every other pill', badge.radius === '999px', badge.radius);
 // Pills are one component now, so the badge shares the 14px pill type rather
 // than being a size step below the row text as it was when it was bespoke.
 check('badge uses the shared pill type', badge.badgeFs === 14, String(badge.badgeFs));

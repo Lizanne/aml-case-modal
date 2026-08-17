@@ -13,7 +13,11 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
  * required-action chips, for instance - the CALLER supplies aria-label, because
  * only the caller knows what the pill is describing.
  *
- * Sizing is uniform: 24px tall, 8px of horizontal padding, 14px/20px type.
+ * Sizing and shape are uniform: 24px tall, 8px of horizontal padding,
+ * 14px/20px type, fully rounded. Only the colours vary - there is no size or
+ * shape variant, because every exception to that was a copy waiting to drift.
+ *
+ * Sizing detail: 24px tall, 8px of horizontal padding, 14px/20px type.
  * Vertical padding would fight the fixed height, so the height and
  * align-items do the centring instead.
  */
@@ -26,9 +30,6 @@ export type PillTone =
   | 'outline'
   | 'dashed';
 
-/** `badge` keeps the square-ish 4px corner the NEW marker has always had. */
-export type PillShape = 'pill' | 'badge';
-
 @Component({
   selector: 'ui-pill',
   standalone: true,
@@ -37,7 +38,6 @@ export type PillShape = 'pill' | 'badge';
   host: {
     '[attr.data-tone]': 'severity ? null : tone',
     '[attr.data-sev]': 'severity',
-    '[attr.data-shape]': 'shape',
   },
   styles: [
     `
@@ -109,13 +109,6 @@ export type PillShape = 'pill' | 'badge';
         color: var(--sev-compliance);
       }
 
-      /* ---- shape ---- */
-      :host([data-shape='badge']) {
-        border-radius: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        font-weight: 700;
-      }
 
       /**
        * Projected icons are sized by the CALLER, not here.
@@ -133,5 +126,4 @@ export class PillComponent {
   @Input() tone: PillTone = 'neutral';
   /** When set, the severity language applies and `tone` is ignored. */
   @Input() severity: string | null = null;
-  @Input() shape: PillShape = 'pill';
 }
