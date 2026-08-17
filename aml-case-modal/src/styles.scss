@@ -208,6 +208,31 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+ * Radios select in the primary blue, not the accent.
+ *
+ * Material defaults radios to the theme's accent palette, which here is the
+ * success green - and green is reserved: it is the only "you can act here"
+ * signal (locked to you, done chips, resolved). A selected radio is not that,
+ * so borrowing the colour dilutes the one place it means something.
+ *
+ * Set as a global token override rather than color="primary" on each group, so
+ * a radio added later is blue without anyone having to remember.
+ *
+ * The .mat-accent half of the selector is load-bearing: Material sets these
+ * tokens on ".mat-mdc-radio-button.mat-accent", so a single-class override
+ * loses on specificity and does nothing at all. Matching the two-class form and
+ * declaring after the theme is what actually wins.
+ * ------------------------------------------------------------------------ */
+.mat-mdc-radio-button.mat-accent,
+.mat-mdc-radio-button {
+  --mdc-radio-selected-icon-color: var(--primary);
+  --mdc-radio-selected-hover-icon-color: var(--primary);
+  --mdc-radio-selected-focus-icon-color: var(--primary);
+  --mdc-radio-selected-pressed-icon-color: var(--primary);
+  --mat-radio-checked-ripple-color: var(--primary);
+}
+
+/* --------------------------------------------------------------------------
  * Material buttons are flex containers, so an icon inside one is a flex item
  * and shrinks like any other. When a button is itself squeezed and its label
  * is nowrap, the icon is the only thing that CAN give - so it silently

@@ -145,6 +145,36 @@ await page.setViewportSize({ width: 1260, height: 1040 });
 await page.waitForTimeout(700);
 await streamFit('dual-modal at the narrowest allowed');
 
+console.log('\nRadios select in primary blue; green stays reserved');
+const radioColour = async (state, sel, pick) => {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(`${sel} mat-radio-button`, { timeout: 15000 });
+  await page.waitForTimeout(400);
+  if (pick) {
+    await page.locator(`${sel} mat-radio-button:has-text("${pick}") input`).check({ force: true });
+    await page.waitForTimeout(350);
+  }
+  return page.evaluate((s) => {
+    const r = document.querySelector(`${s} mat-radio-button.mat-mdc-radio-checked`);
+    return r ? getComputedStyle(r.querySelector('.mdc-radio__inner-circle')).borderColor : null;
+  }, sel);
+};
+const PRIMARY = 'rgb(26, 115, 201)';
+const SUCCESS = 'rgb(15, 110, 87)';
+check('severity dialog radio is primary blue',
+  (await radioColour('05', 'severity-dialog', 'AML')) === PRIMARY);
+check('record form radio is primary blue',
+  (await radioColour('02b', 'record-form', null)) === PRIMARY);
+// Green must still mean "you can act here" where it always did.
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('required-chips ui-pill', { timeout: 15000 });
+await page.waitForTimeout(400);
+check('green survives on the done chip and the lock band', await page.evaluate((g) => {
+  const chip = getComputedStyle(document.querySelector('required-chips ui-pill')).color;
+  const band = getComputedStyle(document.querySelector('case-header .head__lock-text')).color;
+  return chip === g && band === g;
+}, SUCCESS));
+
 console.log('\nThe lock band holds its height across every lock state');
 const bandState = () =>
   page.evaluate(() => {
