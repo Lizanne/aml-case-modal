@@ -160,6 +160,17 @@ check('required chips are a status region', await page.evaluate(() => {
   const el = document.querySelector('required-chips [role="status"]');
   return !!el;
 }));
+// The visible chip carries no state word - the icon and colour do that, and the
+// icon is aria-hidden. So the accessible name is the ONLY thing telling a
+// screen reader whether an action is done; it must name the state explicitly.
+check('each chip states its own status in its accessible name', await page.evaluate(() => {
+  const chips = [...document.querySelectorAll('required-chips ui-pill')];
+  return (
+    chips.length > 0 &&
+    chips.every((c) => /: (pending|done)$/.test(c.getAttribute('aria-label') || '')) &&
+    chips.every((c) => !/pending|done/i.test(c.textContent))
+  );
+}));
 await go('02');
 check('attachment errors are announced without breaking list semantics', await page.evaluate(() => {
   const ul = document.querySelector('record-form .errors');

@@ -5,7 +5,8 @@ import { CaseStore } from '../core/case-store';
 import { PillComponent } from './ui-pill.component';
 
 /**
- * Rule 4. One chip per mandatory action, pending or done. Pinned to the top of
+ * Rule 4. One chip per mandatory action, pending or done - stated by icon
+ * and colour, never by a word. Pinned to the top of
  * the workflow panel - it never scrolls with the stream.
  *
  * Rule 10: hidden entirely once the case is resolved.
@@ -22,9 +23,10 @@ import { PillComponent } from './ui-pill.component';
       role="status"
       aria-label="Required actions"
     >
-      <!-- The "Required" heading and the Done/Pending suffixes are the first
-           things to go when width is short: the tick and the pill colour
-           already carry the state. -->
+      <!-- State is carried by the icon and the pill colour alone: a ring and
+           an outline when pending, a tick and green when done. No word is
+           needed for either, so neither has one. The "Required" heading is
+           still the first thing to go when width is short. -->
       @if (!store.layoutNarrow()) {
         <span class="chip-bar__label">Required</span>
       }
@@ -37,11 +39,6 @@ import { PillComponent } from './ui-pill.component';
             action.done ? 'check_circle' : 'radio_button_unchecked'
           }}</mat-icon>
           {{ store.layoutNarrow() ? action.shortLabel : action.label }}
-          <!-- Only the outstanding state is named. A done chip already says so
-               with its tick and its green; "Done" on top of both is noise. -->
-          @if (!store.layoutNarrow() && !action.done) {
-            <span class="chip__state">Pending</span>
-          }
         </ui-pill>
       }
     </div>
@@ -81,14 +78,6 @@ import { PillComponent } from './ui-pill.component';
         margin-right: 4px;
       }
       /* Success green is the only "you can act here" / completed signal. */
-      /* No opacity: it silently multiplies against whatever is behind and
-         dropped this to 4.09:1 on white, 3.75:1 on the done tint. */
-      .chip__state {
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
-        color: var(--ink-2);
-      }
     `,
   ],
 })
