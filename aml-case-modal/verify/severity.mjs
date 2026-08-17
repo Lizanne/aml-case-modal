@@ -33,7 +33,7 @@ const go = async (state) => {
   await page.waitForSelector('aml-case-modal');
   await page.waitForTimeout(350);
 };
-const headerPill = () => page.locator('case-header .pill--severity');
+const headerPill = () => page.locator('case-header ui-pill[data-sev]');
 const rgb = (el) => page.evaluate((e) => getComputedStyle(e).color, el);
 
 // Read the tokens from the running app rather than restating their hex here.
@@ -77,7 +77,7 @@ for (const state of ['03', '07']) {
 
 console.log('\nThe severity event in the stream reads AML -> EDD, escalation');
 await go('03');
-const eventPills = await page.locator('event-row .row .pill').allInnerTexts();
+const eventPills = await page.locator('event-row ui-pill').allInnerTexts();
 check('event pills are AML then EDD', eventPills.map((t) => t.trim()).join('->') === 'AML->EDD',
   eventPills.join('->'));
 check('the row calls it an escalation',
@@ -97,15 +97,15 @@ await go('01'); // pre-escalation, so current severity is AML
 await page.locator('.footer button:has-text("Adjust severity")').click();
 await page.waitForTimeout(300);
 check('dialog opens showing the current severity as AML',
-  (await page.locator('severity-dialog .pair .pill').first().innerText()).trim() === 'AML');
+  (await page.locator('severity-dialog .pair ui-pill').first().innerText()).trim() === 'AML');
 await page.locator('severity-dialog mat-radio-button:has-text("EDD") input').check({ force: true });
 await page.waitForTimeout(250);
-const pair = (await page.locator('severity-dialog .pair .pill').allInnerTexts()).map((t) => t.trim());
+const pair = (await page.locator('severity-dialog .pair ui-pill').allInnerTexts()).map((t) => t.trim());
 check('the pill pair is AML -> EDD', pair[0] === 'AML' && pair[1] === 'EDD', pair.join('->'));
 check('the badge says Escalation',
-  (await page.locator('severity-dialog .badge').innerText()).includes('Escalation'));
+  (await page.locator('severity-dialog ui-pill[data-tone="warn"]').innerText()).includes('Escalation'));
 check('the badge does NOT say De-escalation',
-  !(await page.locator('severity-dialog .badge').innerText()).includes('De-escalation'));
+  !(await page.locator('severity-dialog ui-pill[data-tone="warn"]').innerText()).includes('De-escalation'));
 
 console.log('\nAnd the reverse is a de-escalation');
 await go('03'); // current severity EDD
@@ -114,7 +114,7 @@ await page.waitForTimeout(300);
 await page.locator('severity-dialog mat-radio-button:has-text("AML") input').check({ force: true });
 await page.waitForTimeout(250);
 check('EDD -> AML is labelled De-escalation',
-  (await page.locator('severity-dialog .badge').innerText()).includes('De-escalation'));
+  (await page.locator('severity-dialog ui-pill[data-tone="warn"]').innerText()).includes('De-escalation'));
 
 console.log('\nSaving a change applies the new severity everywhere');
 await go('01');
@@ -128,7 +128,7 @@ await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
 check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
 check('the widget follows too',
-  (await page.locator('back-office-widgets .widget__tag--sev').innerText()).trim() === 'EDD');
+  (await page.locator('back-office-widgets ui-pill[data-sev]').innerText()).trim() === 'EDD');
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
 check('the timeline entry names the direction', await (async () => {
@@ -214,13 +214,13 @@ const directionFor = async (from, to) => {
     await page.locator('case-header button:has-text("Lock case")').click();
     await page.waitForTimeout(250);
   }
-  const current = (await page.locator('case-header .pill--severity').innerText()).trim();
+  const current = (await page.locator('case-header ui-pill[data-sev]').innerText()).trim();
   await page.locator('.footer button:has-text("Adjust severity")').click();
   await page.waitForTimeout(250);
   const label = to === 'COMPLIANCE' ? 'Compliance' : to;
   await page.locator(`severity-dialog mat-radio-button:has-text("${label}") input`).check({ force: true });
   await page.waitForTimeout(200);
-  const badge = (await page.locator('severity-dialog .badge').innerText()).trim();
+  const badge = (await page.locator('severity-dialog ui-pill[data-tone="warn"]').innerText()).trim();
   const options = (await page.locator('severity-dialog mat-radio-button').allInnerTexts()).map((t) => t.trim());
   return { current, badge, options };
 };
@@ -355,8 +355,8 @@ const past = await page.evaluate(() => {
     dateAlign: getComputedStyle(r.querySelector('.past__date')).textAlign,
     dateWrap: getComputedStyle(r.querySelector('.past__date')).whiteSpace,
     idText: r.querySelector('.past__id').textContent.trim(),
-    sev: r.querySelector('.pill--severity').getAttribute('data-sev'),
-    sevColour: getComputedStyle(r.querySelector('.pill--severity')).color,
+    sev: r.querySelector('ui-pill[data-sev]').getAttribute('data-sev'),
+    sevColour: getComputedStyle(r.querySelector('ui-pill[data-sev]')).color,
     text: r.textContent.replace(/\s+/g, ' ').trim(),
   }));
 });

@@ -145,6 +145,52 @@ await page.setViewportSize({ width: 1260, height: 1040 });
 await page.waitForTimeout(700);
 await streamFit('dual-modal at the narrowest allowed');
 
+console.log('\nOne pill component: uniform box, colours preserved');
+const pills = new Map();
+for (const state of ['01', '03', '05', '07', '10', '11']) {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const rows = await page.evaluate(() =>
+    [...document.querySelectorAll('ui-pill')].map((e) => {
+      const cs = getComputedStyle(e);
+      return {
+        key: `${e.getAttribute('data-sev') || e.getAttribute('data-tone')}|${e.getAttribute('data-shape')}`,
+        h: Math.round(e.getBoundingClientRect().height),
+        padL: cs.paddingLeft, padR: cs.paddingRight,
+        fs: cs.fontSize, lh: cs.lineHeight, radius: cs.borderTopLeftRadius,
+        bg: cs.backgroundColor, fg: cs.color,
+        role: e.getAttribute('role'), tabindex: e.getAttribute('tabindex'),
+      };
+    }),
+  );
+  rows.forEach((r) => pills.set(r.key + r.bg, r));
+}
+const P = [...pills.values()];
+check('pills are rendered at all', P.length >= 8, String(P.length));
+check('every pill is 24px tall', P.every((r) => r.h === 24),
+  [...new Set(P.map((r) => r.h))].join(','));
+check('every pill has 8px horizontal padding',
+  P.every((r) => r.padL === '8px' && r.padR === '8px'),
+  [...new Set(P.map((r) => r.padL + '/' + r.padR))].join(' '));
+check('every pill is 14px/20px',
+  P.every((r) => r.fs === '14px' && r.lh === '20px'),
+  [...new Set(P.map((r) => r.fs + '/' + r.lh))].join(' '));
+check('only two radii survive: pill 999px and badge 4px',
+  [...new Set(P.map((r) => r.radius))].sort().join(',') === '4px,999px',
+  [...new Set(P.map((r) => r.radius))].join(','));
+check('colours were preserved, not flattened',
+  new Set(P.map((r) => r.bg + r.fg)).size >= 7,
+  String(new Set(P.map((r) => r.bg + r.fg)).size) + ' distinct');
+check('no pill is interactive', P.every((r) => !r.role && !r.tabindex));
+// Nothing should still be styling a pill outside the component.
+check('no stray pill CSS survives elsewhere', await page.evaluate(() => {
+  const legacy = document.querySelectorAll(
+    '.pill, .chip, .strip__chip, .cell__new, .widget__tag, .bar__tag, .sg__tag, .badge',
+  );
+  return legacy.length === 0;
+}));
+
 console.log('\nNo button icon is compressed, in any state');
 // Material buttons are flex containers, so an icon inside one shrinks like any
 // other flex item. A squeezed button with a nowrap label crushes its icon
@@ -219,7 +265,7 @@ const controlShape = async () => {
         .map((c) => c.className.split(' ')[0])
         .filter((c) => c !== 'strip__count')
         .join('|'),
-      hasChip: !!el.querySelector('.strip__chip'),
+      hasChip: !!el.querySelector('ui-pill'),
       hasVerb: !!el.querySelector('.strip__verb'),
       hasNote: !!el.querySelector('.strip__count'),
       barIsNotAControl: el.tagName === 'DIV' && !el.closest('button'),
@@ -312,7 +358,7 @@ const bar = async () =>
     const verb = t.querySelector('.strip__verb');
     return {
       text: t.textContent.replace(/\s+/g, ' ').trim(),
-      chip: t.querySelector('.strip__chip').textContent.trim(),
+      chip: t.querySelector('.strip__bar ui-pill').textContent.trim(),
       note: t.querySelector('.strip__count')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
       verb: verb?.textContent.replace(/\s+/g, ' ').trim() ?? null,
       verbFlushRight: verb
@@ -462,7 +508,7 @@ const badge = await page.evaluate(() => {
   if (!row) return null;
   const name = row.querySelector('.cell--name');
   const label = row.querySelector('.cell__label');
-  const b = row.querySelector('.cell__new');
+  const b = row.querySelector('ui-pill[data-shape="badge"]');
   const meta = row.querySelector('.cell--meta');
   const time = row.querySelector('.cell__at');
   const br = b.getBoundingClientRect();
@@ -475,6 +521,7 @@ const badge = await page.evaluate(() => {
     tag: b.tagName,
     rowFs: parseFloat(getComputedStyle(row.querySelector('.cell')).fontSize),
     badgeFs: parseFloat(getComputedStyle(b).fontSize),
+    radius: getComputedStyle(b).borderTopLeftRadius,
     metaOnlyHasTime: [...meta.children].every((c) => c.tagName === 'TIME'),
     timeFlushRight:
       Math.round(meta.getBoundingClientRect().right - time.getBoundingClientRect().right) <= 20,
@@ -485,9 +532,11 @@ check('the highlighted row exists to test', !!badge);
 check('badge is in column 1 with the name', badge.inColumn1 && !badge.inMeta);
 check('badge follows the name', badge.afterName);
 check('6px gap between name and badge', badge.gap === 6, `${badge.gap}px`);
-check('badge is still the status-badge span', badge.tag === 'SPAN');
-check('badge is one size step below the row text',
-  badge.badgeFs === 12 && badge.rowFs === 14, `${badge.badgeFs} vs ${badge.rowFs}`);
+check('badge is the shared pill component', badge.tag === 'UI-PILL');
+check('badge keeps its square-ish corner', badge.radius === '4px', badge.radius);
+// Pills are one component now, so the badge shares the 14px pill type rather
+// than being a size step below the row text as it was when it was bespoke.
+check('badge uses the shared pill type', badge.badgeFs === 14, String(badge.badgeFs));
 check('badge is vertically centred on the name', badge.centred);
 check('timestamp column holds nothing but the time', badge.metaOnlyHasTime);
 check('timestamp stays right-aligned', badge.timeFlushRight);

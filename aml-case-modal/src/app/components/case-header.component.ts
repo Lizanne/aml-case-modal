@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { SEVERITY_LABEL } from '../core/models';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * Title, severity pill, status pill, lock line, lock button.
@@ -17,7 +18,7 @@ import { SEVERITY_LABEL } from '../core/models';
 @Component({
   selector: 'case-header',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, StampPipe],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head" [class.head--narrow]="store.layoutNarrow()">
@@ -28,12 +29,12 @@ import { SEVERITY_LABEL } from '../core/models';
           <div class="head__title-row">
             <h2 class="head__title">AML case #{{ store.caseId() }}</h2>
             <div class="head__pills">
-              <span class="pill pill--severity" [attr.data-sev]="store.severity()">
+              <ui-pill [severity]="store.severity()">
                 {{ severityLabel() }}
-              </span>
-              <span class="pill" [class.pill--resolved]="store.isResolved()">
+              </ui-pill>
+              <ui-pill [tone]="store.isResolved() ? 'success' : 'neutral'">
                 {{ store.isResolved() ? 'Resolved' : 'Open' }}
-              </span>
+              </ui-pill>
             </div>
           </div>
           @if (!store.layoutNarrow()) {

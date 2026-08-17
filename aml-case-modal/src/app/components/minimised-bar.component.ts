@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
 import { ModalId, WorkspaceStore } from '../core/workspace-store';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * A minimised modal, docked as a slim bar at the bottom edge. Bars stack, in
@@ -15,12 +16,12 @@ import { ModalId, WorkspaceStore } from '../core/workspace-store';
 @Component({
   selector: 'minimised-bar',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="bar" [class.bar--pulse]="pulsing()">
       <button class="bar__restore" type="button" (click)="ws.restore(id)">
-        <span class="bar__tag" [attr.data-sev]="severity()">{{ tag() }}</span>
+        <ui-pill [severity]="severity()" tone="primary">{{ tag() }}</ui-pill>
         <span class="bar__title">{{ title() }}</span>
         <span class="bar__hint">Restore</span>
         <mat-icon class="bar__icon">expand_less</mat-icon>
@@ -59,28 +60,6 @@ import { ModalId, WorkspaceStore } from '../core/workspace-store';
       }
       .bar__restore:hover {
         background: var(--page);
-      }
-      .bar__tag {
-        flex: none;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
-        background: var(--primary-bg);
-        color: var(--primary-ink);
-      }
-      .bar__tag[data-sev='AML'] {
-        background: var(--sev-aml-bg);
-        color: var(--sev-aml);
-      }
-      .bar__tag[data-sev='EDD'] {
-        background: var(--sev-edd-bg);
-        color: var(--sev-edd);
-      }
-      .bar__tag[data-sev='COMPLIANCE'] {
-        background: var(--sev-compliance-bg);
-        color: var(--sev-compliance);
       }
       .bar__title {
         flex: 1;

@@ -6,6 +6,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { CaseStore } from '../core/case-store';
 import { SEVERITY_LABEL, SEVERITY_ORDER, Severity, severityDirection } from '../core/models';
 import { DialogShellComponent } from './dialog-shell.component';
+import { PillComponent } from './ui-pill.component';
 
 /** Most severe first, straight from the ranking - never an ad-hoc list. */
 const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
@@ -19,23 +20,23 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
 @Component({
   selector: 'severity-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent],
+  imports: [MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog-shell heading="Adjust severity" (dismiss)="close()">
       <div class="pair">
-        <span class="pill pill--severity" [attr.data-sev]="store.severity()">
+        <ui-pill [severity]="store.severity()">
           {{ label(store.severity()) }}
-        </span>
+        </ui-pill>
         <mat-icon class="pair__arrow">arrow_forward</mat-icon>
         @if (target(); as to) {
-          <span class="pill pill--severity" [attr.data-sev]="to">{{ label(to) }}</span>
-          <span class="badge" [attr.data-direction]="direction()">
+          <ui-pill [severity]="to">{{ label(to) }}</ui-pill>
+          <ui-pill tone="warn" [attr.data-direction]="direction()">
             <mat-icon>{{ direction() === 'escalation' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
             {{ direction() === 'escalation' ? 'Escalation' : 'De-escalation' }}
-          </span>
+          </ui-pill>
         } @else {
-          <span class="pill pill--empty">Choose</span>
+          <ui-pill tone="dashed">Choose</ui-pill>
         }
       </div>
 
@@ -83,27 +84,6 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         font-size: 18px;
         width: 18px;
         height: 18px;
-      }
-      .pill--empty {
-        border: 1px dashed var(--line-strong);
-        background: transparent;
-        color: var(--ink-3);
-      }
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 600;
-        background: var(--warn-bg);
-        color: var(--warn);
-      }
-      .badge mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
       }
       .choices {
         display: flex;

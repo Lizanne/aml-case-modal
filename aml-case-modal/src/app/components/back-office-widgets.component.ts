@@ -5,6 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { WorkspaceStore } from '../core/workspace-store';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * The back office surface behind the modals. Each widget opens its own modal
@@ -19,14 +20,14 @@ import { WorkspaceStore } from '../core/workspace-store';
 @Component({
   selector: 'back-office-widgets',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="widgets">
       <article class="widget">
         <div class="widget__head">
           <h2 class="widget__title">Responsible gambling alerts</h2>
-          <span class="widget__tag">SG alert</span>
+          <ui-pill tone="primary">SG alert</ui-pill>
         </div>
         <p class="widget__body">1 active alert for this player.</p>
         <footer class="widget__foot">
@@ -43,9 +44,9 @@ import { WorkspaceStore } from '../core/workspace-store';
       <article class="widget">
         <div class="widget__head">
           <h2 class="widget__title">AML case #{{ store.caseId() }}</h2>
-          <span class="widget__tag widget__tag--sev" [attr.data-sev]="store.severity()">
+          <ui-pill [severity]="store.severity()">
             {{ store.severity() }}
-          </span>
+          </ui-pill>
         </div>
         <p class="widget__body">{{ lockLine() }}</p>
         <footer class="widget__foot">
@@ -96,28 +97,6 @@ import { WorkspaceStore } from '../core/workspace-store';
         display: flex;
         align-items: center;
         gap: 8px;
-      }
-      .widget__tag {
-        flex: none;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
-        background: var(--primary-bg);
-        color: var(--primary-ink);
-      }
-      .widget__tag--sev[data-sev='AML'] {
-        background: var(--sev-aml-bg);
-        color: var(--sev-aml);
-      }
-      .widget__tag--sev[data-sev='EDD'] {
-        background: var(--sev-edd-bg);
-        color: var(--sev-edd);
-      }
-      .widget__tag--sev[data-sev='COMPLIANCE'] {
-        background: var(--sev-compliance-bg);
-        color: var(--sev-compliance);
       }
       .widget__title {
         margin: 0;

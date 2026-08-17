@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
+import { PillComponent } from './ui-pill.component';
 import {
   TRIGGER_COLLAPSE_THRESHOLD,
   TRIGGER_EXPANDED_ROWS,
@@ -80,7 +81,7 @@ let stripSeq = 0;
 @Component({
   selector: 'trigger-strip',
   standalone: true,
-  imports: [MatIconModule, StampPipe],
+  imports: [MatIconModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="strip" aria-label="Case triggers">
@@ -90,9 +91,11 @@ let stripSeq = 0;
         and the hit target is exactly the thing that does something.
       -->
       <div class="strip__bar">
-        <span class="strip__chip" [class.strip__chip--new]="showsArrival()">
+        <ui-pill
+          [tone]="showsArrival() ? 'warn' : 'primary'"
+        >
           {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
-        </span>
+        </ui-pill>
 
         <!-- Only when the expanded list is actually withholding rows behind a
              scrollbar is showing-vs-total worth saying. -->
@@ -144,7 +147,7 @@ let stripSeq = 0;
               <span class="cell cell--name">
                 <span class="cell__label">{{ trigger.name }}</span>
                 @if (isArrival(trigger)) {
-                  <span class="cell__new">New</span>
+                  <ui-pill tone="warn-solid" shape="badge">New</ui-pill>
                 }
               </span>
               <span class="cell cell--detail">{{ trigger.detail }}</span>
@@ -185,21 +188,6 @@ let stripSeq = 0;
         background: var(--panel);
         cursor: default;
         user-select: text;
-      }
-      .strip__chip {
-        flex: none;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 600;
-        background: var(--primary-bg);
-        color: var(--primary-ink);
-      }
-      /* Rule 11: the arrival is also flagged on the control itself, so it
-         survives the row scrolling out of view in a long expanded list. */
-      .strip__chip--new {
-        background: var(--warn-bg);
-        color: var(--warn);
       }
       .strip__count {
         flex: 0 1 auto;
@@ -342,18 +330,6 @@ let stripSeq = 0;
       .trigger--new .cell--detail,
       .trigger--new .cell__at {
         color: var(--ink-2);
-      }
-      .cell__new {
-        flex: none;
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        padding: 2px 6px;
-        border-radius: 4px;
-        background: var(--warn);
-        color: #fff;
       }
     `,
   ],

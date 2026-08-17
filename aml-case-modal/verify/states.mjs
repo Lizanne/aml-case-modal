@@ -22,7 +22,7 @@ mkdirSync(OUT, { recursive: true });
 // [state, assertions] - each assertion is [label, selector-or-fn, expectation]
 const CHECKS = {
   '00a': async (p) => ({
-    'header shows the opening severity': (await p.locator('case-header .pill--severity').innerText()).trim() === OPENING_SEVERITY,
+    'header shows the opening severity': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === OPENING_SEVERITY,
     'lock button says Lock case': (await p.locator('case-header button:has-text("Lock case")').count()) === 1,
     'record buttons disabled': await p.locator('action-placeholder button').first().isDisabled(),
     'two placeholders': (await p.locator('action-placeholder').count()) === 2,
@@ -35,7 +35,7 @@ const CHECKS = {
     'header offers Force unlock': (await p.locator('case-header button:has-text("Force unlock")').count()) === 1,
   }),
   '01': async (p) => ({
-    'two pending chips': (await p.locator('required-chips .chip:not(.chip--done)').count()) === 2,
+    'two pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"]').count()) === 2,
     'two placeholders': (await p.locator('action-placeholder').count()) === 2,
     'record enabled': await p.locator('action-placeholder button').first().isEnabled(),
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
@@ -53,11 +53,11 @@ const CHECKS = {
     'open-source placeholder still present': (await p.locator('action-placeholder').count()) === 1,
   }),
   '03': async (p) => ({
-    'both chips done': (await p.locator('required-chips .chip--done').count()) === 2,
+    'both chips done': (await p.locator('required-chips ui-pill[data-tone="success"]').count()) === 2,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
     'severity event row shown': (await p.locator('event-row .row').count()) === 1,
     'submit enabled': await p.locator('.footer button:has-text("Submit decision")').isEnabled(),
-    'header severity is the post-escalation one': (await p.locator('case-header .pill--severity').innerText()).trim() === POST_ESCALATION,
+    'header severity is the post-escalation one': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === POST_ESCALATION,
   }),
   '04': async (p) => ({
     'snapshot banner shown': (await p.locator('player-info-panel .banner').count()) === 1,
@@ -66,7 +66,7 @@ const CHECKS = {
   }),
   '05': async (p) => ({
     'severity dialog open': (await p.locator('severity-dialog').count()) === 1,
-    'shows the current severity as the left pill': (await p.locator('severity-dialog .pair .pill').first().innerText()).trim() === POST_ESCALATION,
+    'shows the current severity as the left pill': (await p.locator('severity-dialog .pair ui-pill').first().innerText()).trim() === POST_ESCALATION,
     'warns lock is lifted': (await p.locator('severity-dialog .warn-note').innerText()).toLowerCase().includes('lock is lifted'),
     'save disabled until reason': await p.locator('severity-dialog button:has-text("Save severity")').isDisabled(),
   }),
@@ -77,7 +77,7 @@ const CHECKS = {
     'button says Submit and resolve': (await p.locator('decision-dialog button:has-text("Submit and resolve")').count()) === 1,
   }),
   '07': async (p) => ({
-    'status pill Resolved': (await p.locator('case-header .pill--resolved').innerText()).trim() === 'Resolved',
+    'status pill Resolved': (await p.locator('case-header ui-pill[data-tone="success"]').innerText()).trim() === 'Resolved',
     'no chips': (await p.locator('required-chips').count()) === 0,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
     'no add action': (await p.locator('add-action-menu').count()) === 0,
@@ -103,7 +103,7 @@ const CHECKS = {
     'segmented control shown': (await p.locator('mat-button-toggle-group').count()) === 1,
     'only one panel rendered': (await p.locator('workflow-panel').count()) + (await p.locator('player-info-panel').count()) === 1,
     'trigger strip shows the same single control': (await p.locator('trigger-strip .strip__verb').count()) === 1,
-    'chips use short labels': (await p.locator('required-chips .chip').first().innerText()).includes('Searches'),
+    'chips use short labels': (await p.locator('required-chips ui-pill').first().innerText()).includes('Searches'),
     'footer buttons share the width': await (async () => {
       const a = await p.locator('workflow-panel .footer button').first().boundingBox();
       const b = await p.locator('workflow-panel .footer button').last().boundingBox();
@@ -113,7 +113,7 @@ const CHECKS = {
   '10': async (p) => ({
     // The badge is the single source of the count; assert it there rather
     // than off the scroll note, which only exists while expanded.
-    '20 triggers total': (await p.locator('trigger-strip .strip__chip').innerText()).trim() === '20 triggers',
+    '20 triggers total': (await p.locator('trigger-strip .strip__bar ui-pill').innerText()).trim() === '20 triggers',
     'new marker present': (await p.locator('trigger-strip .trigger--new').count()) === 1,
     'new row is first': (await p.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'),
     'resync banner shown': (await p.locator('workflow-panel .resync').count()) === 1,

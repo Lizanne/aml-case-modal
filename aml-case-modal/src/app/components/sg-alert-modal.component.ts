@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { WorkspaceStore } from '../core/workspace-store';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * The existing production "Resolve & archive active alert" modal.
@@ -16,7 +17,7 @@ import { WorkspaceStore } from '../core/workspace-store';
 @Component({
   selector: 'sg-alert-modal',
   standalone: true,
-  imports: [MatIconModule, MatTooltipModule],
+  imports: [MatIconModule, MatTooltipModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[style.width.px]': 'ws.modalWidth()',
@@ -26,7 +27,7 @@ import { WorkspaceStore } from '../core/workspace-store';
       <div class="sg__head">
         <h2 class="sg__title">Resolve &amp; archive active alert</h2>
         <!-- SG-alert material stays in the primary blue family, never severity. -->
-        <span class="sg__tag">SG alert</span>
+        <ui-pill tone="primary">SG alert</ui-pill>
         <button
           class="sg__btn"
           type="button"
@@ -91,15 +92,6 @@ import { WorkspaceStore } from '../core/workspace-store';
         font-size: 14px;
         font-weight: 600;
         color: var(--ink);
-      }
-      .sg__tag {
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
-        background: var(--primary-bg);
-        color: var(--primary-ink);
       }
       .sg__btn {
         display: inline-flex;

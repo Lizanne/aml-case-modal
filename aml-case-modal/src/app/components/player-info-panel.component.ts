@@ -14,6 +14,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { InfoTab } from '../core/models';
+import { PillComponent } from './ui-pill.component';
 
 const TAB_LABEL: Record<InfoTab, string> = {
   snapshot: 'Snapshot',
@@ -31,7 +32,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
 @Component({
   selector: 'player-info-panel',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTabsModule, StampPipe],
+  imports: [MatButtonModule, MatIconModule, MatTabsModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="info" aria-label="Player information">
@@ -136,9 +137,9 @@ const TAB_LABEL: Record<InfoTab, string> = {
                       restyle - the past does not get re-graded. The pill is
                       keyed on the stored string only.
                     -->
-                    <span class="pill pill--severity" [attr.data-sev]="past.severity">
+                    <ui-pill [severity]="past.severity">
                       {{ past.severity }}
-                    </span>
+                    </ui-pill>
                   </span>
                   <time class="past__date" [attr.datetime]="past.dateCreated">
                     {{ past.dateCreated | stamp }}
@@ -160,7 +161,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               @for (star of store.starred(); track star.at) {
                 <li class="row row--stacked">
                   <div class="row__head">
-                    <span class="pill pill--severity" [attr.data-sev]="star.tag">{{ star.tag }}</span>
+                    <ui-pill [severity]="star.tag">{{ star.tag }}</ui-pill>
                     <span class="row__meta">{{ star.who }} · {{ star.at | stamp }}</span>
                   </div>
                   <p class="row__text">{{ star.text }}</p>

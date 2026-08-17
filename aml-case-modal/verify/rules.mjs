@@ -85,8 +85,8 @@ check('rule 5: save enabled once the lock choice is explicit',
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
 check('one chip done, one still pending',
-  (await page.locator('required-chips .chip--done').count()) === 1 &&
-  (await page.locator('required-chips .chip:not(.chip--done)').count()) === 1);
+  (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 1 &&
+  (await page.locator('required-chips ui-pill[data-tone="outline"]').count()) === 1);
 check('rule 6: saved card has no edit control',
   (await page.locator('outcome-card button:has-text("Edit")').count()) === 0);
 check('rule 6: saved attachments have no remove control',
@@ -104,7 +104,7 @@ await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
 check('extra note saved as an ordinary card', (await page.locator('outcome-card').count()) === 2);
 check('extra note did not satisfy the outstanding requirement',
-  (await page.locator('required-chips .chip--done').count()) === 1);
+  (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 1);
 check('submit still disabled', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
 check('placeholder for the outstanding action remains',
   (await page.locator('action-placeholder').count()) === 1);
@@ -118,7 +118,7 @@ check('recording blocked', await page.locator('action-placeholder button').first
 // collapsed two-row preview always contains it. It is never hidden behind the
 // overflow badge.
 check('collapsed: the count chip carries the arrival',
-  (await page.locator('trigger-strip .strip__chip--new').count()) === 1);
+  (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 1);
 check('collapsed: the arrival is the top preview row',
   (await page.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'));
 check('collapsed: it is inside the preview, not behind the badge',
@@ -135,7 +135,7 @@ await page.locator('workflow-panel .resync button:has-text("Resync")').click();
 await page.waitForTimeout(250);
 check('after resync: recording allowed again', await page.locator('action-placeholder button').first().isEnabled());
 check('after resync: NEW highlight cleared on the chip',
-  (await page.locator('trigger-strip .strip__chip--new').count()) === 0);
+  (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 0);
 check('after resync: NEW highlight cleared on the rows',
   (await page.locator('trigger-strip .trigger--new').count()) === 0);
 
@@ -156,7 +156,7 @@ check('save re-enabled after resync', await page.locator('record-form button:has
 console.log('\nRules 4 and 9 - both recorded unlocks submit; submitting resolves');
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
-check('both chips done', (await page.locator('required-chips .chip--done').count()) === 2);
+check('both chips done', (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 2);
 check('no placeholders left', (await page.locator('action-placeholder').count()) === 0);
 check('submit now enabled', await page.locator('.footer button:has-text("Submit decision")').isEnabled());
 await page.locator('.footer button:has-text("Submit decision")').click();
@@ -169,7 +169,7 @@ await page.locator('decision-dialog button:has-text("Submit and resolve")').clic
 await page.waitForTimeout(300);
 
 console.log('\nRule 10 - resolved is read-only');
-check('status is Resolved', (await page.locator('case-header .pill--resolved').innerText()).trim() === 'Resolved');
+check('status is Resolved', (await page.locator('case-header ui-pill[data-tone="success"]').innerText()).trim() === 'Resolved');
 check('no chips', (await page.locator('required-chips').count()) === 0);
 check('no footer', (await page.locator('workflow-panel .footer').count()) === 0);
 check('no add action', (await page.locator('add-action-menu').count()) === 0);
@@ -189,7 +189,7 @@ await page.locator('severity-dialog mat-radio-button:has-text("Compliance") inpu
 await page.waitForTimeout(150);
 const expectedDirection = directionOf('EDD', 'COMPLIANCE');
 check(`EDD -> COMPLIANCE labelled as a ${expectedDirection.toLowerCase()}`, await (async () => {
-  const badge = (await page.locator('severity-dialog .badge').innerText()).trim();
+  const badge = (await page.locator('severity-dialog ui-pill[data-tone="warn"]').innerText()).trim();
   return expectedDirection === 'Escalation'
     ? badge.includes('Escalation') && !badge.includes('De-escalation')
     : badge.includes('De-escalation');
@@ -199,7 +199,7 @@ await page.waitForTimeout(150);
 await page.locator('severity-dialog button:has-text("Save severity")').click();
 await page.waitForTimeout(300);
 check('header pill now Compliance',
-  (await page.locator('case-header .pill--severity').innerText()).trim() === 'Compliance');
+  (await page.locator('case-header ui-pill[data-sev]').innerText()).trim() === 'Compliance');
 check('lock was lifted', (await page.locator('case-header button:has-text("Lock case")').count()) === 1);
 check('re-lock is one click away', await page.locator('case-header button:has-text("Lock case")').isEnabled());
 check('event row logged', (await page.locator('event-row .row').count()) === 2);
@@ -238,10 +238,10 @@ check('an outcome card is still boxed and white', await page.evaluate(() => {
 console.log('\nRules 10 + 11 - a resolved case never advertises an arrival');
 const arrival = () =>
   page.evaluate(() => ({
-    chip: document.querySelectorAll('trigger-strip .strip__chip--new').length,
+    chip: document.querySelectorAll('trigger-strip .strip__bar ui-pill[data-tone="warn"]').length,
     rows: document.querySelectorAll('trigger-strip .trigger--new').length,
-    markers: document.querySelectorAll('trigger-strip .cell__new').length,
-    count: document.querySelector('trigger-strip .strip__chip')?.textContent.trim(),
+    markers: document.querySelectorAll('trigger-strip ui-pill[data-shape="badge"]').length,
+    count: document.querySelector('trigger-strip .strip__bar ui-pill')?.textContent.trim(),
   }));
 
 // Control: an OPEN case must show the arrival, or the test below proves nothing.

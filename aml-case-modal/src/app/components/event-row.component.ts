@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { StampPipe } from '../core/format';
 import { SeverityChangeEvent } from '../core/models';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * A severity change, rendered as an annotation between outcome cards rather
@@ -20,7 +21,7 @@ import { SeverityChangeEvent } from '../core/models';
 @Component({
   selector: 'event-row',
   standalone: true,
-  imports: [MatIconModule, StampPipe],
+  imports: [MatIconModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="row">
@@ -32,9 +33,9 @@ import { SeverityChangeEvent } from '../core/models';
         {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
       </span>
 
-      <span class="pill" [attr.data-sev]="event.from">{{ event.from }}</span>
+      <ui-pill [severity]="event.from">{{ event.from }}</ui-pill>
       <mat-icon class="row__arrow">arrow_forward</mat-icon>
-      <span class="pill" [attr.data-sev]="event.to">{{ event.to }}</span>
+      <ui-pill [severity]="event.to">{{ event.to }}</ui-pill>
 
       <span class="row__reason" [title]="event.reason">{{ event.reason }}</span>
 

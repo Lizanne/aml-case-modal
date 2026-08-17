@@ -181,48 +181,12 @@ body {
 }
 
 /* --------------------------------------------------------------------------
- * Pills. Shared by the header, the severity dialog, the severity event row and
- * the past-cases list, so they live here rather than in one component.
- *
- * A severity pill is the ONLY place severity colour is allowed to appear.
+ * Pills, chips, tags and badges are all <ui-pill> now - see
+ * components/ui-pill.component.ts. The global .pill block that used to live
+ * here (plus seven near-copies across other components) has gone with it.
+ * Classes like .pill--severity survive only where a caller needs to position
+ * one; they carry no appearance.
  * ------------------------------------------------------------------------ */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  background: var(--page);
-  color: var(--ink-2);
-  border: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.pill--resolved {
-  background: var(--success-bg);
-  color: var(--success);
-  border-color: transparent;
-}
-
-.pill[data-sev='AML'] {
-  background: var(--sev-aml-bg);
-  color: var(--sev-aml);
-  border-color: transparent;
-}
-
-.pill[data-sev='EDD'] {
-  background: var(--sev-edd-bg);
-  color: var(--sev-edd);
-  border-color: transparent;
-}
-
-.pill[data-sev='COMPLIANCE'] {
-  background: var(--sev-compliance-bg);
-  color: var(--sev-compliance);
-  border-color: transparent;
-}
 
 /* --------------------------------------------------------------------------
  * Danger buttons. Material's warn palette is close, but the token is exact and
