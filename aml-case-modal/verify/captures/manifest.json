@@ -1,0 +1,100 @@
+[
+  {
+    "id": "00a",
+    "title": "Unlocked",
+    "file": "00a Unlocked.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "00b",
+    "title": "Locked to other with force unlock dialog",
+    "file": "00b Locked to other with force unlock dialog.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "01",
+    "title": "Locked empty",
+    "file": "01 Locked empty.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "02",
+    "title": "Recording with attachment errors",
+    "file": "02 Recording with attachment errors.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "02b",
+    "title": "Recording clean reverse order",
+    "file": "02b Recording clean reverse order.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "03",
+    "title": "All required recorded",
+    "file": "03 All required recorded.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "04",
+    "title": "Historical snapshot",
+    "file": "04 Historical snapshot.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "05",
+    "title": "Adjust severity dialog",
+    "file": "05 Adjust severity dialog.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "06",
+    "title": "Submit decision dialog",
+    "file": "06 Submit decision dialog.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "07",
+    "title": "Resolved",
+    "file": "07 Resolved.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "08",
+    "title": "Add action menu",
+    "file": "08 Add action menu.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "09",
+    "title": "Dual modal",
+    "file": "09 Dual modal.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "10",
+    "title": "Triggers expanded",
+    "file": "10 Triggers expanded.png",
+    "width": 1440,
+    "height": 940
+  },
+  {
+    "id": "11",
+    "title": "Past AML cases tab",
+    "file": "11 Past AML cases tab.png",
+    "width": 1440,
+    "height": 940
+  }
+]

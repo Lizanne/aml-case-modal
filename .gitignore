@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules/
+dist/
+.angular/
+*.tsbuildinfo
+
+# Local tool config — contains absolute paths and unrelated project names
+.claude/
+
+# Scratch screenshots written by the verify suites
+aml-case-modal/verify/shots/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

@@ -1,0 +1,343 @@
+{
+  "player": {
+    "id": "88213",
+    "name": "Howard Williams",
+    "status": "PLAYER_VERIFY"
+  },
+  "case": {
+    "id": "4821",
+    "status": "OPEN",
+    "severity": "EDD",
+    "createdAt": "2026-08-04T09:12:00Z",
+    "lock": {
+      "state": "locked-to-me",
+      "owner": {
+        "id": "ak",
+        "name": "A. Kowalski"
+      },
+      "since": "2026-08-11T10:31:00Z"
+    },
+    "snapshot": {
+      "generatedAt": "2026-08-11T10:32:00Z",
+      "outOfSync": false
+    }
+  },
+  "agents": [
+    {
+      "id": "ak",
+      "name": "A. Kowalski",
+      "isMe": true
+    },
+    {
+      "id": "mt",
+      "name": "M. Torres",
+      "isMe": false
+    }
+  ],
+  "requiredActions": [
+    "open-source-searches",
+    "player-contact"
+  ],
+  "actionTypes": [
+    {
+      "id": "player-contact",
+      "label": "Contact player",
+      "hint": "Log another contact with the player"
+    },
+    {
+      "id": "open-source-searches",
+      "label": "Open source searches",
+      "hint": "Record an additional search"
+    },
+    {
+      "id": "note",
+      "label": "Add a note",
+      "hint": "Free note with optional attachments"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "t20",
+      "name": "System - Threshold",
+      "detail": "Large deposit while case open. Snapshot resync required before recording outcomes.",
+      "at": "2026-08-11T12:02:00Z",
+      "isNew": true
+    },
+    {
+      "id": "t19",
+      "name": "Manual - EDD",
+      "detail": "Unusual deposit pattern flagged during profile review.",
+      "at": "2026-08-11T10:31:00Z"
+    },
+    {
+      "id": "t18",
+      "name": "HVP withdrawal",
+      "detail": "HVP 50£ withdrawal request.",
+      "at": "2026-08-11T10:35:00Z"
+    },
+    {
+      "id": "t17",
+      "name": "Declined deposits",
+      "detail": "Player has hit a configured threshold for failed deposits.",
+      "at": "2026-08-04T09:40:00Z"
+    },
+    {
+      "id": "t16",
+      "name": "Player status change",
+      "detail": "From ENABLED to PLAYER_VERIFY",
+      "at": "2026-08-05T11:20:00Z"
+    },
+    {
+      "id": "t15",
+      "name": "Player status change",
+      "detail": "From PLAYER_VERIFY to ENABLED",
+      "at": "2026-08-06T09:05:00Z"
+    },
+    {
+      "id": "t14",
+      "name": "Player status change",
+      "detail": "From ENABLED to PLAYER_VERIFY",
+      "at": "2026-08-07T15:44:00Z"
+    },
+    {
+      "id": "t13",
+      "name": "Player status change",
+      "detail": "From PLAYER_VERIFY to ENABLED",
+      "at": "2026-08-08T10:12:00Z"
+    },
+    {
+      "id": "t12",
+      "name": "Time spent playing",
+      "detail": "360 min consecutively",
+      "at": "2026-08-09T22:00:00Z"
+    },
+    {
+      "id": "t11",
+      "name": "Time spent playing",
+      "detail": "420 min consecutively",
+      "at": "2026-08-10T23:15:00Z"
+    },
+    {
+      "id": "t10",
+      "name": "Time spent playing",
+      "detail": "480 min consecutively",
+      "at": "2025-10-14T21:30:00Z"
+    },
+    {
+      "id": "t09",
+      "name": "HVP withdrawal",
+      "detail": "HVP 120£ withdrawal request.",
+      "at": "2025-10-02T13:25:00Z"
+    },
+    {
+      "id": "t08",
+      "name": "Declined deposits",
+      "detail": "Player has hit a configured threshold for failed deposits.",
+      "at": "2025-09-21T17:48:00Z"
+    },
+    {
+      "id": "t07",
+      "name": "Time spent playing",
+      "detail": "300 min consecutively",
+      "at": "2025-09-14T20:10:00Z"
+    },
+    {
+      "id": "t06",
+      "name": "Player status change",
+      "detail": "From ENABLED to PLAYER_VERIFY",
+      "at": "2025-09-01T08:55:00Z"
+    },
+    {
+      "id": "t05",
+      "name": "HVP withdrawal",
+      "detail": "HVP 75£ withdrawal request.",
+      "at": "2025-08-19T12:40:00Z"
+    },
+    {
+      "id": "t04",
+      "name": "Declined deposits",
+      "detail": "Player has hit a configured threshold for failed deposits.",
+      "at": "2025-08-05T16:22:00Z"
+    },
+    {
+      "id": "t03",
+      "name": "Time spent playing",
+      "detail": "330 min consecutively",
+      "at": "2025-07-28T22:35:00Z"
+    },
+    {
+      "id": "t02",
+      "name": "Player status change",
+      "detail": "From PLAYER_VERIFY to ENABLED",
+      "at": "2025-07-10T09:15:00Z"
+    },
+    {
+      "id": "t01",
+      "name": "Manual - EDD",
+      "detail": "Case opened: unusual deposit pattern",
+      "at": "2025-07-01T10:00:00Z"
+    }
+  ],
+  "workflow": [
+    {
+      "kind": "outcome",
+      "id": "a1",
+      "actionType": "open-source-searches",
+      "title": "Open source searches",
+      "actor": "A. Kowalski",
+      "at": "2026-08-11T10:42:00Z",
+      "note": "Adverse media check complete. Two hits reviewed, both false positives relating to a namesake. Full results attached.",
+      "attachments": [
+        {
+          "name": "adverse-media-results.pdf",
+          "type": "pdf",
+          "sizeKb": 2150
+        },
+        {
+          "name": "sanctions-screen.png",
+          "type": "image",
+          "sizeKb": 480
+        },
+        {
+          "name": "companies-house-extract.pdf",
+          "type": "pdf",
+          "sizeKb": 900
+        }
+      ],
+      "snapshotAt": "2026-08-11T10:42:00Z"
+    },
+    {
+      "kind": "event",
+      "id": "e1",
+      "type": "severity-change",
+      "from": "AML",
+      "to": "EDD",
+      "direction": "escalation",
+      "actor": "A. Kowalski",
+      "at": "2026-08-11T11:03:00Z",
+      "reason": "Open source findings raise the risk profile; enhanced due diligence required."
+    },
+    {
+      "kind": "outcome",
+      "id": "a2",
+      "actionType": "player-contact",
+      "title": "Player contact",
+      "actor": "A. Kowalski",
+      "at": "2026-08-11T12:15:00Z",
+      "note": "Called player on verified number. Confirmed source of funds as property sale, documentation promised within 5 days.",
+      "attachments": [
+        {
+          "name": "call-log-2026-08-11.pdf",
+          "type": "pdf",
+          "sizeKb": 1200
+        }
+      ],
+      "snapshotAt": "2026-08-11T12:15:00Z"
+    },
+    {
+      "kind": "outcome",
+      "id": "a3",
+      "actionType": "decision",
+      "title": "Decision — case resolved",
+      "actor": "A. Kowalski",
+      "at": "2026-08-11T12:31:00Z",
+      "note": "Source of funds verified via documentation. No further concerns; monitoring continues under standard rules.",
+      "attachments": [],
+      "snapshotAt": "2026-08-11T12:31:00Z"
+    }
+  ],
+  "timeline": [
+    {
+      "at": "2026-08-04T09:12:00Z",
+      "what": "Case created (AML)",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-04T09:12:00Z",
+      "what": "Trigger added: Manual — EDD",
+      "who": "system"
+    },
+    {
+      "at": "2026-08-11T10:31:00Z",
+      "what": "Case locked",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T10:42:00Z",
+      "what": "Outcome recorded: Open source searches",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T11:03:00Z",
+      "what": "Severity changed AML to EDD (escalation); lock lifted",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T11:05:00Z",
+      "what": "Case locked",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T12:02:00Z",
+      "what": "Trigger added: System — Threshold; snapshot out of sync",
+      "who": "system"
+    },
+    {
+      "at": "2026-08-11T12:06:00Z",
+      "what": "Snapshot resynced",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T12:15:00Z",
+      "what": "Outcome recorded: Player contact",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T12:31:00Z",
+      "what": "Decision submitted; case RESOLVED",
+      "who": "A. Kowalski"
+    }
+  ],
+  "pastCases": [
+    {
+      "caseId": "3310",
+      "status": "RESOLVED",
+      "severity": "COMPLIANCE",
+      "dateCreated": "2025-11-02T10:00:00Z"
+    },
+    {
+      "caseId": "2984",
+      "status": "RESOLVED",
+      "severity": "EDD",
+      "dateCreated": "2025-06-18T14:30:00Z"
+    }
+  ],
+  "starredCommentaries": [
+    {
+      "at": "2026-05-20T09:40:00Z",
+      "tag": "AML",
+      "text": "Player previously provided SoF documentation for property income.",
+      "who": "M. Torres"
+    }
+  ],
+  "attachmentErrorsExample": [
+    {
+      "file": "notes.docx",
+      "reason": "type",
+      "message": "notes.docx was not added. PDF and images only."
+    },
+    {
+      "file": "bank-statements.pdf",
+      "reason": "size",
+      "message": "bank-statements.pdf was not added. Files must be under 10 MB."
+    }
+  ],
+  "severityRanking": {
+    "comment": "Confirmed by compliance 12 Aug: rank high to low. Any direction of change is allowed; badge derives from this order.",
+    "order": [
+      "COMPLIANCE",
+      "EDD",
+      "AML"
+    ]
+  }
+}

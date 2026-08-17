@@ -1,0 +1,291 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+/* --------------------------------------------------------------------------
+ * Design tokens (PROTOTYPE.md)
+ *
+ * Rules:
+ *   - Severity colours never mean anything except severity.
+ *   - SG-alert material stays in the primary blue family.
+ *   - Success green is the only "you can act here" signal.
+ *   - Text on tinted backgrounds uses the darkest tone of the same family.
+ * ------------------------------------------------------------------------ */
+:root {
+  --ink: #18181b;
+  --ink-2: #52525b;
+  /**
+   * Was #71717A, which is 4.83:1 on --panel but only 4.43:1 on --page and
+   * 4.32:1 on the warn tint - both under AA, and muted text lands on those
+   * surfaces constantly (file sizes, timestamps, empty states). Darkened to
+   * clear 4.5:1 on every surface it is used on.
+   */
+  --ink-3: #6b6b73;
+  --line: #e3e6ea;
+  --line-strong: #c9ced6;
+  --page: #f4f5f7;
+  --panel: #ffffff;
+
+  --primary: #1a73c9;
+  --primary-bg: #eaf2fb;
+  /**
+   * Darkest tone of the primary family, for TEXT sitting on --primary-bg.
+   * --primary itself is only 4.28:1 on its own tint, under AA. It stays the
+   * fill/border colour (it is fine on white and on --page); this is the ink.
+   */
+  --primary-ink: #175fa8;
+
+  /* Severity language. Used ONLY for severity. */
+  --sev-aml: #b3261e;
+  --sev-aml-bg: #fbecea;
+  /**
+   * EDD was #B06A00, which is only 3.83:1 on its own tint - under AA for the
+   * 12px pill text it is used for. Darkened to the same hue at 5.66:1.
+   * Doubles as the warn tone below, so the two stay one colour.
+   */
+  --sev-edd: #8c5200;
+  --sev-edd-bg: #fdf1dc;
+  --sev-compliance: #5b4bc4;
+  --sev-compliance-bg: #edeafb;
+
+  /* State colours. */
+  --success: #0f6e57;
+  --success-bg: #e0f5ed;
+  /**
+   * Paler success tint, for filling a whole card rather than a chip.
+   *
+   * --success-bg (#E0F5ED) is fine behind the short, high-contrast text on a
+   * chip, but as a card fill it drops the muted tones below AA: --ink-3 meta
+   * text lands at 4.25:1 and the --primary button label at 4.25:1, both under
+   * 4.5. This tint keeps every text token already used inside an outcome card
+   * compliant, so the card can be tinted without restating any text colour.
+   */
+  --success-bg-subtle: #f4fcf7;
+  --danger: #b3261e;
+  --danger-bg: #fbecea;
+  /* Same tone as --sev-edd, and darkened with it: 5.66:1 on the tint, and
+     6.32:1 for white text on a solid --warn fill (the NEW badge). */
+  --warn: #8c5200;
+  --warn-bg: #fdf1dc;
+}
+
+/* --------------------------------------------------------------------------
+ * Material theme. The palette is built from --primary so Material's own
+ * surfaces agree with the tokens; severity is applied on top with custom
+ * properties rather than by bending Material's colour system.
+ * ------------------------------------------------------------------------ */
+$aml-primary-palette: (
+  50: #eaf2fb,
+  100: #c7ddf4,
+  200: #a1c6ed,
+  300: #7aaee5,
+  400: #5d9cdf,
+  500: #1a73c9,
+  600: #176ac0,
+  700: #135fb7,
+  800: #0f55ad,
+  900: #08429c,
+  A100: #c7ddf4,
+  A200: #a1c6ed,
+  A400: #5d9cdf,
+  A700: #135fb7,
+  contrast: (
+    50: rgba(0, 0, 0, 0.87),
+    100: rgba(0, 0, 0, 0.87),
+    200: rgba(0, 0, 0, 0.87),
+    300: rgba(0, 0, 0, 0.87),
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+    A100: rgba(0, 0, 0, 0.87),
+    A200: rgba(0, 0, 0, 0.87),
+    A400: #ffffff,
+    A700: #ffffff,
+  ),
+);
+
+$aml-accent-palette: (
+  50: #e0f5ed,
+  100: #b3e6d5,
+  200: #80d5bb,
+  300: #4dc4a0,
+  400: #26b78c,
+  500: #0f6e57,
+  600: #0d654f,
+  700: #0b5a45,
+  800: #08503c,
+  900: #043e2c,
+  A100: #b3e6d5,
+  A200: #80d5bb,
+  A400: #26b78c,
+  A700: #0b5a45,
+  contrast: (
+    50: rgba(0, 0, 0, 0.87),
+    100: rgba(0, 0, 0, 0.87),
+    200: rgba(0, 0, 0, 0.87),
+    300: rgba(0, 0, 0, 0.87),
+    400: rgba(0, 0, 0, 0.87),
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+    A100: rgba(0, 0, 0, 0.87),
+    A200: rgba(0, 0, 0, 0.87),
+    A400: rgba(0, 0, 0, 0.87),
+    A700: #ffffff,
+  ),
+);
+
+$aml-typography: mat.define-typography-config(
+  $font-family: "'Source Sans Pro', sans-serif",
+);
+
+$aml-theme: mat.define-light-theme(
+  (
+    color: (
+      primary: mat.define-palette($aml-primary-palette, 500),
+      accent: mat.define-palette($aml-accent-palette, 500),
+      warn: mat.define-palette(mat.$red-palette, 700),
+    ),
+    typography: $aml-typography,
+    density: -1,
+  )
+);
+
+@include mat.all-component-themes($aml-theme);
+
+/* --------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+ * Pills. Shared by the header, the severity dialog, the severity event row and
+ * the past-cases list, so they live here rather than in one component.
+ *
+ * A severity pill is the ONLY place severity colour is allowed to appear.
+ * ------------------------------------------------------------------------ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: var(--page);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.pill--resolved {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: transparent;
+}
+
+.pill[data-sev='AML'] {
+  background: var(--sev-aml-bg);
+  color: var(--sev-aml);
+  border-color: transparent;
+}
+
+.pill[data-sev='EDD'] {
+  background: var(--sev-edd-bg);
+  color: var(--sev-edd);
+  border-color: transparent;
+}
+
+.pill[data-sev='COMPLIANCE'] {
+  background: var(--sev-compliance-bg);
+  color: var(--sev-compliance);
+  border-color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+ * Danger buttons. Material's warn palette is close, but the token is exact and
+ * "Force unlock" / "Unlock case" are the only two places it may be used.
+ * ------------------------------------------------------------------------ */
+.danger-button.mat-mdc-outlined-button {
+  --mdc-outlined-button-label-text-color: var(--danger);
+  --mdc-outlined-button-outline-color: var(--danger);
+}
+
+.danger-button-filled.mat-mdc-unelevated-button {
+  --mdc-filled-button-container-color: var(--danger);
+  --mdc-filled-button-label-text-color: #ffffff;
+}
+
+/* Material's own hairlines, aligned to the token. */
+.mat-mdc-tab-header {
+  --mat-tab-header-divider-color: var(--line);
+}
+
+/* --------------------------------------------------------------------------
+ * Material buttons are flex containers, so an icon inside one is a flex item
+ * and shrinks like any other. When a button is itself squeezed and its label
+ * is nowrap, the icon is the only thing that CAN give - so it silently
+ * compresses (18px box down to 7px) and reads as a cut-off glyph.
+ *
+ * Icons are fixed-size chrome, never the thing that yields.
+ * ------------------------------------------------------------------------ */
+button .mat-icon,
+.mat-mdc-menu-item .mat-icon {
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+ * Material sets its button labels to 500. Source Sans Pro has no 500 face -
+ * Google Fonts accepts wght@500 in the URL but silently serves only 400/600/700
+ * - and CSS font matching resolves a desired 500 DOWNWARDS, so the labels would
+ * render Regular and read lighter than everything around them.
+ *
+ * 600 is the nearest weight the family actually ships. (A true 500 would mean
+ * moving to Source Sans 3, the variable successor.)
+ * ------------------------------------------------------------------------ */
+/* Set the tokens, not font-weight: Material's own .mat-mdc-outlined-button rule
+   is declared after ours at equal specificity, so a direct property loses. The
+   token is what that rule reads. */
+.mat-mdc-button-base {
+  --mdc-text-button-label-text-weight: 600;
+  --mdc-outlined-button-label-text-weight: 600;
+  --mdc-filled-button-label-text-weight: 600;
+  --mdc-protected-button-label-text-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+ * Available to screen readers, absent from the visual design.
+ * ------------------------------------------------------------------------ */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
