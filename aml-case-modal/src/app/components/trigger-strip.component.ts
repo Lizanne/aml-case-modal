@@ -183,7 +183,7 @@ let stripSeq = 0;
         gap: 10px;
         width: 100%;
         min-height: var(--trigger-row-height);
-        padding: 0 12px 0 20px;
+        padding: 0 20px 0 20px;
         box-sizing: border-box;
         background: var(--panel);
         cursor: default;
@@ -294,7 +294,7 @@ let stripSeq = 0;
       /* Spacing lives in cell padding rather than column-gap: a gap would leave
          unpainted stripes through a highlighted row. */
       .cell--name {
-        padding: 0 12px 0 20px;
+        padding: 0 20px 0 20px;
         font-weight: 600;
         color: var(--ink);
       }

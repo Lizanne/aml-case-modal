@@ -193,7 +193,7 @@ import { PillComponent } from './ui-pill.component';
       /* Narrow / dual-modal: two tight rows instead of a title block and a
          separate lock strip. */
       .head--narrow .head__main {
-        padding: 12px 16px 0;
+        padding: 16px 20px 0;
         align-items: center;
       }
       .head--narrow .head__title {

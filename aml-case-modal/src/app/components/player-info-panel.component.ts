@@ -488,6 +488,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         grid-column: 2;
         color: var(--ink-3);
         font-size: 12px;
+        text-transform: capitalize;
       }
     `,
   ],

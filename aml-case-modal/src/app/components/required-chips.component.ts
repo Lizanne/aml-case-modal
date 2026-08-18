@@ -58,8 +58,8 @@ import { PillComponent } from './ui-pill.component';
         background: var(--panel);
       }
       .chip-bar--narrow {
-        padding: 8px 16px;
-        gap: 6px;
+        padding: 12px 20px;
+        gap: 8px;
       }
       /* mat-icon.<class>, not just .<class>: Material's own .mat-icon rule sets
          24px at the same class specificity, so the element tag is what wins. */

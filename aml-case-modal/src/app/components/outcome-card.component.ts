@@ -146,13 +146,11 @@ import { AttachmentListComponent } from './attachment-list.component';
       /* Narrow: tighter card, and the footer loses its rule - the attachment
          chips and View snapshot sit on one line with the note. */
       .card--narrow {
-        padding: 12px 14px;
+        padding: 16px;
       }
-      .card--narrow .card__head {
-        display: block;
-      }
+     
       .card--narrow .card__title {
-        font-size: 14px;
+        font-size: 16px;
       }
       .card--narrow .card__meta {
         margin-top: 2px;

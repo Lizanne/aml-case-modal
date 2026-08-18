@@ -85,12 +85,12 @@ import { PillComponent } from './ui-pill.component';
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 10px 12px 10px 16px;
+        padding: 16px 20px;
         border-bottom: 1px solid var(--line);
       }
       .sg__title {
         margin: 0;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 600;
         color: var(--ink);
       }

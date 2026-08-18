@@ -235,6 +235,15 @@ body {
 /* Material's own hairlines, aligned to the token. */
 .mat-mdc-tab-header {
   --mat-tab-header-divider-color: var(--line);
+  /**
+   * 48px, via the density token rather than a height on the header.
+   *
+   * The theme is built at density -1, which resolves this to 44px and applies
+   * it to the header AND to each tab. Setting height: 48px on the header alone
+   * would leave 44px tabs sitting in a 48px strip with the labels off centre;
+   * moving the token takes both.
+   */
+  --mdc-secondary-navigation-tab-container-height: 48px;
 }
 
 /* --------------------------------------------------------------------------

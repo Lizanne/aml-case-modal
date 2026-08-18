@@ -162,6 +162,11 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
           transition: none;
         }
       }
+      /* Material paints its own hover overlay on top of ours; two stacked
+         tints never give the 6% that was asked for. */
+      .segments__group ::ng-deep .mat-button-toggle-focus-overlay {
+        opacity: 0;
+      }
       .segments__group ::ng-deep .mat-button-toggle .mat-button-toggle-button {
         height: 32px;
       }
@@ -174,9 +179,6 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       /* The selected half reads as a raised card on the track. Material's
          default is a grey fill plus a checkmark, which reads as "checked"
          rather than "current". */
-      .segments__group ::ng-deep .mat-button-toggle-focus-overlay {
-        opacity: 0;
-      }
       .segments__group ::ng-deep .mat-button-toggle-checked {
         background: var(--panel);
         border-radius: 6px;

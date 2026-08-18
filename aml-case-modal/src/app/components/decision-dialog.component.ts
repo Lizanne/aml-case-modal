@@ -97,7 +97,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         border-color: var(--primary);
       }
       .consequence {
-        margin: 14px 0 4px;
+        margin: 16px 0 0px;
         font-size: 12px;
         color: var(--ink-3);
         line-height: 1.5;

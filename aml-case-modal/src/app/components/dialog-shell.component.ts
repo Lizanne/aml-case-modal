@@ -123,7 +123,7 @@ let dialogSeq = 0;
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 0 20px 4px;
+        padding: 0 20px 8px;
       }
       .panel__foot {
         display: flex;

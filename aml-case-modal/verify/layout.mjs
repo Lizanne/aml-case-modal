@@ -377,6 +377,31 @@ for (const [state, noticeExpected] of [['10', true], ['01', false]]) {
   }
 }
 
+console.log('\nThe info tab header is 48px, tabs included');
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const state of ['01', '07', '11']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.mat-mdc-tab-header', { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const t = await page.evaluate(() => {
+    const header = document.querySelector('.mat-mdc-tab-header');
+    const tabs = [...document.querySelectorAll('.mat-mdc-tab')];
+    const hr = header.getBoundingClientRect();
+    const first = tabs[0].getBoundingClientRect();
+    const label = tabs[0].querySelector('.mdc-tab__text-label').getBoundingClientRect();
+    return {
+      header: Math.round(hr.height),
+      // The height comes from the density token, which sizes the tabs too.
+      // A height on the header alone would leave 44px tabs in a 48px strip.
+      tabs: [...new Set(tabs.map((x) => Math.round(x.getBoundingClientRect().height)))],
+      labelCentred: Math.abs((label.top - first.top) - (first.bottom - label.bottom)) <= 1,
+    };
+  });
+  check(`${state}: header is 48px`, t.header === 48, `${t.header}`);
+  check(`${state}: the tabs are 48px too`, t.tabs.length === 1 && t.tabs[0] === 48, t.tabs.join(','));
+  check(`${state}: labels stay vertically centred`, t.labelCentred);
+}
+
 console.log('\nThe historical snapshot banner matches the Figma alert');
 await page.goto(`${BASE}/?state=04`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('player-info-panel .banner', { timeout: 15000 });
@@ -1001,8 +1026,12 @@ const bar = async () =>
       chip: t.querySelector('.strip__bar ui-pill').textContent.trim(),
       note: t.querySelector('.strip__count')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
       verb: verb?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      // Flush means "sits on the bar's own right padding", not "within some
+      // magic number of pixels". The bar's padding moved 12px -> 20px and a
+      // hardcoded < 20 then failed by exactly the tolerance it had invented.
       verbFlushRight: verb
-        ? Math.round(t.getBoundingClientRect().right - verb.getBoundingClientRect().right) < 20
+        ? Math.round(t.getBoundingClientRect().right - verb.getBoundingClientRect().right) ===
+          Math.round(parseFloat(getComputedStyle(t).paddingRight))
         : null,
       aboveRows: list
         ? t.getBoundingClientRect().bottom <= list.getBoundingClientRect().top + 1
