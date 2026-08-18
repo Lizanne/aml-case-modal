@@ -60,9 +60,12 @@ const CHECKS = {
     'header severity is the post-escalation one': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === POST_ESCALATION,
   }),
   '04': async (p) => ({
-    'snapshot banner shown': (await p.locator('player-info-panel .banner').count()) === 1,
-    'names source action': (await p.locator('player-info-panel .banner__title').innerText()).includes('Open source searches'),
-    'way back lives inside the banner': (await p.locator('player-info-panel .banner .banner__back').count()) === 1,
+    // The historical view is the shared snapshot header now, not a tinted
+    // banner: the source action is the header LABEL.
+    'snapshot header shown': (await p.locator('player-info-panel .snapshot-head').count()) === 1,
+    'names source action': (await p.locator('player-info-panel .snapshot-head__label').innerText()).includes('Open source searches'),
+    'timestamp reads as captured': (await p.locator('player-info-panel .snapshot-head__value').innerText()).startsWith('Captured '),
+    'way back is the header control': (await p.locator('player-info-panel .snapshot-head .snapshot-head__back').count()) === 1,
   }),
   '05': async (p) => ({
     'severity dialog open': (await p.locator('severity-dialog').count()) === 1,

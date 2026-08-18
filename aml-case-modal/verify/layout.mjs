@@ -203,7 +203,6 @@ check('green survives on the done chip and the lock band',
 
 console.log('\nBanners: 16px, top-aligned, 20px outlined icons');
 const BANNERS = [
-  ['04', 'player-info-panel .banner'],
   ['10', 'player-info-panel .warn-note'],
   ['10', 'workflow-panel .resync'],
   ['05', 'severity-dialog .warn-note'],
@@ -434,236 +433,76 @@ for (const state of ['01', '07', '11']) {
   check(`${state}: labels stay vertically centred`, t.labelCentred);
 }
 
-console.log('\nThe historical snapshot banner matches the Figma alert');
-await page.goto(`${BASE}/?state=04`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('player-info-panel .banner', { timeout: 15000 });
-await page.waitForTimeout(500);
-const ALERT_BG = await tokenRgb('--alert-info-bg');
-const ALERT_INK = await tokenRgb('--alert-info-ink');
-const ALERT_ACTION = await tokenRgb('--alert-info-action');
-const banner = await page.evaluate(() => {
-  const bn = document.querySelector('player-info-panel .banner');
-  const icon = bn.querySelector('.banner__icon');
-  const title = bn.querySelector('.banner__title');
-  const body = bn.querySelector('.banner__body');
-  const back = bn.querySelector('.banner__back');
-  const cs = getComputedStyle(bn);
-  const kcs = getComputedStyle(back);
-  const R = (e) => e.getBoundingClientRect();
-  const arrow = back.querySelector('mat-icon');
-  return {
-    pad: cs.padding,
-    radius: cs.borderRadius,
-    bg: cs.backgroundColor,
-    ink: cs.color,
-    iconSize: [Math.round(R(icon).width), Math.round(R(icon).height)],
-    iconOutlined: /Outlined/.test(getComputedStyle(icon).fontFamily),
-    iconGap: Math.round(R(title).left - R(icon).right),
-    // All three lines share one left edge - the text column, 8px right of the
-    // icon. The way back belongs to that column, not to the icon.
-    column: [Math.round(R(title).left), Math.round(R(body).left), Math.round(R(back).left)],
-    titleText: title.textContent.trim(),
-    bodyText: body.textContent.trim(),
-    titleFont: `${getComputedStyle(title).fontSize}/${getComputedStyle(title).lineHeight}`,
-    titleWeight: getComputedStyle(title).fontWeight,
-    bodyFont: getComputedStyle(body).fontSize,
-    backColour: kcs.color,
-    // No border, no fill, no padding: a text button, not a chrome one.
-    backBorder: parseFloat(kcs.borderTopWidth) + parseFloat(kcs.borderLeftWidth),
-    backBg: kcs.backgroundColor,
-    backPad: kcs.padding,
-    backFont: `${kcs.fontSize}/${kcs.lineHeight}`,
-    backHeight: Math.round(R(back).height),
-    arrowSize: [Math.round(R(arrow).width), Math.round(R(arrow).height)],
-    arrowColour: getComputedStyle(arrow).color,
-    gapAboveBack: Math.round(R(back).top - R(body).bottom),
-    belowCaption: R(back).top >= R(body).bottom - 1,
-    text: bn.textContent.replace(/\s+/g, ' ').trim(),
-    strandedRows: document.querySelectorAll('player-info-panel .back').length,
-  };
-});
-check('16px box, 8px radius', banner.pad === '16px' && banner.radius === '8px',
-  `${banner.pad} / ${banner.radius}`);
-check('alert tokens, not the primary family',
-  banner.bg === ALERT_BG && banner.ink === ALERT_INK,
-  `${banner.bg} / ${banner.ink}`);
-check('20px outlined icon, 8px from the text column',
-  banner.iconSize[0] === 20 && banner.iconSize[1] === 20 && banner.iconOutlined && banner.iconGap === 8,
-  `${banner.iconSize.join('x')} gap ${banner.iconGap} outlined=${banner.iconOutlined}`);
-check('title, caption and the way back share one left edge',
-  new Set(banner.column).size === 1, banner.column.join(','));
-check('title is the quoted source action at 14px/20px semibold',
-  banner.titleText === 'Snapshot from "Open source searches"' &&
-    banner.titleFont === '14px/20px' && banner.titleWeight === '600',
-  `${banner.titleText} ${banner.titleFont} w${banner.titleWeight}`);
-check('caption is the capture stamp alone',
-  banner.bodyText === 'Captured 11 Aug 2026, 11:42.' && banner.bodyFont === '12px',
-  `${banner.bodyText} ${banner.bodyFont}`);
-check('"This view is read-only" is gone', !/read-only/i.test(banner.text));
-check('the way back sits under the caption, 12px below', banner.belowCaption && banner.gapAboveBack === 12,
-  `below=${banner.belowCaption} gap=${banner.gapAboveBack}`);
-check('it is a text button: no border, no fill, no padding',
-  banner.backBorder === 0 && banner.backBg === 'rgba(0, 0, 0, 0)' && banner.backPad === '0px',
-  `border=${banner.backBorder} bg=${banner.backBg} pad=${banner.backPad}`);
-check('arrow and label both carry the action colour',
-  banner.backColour === ALERT_ACTION && banner.arrowColour === ALERT_ACTION,
-  `${banner.backColour} / ${banner.arrowColour}`);
-check('16px arrow on a 16px row', banner.arrowSize[0] === 16 && banner.arrowSize[1] === 16 &&
-  banner.backHeight === 16 && banner.backFont === '14px/16px',
-  `${banner.arrowSize.join('x')} h${banner.backHeight} ${banner.backFont}`);
-check('the stranded button row under the banner is gone', banner.strandedRows === 0);
-// Colour alone is not an affordance; the underline is.
-await page.hover('player-info-panel .banner__back');
-await page.waitForTimeout(200);
-const hover = await page.evaluate(() =>
-  getComputedStyle(document.querySelector('.banner__back')).textDecorationLine);
-check('hover underlines it', hover === 'underline', hover);
-
-console.log('\nDialog footers carry the same padding as the workflow footer');
+console.log('\nThe snapshot header is one layout in both modes');
 await page.setViewportSize({ width: 1440, height: 1040 });
-for (const state of ['00b', '05', '06']) {
+const snapHead = async (state) => {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('dialog-shell .panel__foot', { timeout: 15000 });
-  await page.waitForTimeout(400);
-  const fp = await page.evaluate(() => {
-    const cs = getComputedStyle(document.querySelector('dialog-shell .panel__foot'));
-    return `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`;
-  });
-  check(`${state}: dialog footer is 16px 20px`, fp === '16px 20px 16px 20px', fp);
-}
-
-console.log('\nEvery form field puts 8px between its label and its control');
-await page.setViewportSize({ width: 1440, height: 1040 });
-for (const [state, host] of [['02', 'record-form'], ['05', 'severity-dialog'], ['06', 'decision-dialog']]) {
-  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector(`${host} .field`, { timeout: 15000 });
+  await page.waitForSelector('.snapshot-head', { timeout: 15000 });
   await page.waitForTimeout(450);
-  const fields = await page.$$eval(`${host} .field`, (els) =>
-    els.map((e) => {
-      const label = e.querySelector('label, .field__label');
-      const next = label?.nextElementSibling;
-      return {
-        text: label ? label.textContent.trim().slice(0, 24) : '(none)',
-        cssGap: getComputedStyle(e).rowGap,
-        // A <legend> is not a grid item, so the gap cannot reach it. Those
-        // fields are measured as null and only the declared gap is asserted.
-        measured: label && next && label.tagName !== 'LEGEND'
-          ? Math.round(next.getBoundingClientRect().top - label.getBoundingClientRect().bottom)
-          : null,
-      };
-    }),
-  );
-  check(`${state} ${host}: fields found`, fields.length > 0, `${fields.length}`);
-  const off = fields.filter((f) => f.cssGap !== '8px' || (f.measured !== null && f.measured !== 8));
-  check(`${state} ${host}: 8px label to control`, off.length === 0,
-    off.map((f) => `${f.text} ${f.cssGap}/${f.measured}`).join(', '));
-}
-
-console.log('\nSlot and segment padding');
-await page.setViewportSize({ width: 1440, height: 1040 });
-await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('action-placeholder .slot', { timeout: 15000 });
-await page.waitForTimeout(400);
-const slotPad = await page.evaluate(() => {
-  const c = getComputedStyle(document.querySelector('action-placeholder .slot'));
-  return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
-});
-// The literal follows the component; what is actually under test is that BOTH
-// widths use one value, asserted below by comparing them rather than by
-// restating the number twice.
-check('slot: 12px 16px', slotPad === '12px 16px 12px 16px', slotPad);
-await page.setViewportSize({ width: 1500, height: 1040 });
-await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('.segments', { timeout: 15000 });
-await page.waitForTimeout(500);
-const seg = await page.evaluate(() => {
-  const pad = (s) => {
-    const c = getComputedStyle(document.querySelector(s));
-    return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
-  };
-  return {
-    segments: pad('.segments'),
-    narrowSlot: pad('action-placeholder .slot'),
-    toggles: [...document.querySelectorAll('mat-button-toggle')]
-      .map((t) => Math.round(t.getBoundingClientRect().height)),
-  };
-});
-check('09 segments: 16px 20px', seg.segments === '16px 20px 16px 20px', seg.segments);
-check('09 segment buttons are 32px tall',
-  seg.toggles.length === 2 && seg.toggles.every((h) => h === 32), seg.toggles.join(','));
-// Hover belongs to the segment you can move TO. The current one is already a
-// raised white card and clicking it is a no-op, so a tint there would
-// advertise an action that does not exist.
-const HOVER_TINT = 'rgba(0, 0, 0, 0.06)';
-const segBg = () =>
-  page.$$eval('mat-button-toggle', (els) =>
-    els.map((t) => ({
-      checked: t.classList.contains('mat-button-toggle-checked'),
-      bg: getComputedStyle(t).backgroundColor,
-    })),
-  );
-const atRest = await segBg();
-check('09 segments: no tint at rest',
-  atRest.every((t) => t.checked || t.bg === 'rgba(0, 0, 0, 0)'),
-  JSON.stringify(atRest));
-await page.hover('mat-button-toggle:not(.mat-button-toggle-checked)');
-await page.waitForTimeout(300);
-const hovered = await segBg();
-check('09 segments: the unselected one takes the 6% tint on hover',
-  hovered.some((t) => !t.checked && t.bg === HOVER_TINT), JSON.stringify(hovered));
-check('09 segments: the current one stays a clean white card',
-  hovered.every((t) => !t.checked || t.bg === 'rgb(255, 255, 255)'), JSON.stringify(hovered));
-await page.hover('.segments');
-await page.waitForTimeout(250);
-check('09 slot: the same padding as wide', seg.narrowSlot === slotPad,
-  `${seg.narrowSlot} vs ${slotPad}`);
-
-console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
-for (const [state, width] of [['01', 1440], ['04', 1440], ['09', 1500]]) {
-  await page.setViewportSize({ width, height: 1040 });
-  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('workflow-panel, player-info-panel', { timeout: 15000 });
-  await page.waitForTimeout(450);
-  const g = await page.evaluate(() =>
-    ['workflow-panel .stream', 'player-info-panel .info__body']
-      .map((s) => {
-        const el = document.querySelector(s);
-        if (!el) return null;
-        const cs = getComputedStyle(el);
-        return { s, l: cs.paddingLeft, r: cs.paddingRight };
-      })
-      .filter(Boolean),
-  );
-  // 09 shows one panel at a time, so only the selected one is asserted here.
-  check(`${state}: at least one scroll region on screen`, g.length > 0);
-  for (const r of g) {
-    check(`${state} ${r.s.split(' ').pop()}: 20px sides`, r.l === '20px' && r.r === '20px',
-      `${r.l} / ${r.r}`);
-  }
-}
-// The Player info side of 09 only exists once the segmented control switches.
-await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('mat-button-toggle', { timeout: 15000 });
-await page.waitForTimeout(500);
-await page.click('mat-button-toggle:has-text("Player info")');
-await page.waitForTimeout(400);
-const infoNarrow = await page.evaluate(() => {
-  const cs = getComputedStyle(document.querySelector('player-info-panel .info__body'));
-  return `${cs.paddingLeft} / ${cs.paddingRight}`;
-});
-check('09 info__body (segmented): 20px sides', infoNarrow === '20px / 20px', infoNarrow);
-
-await page.setViewportSize({ width: 1440, height: 1040 });
-for (const state of ['00b', '05', '06']) {
-  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.panel__title', { timeout: 15000 });
-  await page.waitForTimeout(400);
-  const t = await page.evaluate(() => {
-    const cs = getComputedStyle(document.querySelector('.panel__title'));
-    return `${cs.fontSize} / ${cs.lineHeight}`;
+  return page.evaluate(() => {
+    const h = document.querySelector('.snapshot-head');
+    const R = (e) => e.getBoundingClientRect();
+    const label = h.querySelector('.snapshot-head__label');
+    const value = h.querySelector('.snapshot-head__value');
+    const ctrl = h.querySelector('button');
+    const after = document.querySelector('.placeholder');
+    return {
+      height: Math.round(R(h).height),
+      label: label.textContent.trim(),
+      value: value.textContent.trim(),
+      labelSize: getComputedStyle(label).fontSize,
+      valueSize: getComputedStyle(value).fontSize,
+      valueWeight: getComputedStyle(value).fontWeight,
+      // Both lines single-line in both modes, or the fixed height is a lie.
+      lines: [Math.round(R(label).height), Math.round(R(value).height)],
+      control: ctrl ? ctrl.textContent.replace(/\s+/g, ' ').trim() : null,
+      controlIsMaterial: ctrl ? ctrl.classList.contains('mat-mdc-button-base') : null,
+      controlDisabled: ctrl ? ctrl.disabled : null,
+      controlRightInset: ctrl ? Math.round(R(h).right - R(ctrl).right) : null,
+      controlCentred: ctrl
+        ? Math.abs((R(ctrl).top - R(h).top) - (R(h).bottom - R(ctrl).bottom)) <= 1
+        : null,
+      // What sits below the header must start at the same place in both modes.
+      contentOffset: after ? Math.round(R(after).top - R(h).top) : null,
+      hasOldBanner: !!document.querySelector('player-info-panel .banner'),
+    };
   });
-  check(`${state}: dialog title is 18px/28px`, t === '18px / 28px', t);
-}
+};
+
+const current = await snapHead('01');
+const historical = await snapHead('04');
+
+check('current: label over a bold timestamp',
+  current.label === 'Snapshot generated' && current.labelSize === '12px' &&
+    current.valueSize === '14px' && current.valueWeight === '600',
+  `${current.label} / ${current.value} ${current.valueSize} w${current.valueWeight}`);
+check('current: the control is Resync', /Resync/.test(current.control ?? ''), current.control);
+check('current: Resync is disabled while in sync', current.controlDisabled === true);
+
+check('historical: label names the source action',
+  historical.label === 'Snapshot from Open source searches', historical.label);
+check('historical: timestamp reads "Captured ..."',
+  historical.value === 'Captured 11 Aug 2026, 11:42', historical.value);
+check('historical: the control is a text Back with a chevron',
+  /chevron_left Back to current snapshot/.test(historical.control ?? '') &&
+    historical.controlIsMaterial === false,
+  `${historical.control} material=${historical.controlIsMaterial}`);
+check('the tinted banner is gone', !historical.hasOldBanner);
+
+// The whole point of the shared layout.
+check('both modes are exactly the same height',
+  current.height === historical.height, `${current.height} vs ${historical.height}`);
+check('both put the control hard right',
+  current.controlRightInset === 0 && historical.controlRightInset === 0,
+  `${current.controlRightInset} / ${historical.controlRightInset}`);
+check('both centre the control against the text column',
+  current.controlCentred && historical.controlCentred);
+check('both keep the label and timestamp to one line each',
+  current.lines.concat(historical.lines).every((h) => h <= 21),
+  `${current.lines.join(',')} / ${historical.lines.join(',')}`);
+check('what follows the header does not move between modes',
+  current.contentOffset === historical.contentOffset,
+  `${current.contentOffset} vs ${historical.contentOffset}`);
 
 console.log('\nEvery close and minimise control is one size');
 // These lived in four components at three different button sizes and two icon

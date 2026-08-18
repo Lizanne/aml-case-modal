@@ -178,7 +178,11 @@ check('tabs reduced to two', (await page.locator('player-info-panel .mat-mdc-tab
 check('no snapshot selected', (await page.locator('player-info-panel .empty').innerText()).includes('No snapshot selected'));
 await page.locator('outcome-card').first().locator('button:has-text("View snapshot")').click();
 await page.waitForTimeout(250);
-check('View snapshot fills the left panel', (await page.locator('player-info-panel .banner').count()) === 1);
+// The historical view is the shared snapshot header, whose label names the
+// action the snapshot came from.
+check('View snapshot fills the left panel',
+  (await page.locator('player-info-panel .snapshot-head__back').count()) === 1 &&
+    (await page.locator('player-info-panel .snapshot-head__label').innerText()).startsWith('Snapshot from '));
 
 console.log('\nRule 8 - severity change applies everywhere and lifts the lock');
 await go('03');

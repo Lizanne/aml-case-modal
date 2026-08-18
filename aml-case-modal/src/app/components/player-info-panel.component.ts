@@ -61,21 +61,24 @@ const TAB_LABEL: Record<InfoTab, string> = {
         @switch (store.infoTab()) {
           @case ('snapshot') {
             @if (store.viewedSnapshot(); as snap) {
-              <!-- Historical view: name the action that captured it, and offer a way back. -->
-              <div class="banner">
-                <mat-icon class="banner__icon" fontSet="material-icons-outlined">history</mat-icon>
-                <div class="banner__content">
-                  <p class="banner__title">Snapshot from "{{ snap.title }}"</p>
-                  <p class="banner__body">Captured {{ snap.at | stamp }}.</p>
-                  <!-- A plain button, not mat-button: this is a text action on
-                       a tinted panel, and Material's button brings a ripple, a
-                       min-width and a 36px box that would not sit on the 16px
-                       row the design gives it. -->
-                  <button type="button" class="banner__back" (click)="store.clearSnapshot()">
-                    <mat-icon aria-hidden="true">arrow_back</mat-icon>
-                    Back to current snapshot
-                  </button>
+              <!--
+                Same header as the current view, filled differently: label over
+                timestamp on the left, the view's ONE control on the right.
+                Switching between the two modes must not move anything.
+              -->
+              <div class="snapshot-head">
+                <div class="snapshot-head__text">
+                  <p class="snapshot-head__label">Snapshot from {{ snap.title }}</p>
+                  <p class="snapshot-head__value">Captured {{ snap.at | stamp }}</p>
                 </div>
+                <!-- A plain button, not mat-button: it occupies the slot a
+                     36px stroked Resync occupies, and Material's button would
+                     bring a ripple, a min-width and a border to a text
+                     action. -->
+                <button type="button" class="snapshot-head__back" (click)="store.clearSnapshot()">
+                  <mat-icon aria-hidden="true">chevron_left</mat-icon>
+                  Back to current snapshot
+                </button>
               </div>
               <p class="placeholder">
                 Player snapshot as it stood at {{ snap.at | stamp }}. Snapshot content is out of
@@ -90,7 +93,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               </p>
             } @else {
               <div class="snapshot-head">
-                <div>
+                <div class="snapshot-head__text">
                   <p class="snapshot-head__label">Snapshot generated</p>
                   <p class="snapshot-head__value">{{ store.snapshotGeneratedAt() | stamp }}</p>
                 </div>
@@ -251,22 +254,83 @@ const TAB_LABEL: Record<InfoTab, string> = {
         padding-left: 0;
         padding-right: 0;
       }
+      /**
+       * One header, two fillings.
+       *
+       * Left: a small label over a bold timestamp. Right: whatever single
+       * control the view has - a stroked Resync when you are on the current
+       * snapshot, a text Back when you are on a historical one.
+       *
+       * min-height is the point of the whole block. The two controls are not
+       * the same height (a stroked Material button is 36px, a text button is
+       * its line box), so without a floor the header would grow and shrink as
+       * you moved between the modes and everything under it would jump.
+       */
       .snapshot-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        min-height: 40px;
       }
+      .snapshot-head__text {
+        min-width: 0;
+      }
+      /* One line each, both modes. The historical label is the longest string
+         either mode puts here, and a wrap would defeat the fixed height. */
       .snapshot-head__label {
         margin: 0;
         font-size: 12px;
+        line-height: 16px;
         color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .snapshot-head__value {
         margin: 2px 0 0;
         font-size: 14px;
+        line-height: 20px;
         font-weight: 600;
         color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Text style: no border, no fill, no min-width. --primary-ink rather
+         than --primary because this sits on the panel as body-sized text -
+         6.48:1 against 4.84:1. The underline is the hover affordance; colour
+         alone would not be one. */
+      .snapshot-head__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        flex: none;
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        color: var(--primary-ink);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .snapshot-head__back:hover {
+        text-decoration: underline;
+      }
+      .snapshot-head__back:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+      .snapshot-head__back mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        flex: none;
       }
       .warn-note {
         display: flex;
@@ -285,79 +349,6 @@ const TAB_LABEL: Record<InfoTab, string> = {
         width: 20px;
         height: 20px;
         line-height: 20px;
-        flex: none;
-      }
-      /**
-       * Informational alert, per Figma node 22189:14672.
-       *
-       * 16px box, a 20px icon, then one text column 8px to its right holding
-       * all three lines: title, caption, and the way back. The way back is
-       * left-aligned UNDER the caption rather than beside the title - it
-       * belongs to the column of text, not to the icon.
-       */
-      .banner {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 16px;
-        border-radius: 8px;
-        background: var(--alert-info-bg);
-        color: var(--alert-info-ink);
-      }
-      mat-icon.banner__icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        flex: none;
-      }
-      .banner__content {
-        min-width: 0;
-      }
-      .banner__title {
-        margin: 0;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 600;
-      }
-      .banner__body {
-        margin: 2px 0 0;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      /* Text only: no border, no fill, no padding of its own, so it sits flush
-         with the caption's left edge. The underline is the hover affordance -
-         colour alone would not be one. */
-      .banner__back {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        margin-top: 12px;
-        padding: 0;
-        border: 0;
-        background: none;
-        font: inherit;
-        font-size: 14px;
-        line-height: 16px;
-        font-weight: 600;
-        color: var(--alert-info-action);
-        cursor: pointer;
-      }
-      .banner__back:hover {
-        text-decoration: underline;
-        color: #1E40AF;
-      }
-      .banner__back:focus-visible {
-        outline: 2px solid var(--alert-info-action);
-        outline-offset: 3px;
-        border-radius: 2px;
-      }
-      mat-icon.banner__back-icon,
-      .banner__back mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
         flex: none;
       }
       .placeholder {
