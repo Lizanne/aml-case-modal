@@ -63,10 +63,6 @@ export type PillTone =
       }
 
       /* ---- tones. Colours are unchanged from the blocks these replaced. ---- */
-      :host([data-tone='neutral']) {
-        background: var(--page);
-        color: var(--ink);
-      }
       :host([data-tone='primary']) {
         background: var(--primary-bg);
         color: var(--primary-ink);
