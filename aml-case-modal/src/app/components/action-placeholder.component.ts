@@ -52,7 +52,7 @@ import { ActionTypeId } from '../core/models';
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 16px 18px;
+        padding: 16px 12px;
         border: 1px dashed var(--line-strong);
         border-radius: 12px;
         background: transparent;

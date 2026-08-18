@@ -121,7 +121,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       /* Full-bleed, two equal halves - the segmented control is the primary
          navigation in this mode, not a secondary toggle. */
       .segments {
-        padding: 10px 16px;
+        padding: 12px 16px;
         border-bottom: 1px solid var(--line);
         background: var(--panel);
       }

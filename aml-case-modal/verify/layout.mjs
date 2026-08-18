@@ -272,6 +272,52 @@ for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
     `${f.used} of ${f.spanned}px`);
 }
 
+console.log('\nThe header keeps one structure at both widths');
+for (const [state, width, expectName] of [['01', 1440, true], ['09', 1500, false]]) {
+  await page.setViewportSize({ width, height: 1040 });
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('case-header .head__sub', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const h = await page.evaluate(() => {
+    const sub = document.querySelector('case-header .head__sub');
+    const titles = document.querySelector('case-header .head__titles');
+    const lock = document.querySelector('case-header .head__lock');
+    return {
+      text: sub.textContent.trim(),
+      inTitles: titles.contains(sub),
+      // The identity used to fold into the lock band in narrow. That band now
+      // carries lock state only, at both widths.
+      strayInLock: lock.textContent.includes('Player'),
+      lockText: document.querySelector('.head__lock-text').textContent.trim(),
+    };
+  });
+  check(`${state}: identity sits in head__titles`, h.inTitles);
+  check(`${state}: nothing player-shaped left in the lock band`, !h.strayInLock, h.lockText);
+  check(`${state}: identity reads "${h.text}"`, /^Player 88213$|Player 88213$/.test(h.text));
+  check(`${state}: name ${expectName ? 'present' : 'dropped'}`,
+    h.text.includes('Howard Williams') === expectName, h.text);
+}
+
+console.log('\nSlot and segment padding');
+await page.setViewportSize({ width: 1440, height: 1040 });
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('action-placeholder .slot', { timeout: 15000 });
+await page.waitForTimeout(400);
+const slotPad = await page.evaluate(() => {
+  const c = getComputedStyle(document.querySelector('action-placeholder .slot'));
+  return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
+});
+check('slot: 16px 12px', slotPad === '16px 12px 16px 12px', slotPad);
+await page.setViewportSize({ width: 1500, height: 1040 });
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.segments', { timeout: 15000 });
+await page.waitForTimeout(500);
+const segPad = await page.evaluate(() => {
+  const c = getComputedStyle(document.querySelector('.segments'));
+  return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
+});
+check('09 segments: 12px 16px', segPad === '12px 16px 12px 16px', segPad);
+
 console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
 for (const [state, width] of [['01', 1440], ['04', 1440], ['09', 1500]]) {
   await page.setViewportSize({ width, height: 1040 });

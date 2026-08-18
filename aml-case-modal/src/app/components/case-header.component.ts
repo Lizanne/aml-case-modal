@@ -37,9 +37,11 @@ import { PillComponent } from './ui-pill.component';
               </ui-pill>
             </div>
           </div>
-          @if (!store.layoutNarrow()) {
-            <p class="head__sub">{{ store.player().name }} · Player {{ store.player().id }}</p>
-          }
+          <!-- Same slot in every layout. Narrow drops the name because it has
+               no room for it, but the identity stays under the title rather
+               than moving into the lock band, so the header reads the same
+               way whatever width the modal gets. -->
+          <p class="head__sub">{{ subLine() }}</p>
         </div>
 
         <!-- Grouped so the 12px between the two controls is its own value,
@@ -61,11 +63,6 @@ import { PillComponent } from './ui-pill.component';
       </div>
 
       <div class="head__lock" [attr.data-lock]="store.lockState()">
-        <!-- Narrow: the player identity folds into the lock row rather than
-             taking a line of its own. -->
-        @if (store.layoutNarrow()) {
-          <span class="head__player">Player {{ store.player().id }}</span>
-        }
         <mat-icon class="head__lock-icon">{{ lockIcon() }}</mat-icon>
         <p class="head__lock-text">{{ store.layoutNarrow() ? shortLockLine() : lockLine() }}</p>
 
@@ -192,11 +189,6 @@ import { PillComponent } from './ui-pill.component';
       .head__lock[data-lock='locked-to-me'] .head__lock-text {
         color: var(--success);
       }
-      .head__player {
-        font-size: 14px;
-        line-height: 20px;
-        color: var(--ink-3);
-      }
 
       /* Narrow / dual-modal: two tight rows instead of a title block and a
          separate lock strip. */
@@ -237,6 +229,17 @@ export class CaseHeaderComponent {
   readonly lockIcon = computed(() =>
     this.store.lockState() === 'unlocked' ? 'lock_open' : 'lock',
   );
+
+  /**
+   * The identity line under the title. Narrow keeps the ID only - the name
+   * would push the row into an ellipsis, and the Player info panel carries it.
+   */
+  readonly subLine = computed(() => {
+    const player = this.store.player();
+    return this.store.layoutNarrow()
+      ? `Player ${player.id}`
+      : `${player.name} · Player ${player.id}`;
+  });
 
   /**
    * Narrow layout: the lock state matters, the timestamp does not fit. The full
