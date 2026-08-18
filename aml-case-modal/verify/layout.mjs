@@ -175,6 +175,40 @@ check('green survives on the done chip and the lock band', await page.evaluate((
   return chip === g && band === g;
 }, SUCCESS));
 
+console.log('\nWorkflow footer: two controls, hard right, 12px apart');
+for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
+  await page.setViewportSize({ width, height: 1040 });
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('workflow-panel .footer', { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const f = await page.evaluate(() => {
+    const el = document.querySelector('workflow-panel .footer');
+    const btns = [...el.querySelectorAll('button')];
+    const a = btns[0].getBoundingClientRect();
+    const z = btns[btns.length - 1].getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    return {
+      gapCss: cs.gap,
+      measuredGap: Math.round(z.left - a.right),
+      buttons: btns.length,
+      hasSentence: /Record both required/i.test(el.textContent),
+      // In the narrow grid the buttons split the width, so "hard right" is
+      // only meaningful for the flex layout.
+      isGrid: cs.display === 'grid',
+      rightInset: Math.round(el.getBoundingClientRect().right - z.right),
+      padRight: parseFloat(cs.paddingRight),
+    };
+  });
+  check(`${state}: the gate sentence is gone`, !f.hasSentence);
+  check(`${state}: exactly two controls`, f.buttons === 2);
+  check(`${state}: 12px between them`, f.gapCss === '12px' && f.measuredGap === 12,
+    `${f.gapCss} / ${f.measuredGap}px`);
+  if (!f.isGrid) {
+    check(`${state}: submit sits hard right`, f.rightInset === f.padRight,
+      `${f.rightInset} vs padding ${f.padRight}`);
+  }
+}
+
 console.log('\nThe lock band holds its height across every lock state');
 const bandState = () =>
   page.evaluate(() => {

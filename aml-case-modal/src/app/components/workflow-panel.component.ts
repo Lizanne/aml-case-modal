@@ -111,8 +111,9 @@ import { RequiredChipsComponent } from './required-chips.component';
 
       <!-- Pinned. Rule 10: the footer disappears entirely once resolved. -->
       @if (store.showFooter()) {
-        <!-- Narrow: two equal-width buttons, and the gate explanation moves to
-             the disabled button's tooltip - there is no room for a sentence. -->
+        <!-- Two controls, hard right. Why Submit is disabled lives on its
+             tooltip; the required chips at the top of the panel carry the same
+             state persistently. -->
         <footer class="footer" [class.footer--narrow]="store.layoutNarrow()">
           <button
             mat-stroked-button
@@ -124,26 +125,21 @@ import { RequiredChipsComponent } from './required-chips.component';
             Adjust severity
           </button>
 
-          <div class="footer__right">
-            @if (!store.allRequiredRecorded() && !store.layoutNarrow()) {
-              <span class="footer__gate">Record both required actions to submit a decision.</span>
-            }
-            <span
-              class="footer__submit"
-              [matTooltip]="gateTooltip()"
-              [matTooltipDisabled]="store.canSubmitDecision()"
+          <span
+            class="footer__submit"
+            [matTooltip]="gateTooltip()"
+            [matTooltipDisabled]="store.canSubmitDecision()"
+          >
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              [disabled]="!store.canSubmitDecision()"
+              (click)="store.openDialog.set('decision')"
             >
-              <button
-                mat-flat-button
-                color="primary"
-                type="button"
-                [disabled]="!store.canSubmitDecision()"
-                (click)="store.openDialog.set('decision')"
-              >
-                Submit decision
-              </button>
-            </span>
-          </div>
+              Submit decision
+            </button>
+          </span>
         </footer>
       }
     </section>
@@ -237,32 +233,17 @@ import { RequiredChipsComponent } from './required-chips.component';
       .footer {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 16px;
+        justify-content: flex-end;
+        gap: 12px;
         padding: 14px 20px;
         border-top: 1px solid var(--line);
         background: var(--panel);
       }
+      /* flex: none - a shrinking Material button crushes its own icon before
+         anything else gives. */
       .footer button {
         white-space: nowrap;
-        /* The gate sentence is the flexible thing here, not the controls. A
-           shrinking button crushes its own icon before anything else gives. */
         flex: none;
-      }
-      .footer__gate {
-        flex: 0 1 auto;
-      }
-      .footer__right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .footer__gate {
-        font-size: 12px;
-        color: var(--ink-3);
-        max-width: 220px;
-        text-align: right;
-        line-height: 1.35;
       }
       /* Narrow: two equal halves, matching the segmented control above.
          Grid rather than flex - Material's button box does not honour
@@ -272,10 +253,9 @@ import { RequiredChipsComponent } from './required-chips.component';
         display: grid;
         grid-template-columns: 1fr 1fr;
         padding: 11px 16px;
-        gap: 10px;
+        gap: 12px;
       }
       .footer--narrow > button,
-      .footer--narrow .footer__right,
       .footer--narrow .footer__submit,
       .footer--narrow .footer__submit > button {
         width: 100%;
