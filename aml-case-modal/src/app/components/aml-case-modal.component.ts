@@ -135,9 +135,9 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         max-width: 100%;
         box-sizing: border-box;
         border: 1px solid var(--line);
-        border-radius: 8px;
+        border-radius: 12px;
         background: var(--page);
-        padding: 3px;
+        padding: 4px;
       }
       .segments__group ::ng-deep .mat-button-toggle {
         flex: 1 1 0;

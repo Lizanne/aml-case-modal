@@ -63,14 +63,19 @@ const TAB_LABEL: Record<InfoTab, string> = {
             @if (store.viewedSnapshot(); as snap) {
               <!-- Historical view: name the action that captured it, and offer a way back. -->
               <div class="banner">
-                <mat-icon fontSet="material-icons-outlined">history</mat-icon>
-                <p class="banner__title">
-                  Snapshot from {{ snap.title }} · Captured {{ snap.at | stamp }}
-                </p>
-                <button mat-button type="button" class="banner__back" (click)="store.clearSnapshot()">
-                  <mat-icon>arrow_back</mat-icon>
-                  Back to current snapshot
-                </button>
+                <mat-icon class="banner__icon" fontSet="material-icons-outlined">history</mat-icon>
+                <div class="banner__content">
+                  <p class="banner__title">Snapshot from "{{ snap.title }}"</p>
+                  <p class="banner__body">Captured {{ snap.at | stamp }}.</p>
+                  <!-- A plain button, not mat-button: this is a text action on
+                       a tinted panel, and Material's button brings a ripple, a
+                       min-width and a 36px box that would not sit on the 16px
+                       row the design gives it. -->
+                  <button type="button" class="banner__back" (click)="store.clearSnapshot()">
+                    <mat-icon aria-hidden="true">arrow_back</mat-icon>
+                    Back to current snapshot
+                  </button>
+                </div>
               </div>
               <p class="placeholder">
                 Player snapshot as it stood at {{ snap.at | stamp }}. Snapshot content is out of
@@ -283,46 +288,76 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: none;
       }
       /**
-       * One row: icon, the sentence, and the way back hard right. flex-wrap is
-       * the narrow-width answer - the button drops to a line of its own and
-       * stays right-aligned rather than being clipped or squeezing the text.
-       * The way out used to be a stranded button UNDER the banner, which read
-       * as a separate control belonging to the page rather than to the
-       * historical view it exits.
+       * Informational alert, per Figma node 22189:14672.
+       *
+       * 16px box, a 20px icon, then one text column 8px to its right holding
+       * all three lines: title, caption, and the way back. The way back is
+       * left-aligned UNDER the caption rather than beside the title - it
+       * belongs to the column of text, not to the icon.
        */
       .banner {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 16px;
-        border-radius: 10px;
-        background: var(--primary-bg);
-        color: var(--primary-ink);
         align-items: flex-start;
+        gap: 8px;
+        padding: 16px;
+        border-radius: 8px;
+        background: var(--alert-info-bg);
+        color: var(--alert-info-ink);
       }
-      .banner mat-icon {
+      mat-icon.banner__icon {
         font-size: 20px;
         width: 20px;
         height: 20px;
         line-height: 20px;
         flex: none;
       }
-      .banner__title {
-        flex: 1 1 12rem;
+      .banner__content {
         min-width: 0;
+      }
+      .banner__title {
         margin: 0;
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
       }
-      /* Hard right on the title's row, and still hard right on its own row
-         once the sentence has taken the width. align-self keeps it optically
-         centred against a single line of text while the icon stays top-aligned. */
+      .banner__body {
+        margin: 2px 0 0;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      /* Text only: no border, no fill, no padding of its own, so it sits flush
+         with the caption's left edge. The underline is the hover affordance -
+         colour alone would not be one. */
       .banner__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 12px;
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-size: 14px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--alert-info-action);
+        cursor: pointer;
+      }
+      .banner__back:hover {
+        text-decoration: underline;
+      }
+      .banner__back:focus-visible {
+        outline: 2px solid var(--alert-info-action);
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+      mat-icon.banner__back-icon,
+      .banner__back mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
         flex: none;
-        margin-left: auto;
-        align-self: center;
-        color: var(--primary-ink);
       }
       .placeholder {
         margin: 18px 0 0;

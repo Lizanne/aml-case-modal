@@ -35,6 +35,19 @@
    */
   --primary-ink: #175fa8;
 
+  /**
+   * Informational alert (the historical-snapshot banner). Figma node
+   * 22189:14672.
+   *
+   * Its own blues rather than the --primary family, and not a style
+   * preference: --primary on --primary-bg is 4.28:1, under AA, and this
+   * banner needs a TEXT button in that colour. These are 9.52:1 for the ink
+   * and 6.16:1 for the action on the same tint.
+   */
+  --alert-info-bg: #EFF6FF;
+  --alert-info-ink: #1E3A8A;
+  --alert-info-action: #1D4ED8;
+
   /* Severity language. Used ONLY for severity. */
   --sev-aml: #7F1D1D;
   --sev-aml-bg: #FEF2F2;

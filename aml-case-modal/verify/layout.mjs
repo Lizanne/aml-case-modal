@@ -368,53 +368,90 @@ for (const [state, noticeExpected] of [['10', true], ['01', false]]) {
   }
 }
 
-console.log('\nThe snapshot banner carries its own way back');
+console.log('\nThe historical snapshot banner matches the Figma alert');
 await page.goto(`${BASE}/?state=04`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('player-info-panel .banner', { timeout: 15000 });
 await page.waitForTimeout(500);
+const ALERT_BG = await tokenRgb('--alert-info-bg');
+const ALERT_INK = await tokenRgb('--alert-info-ink');
+const ALERT_ACTION = await tokenRgb('--alert-info-action');
 const banner = await page.evaluate(() => {
   const bn = document.querySelector('player-info-panel .banner');
-  const back = bn.querySelector('.banner__back');
+  const icon = bn.querySelector('.banner__icon');
   const title = bn.querySelector('.banner__title');
+  const body = bn.querySelector('.banner__body');
+  const back = bn.querySelector('.banner__back');
   const cs = getComputedStyle(bn);
-  const br = bn.getBoundingClientRect();
-  const kr = back.getBoundingClientRect();
+  const kcs = getComputedStyle(back);
+  const R = (e) => e.getBoundingClientRect();
+  const arrow = back.querySelector('mat-icon');
   return {
+    pad: cs.padding,
+    radius: cs.borderRadius,
+    bg: cs.backgroundColor,
+    ink: cs.color,
+    iconSize: [Math.round(R(icon).width), Math.round(R(icon).height)],
+    iconOutlined: /Outlined/.test(getComputedStyle(icon).fontFamily),
+    iconGap: Math.round(R(title).left - R(icon).right),
+    // All three lines share one left edge - the text column, 8px right of the
+    // icon. The way back belongs to that column, not to the icon.
+    column: [Math.round(R(title).left), Math.round(R(body).left), Math.round(R(back).left)],
+    titleText: title.textContent.trim(),
+    bodyText: body.textContent.trim(),
+    titleFont: `${getComputedStyle(title).fontSize}/${getComputedStyle(title).lineHeight}`,
+    titleWeight: getComputedStyle(title).fontWeight,
+    bodyFont: getComputedStyle(body).fontSize,
+    backColour: kcs.color,
+    // No border, no fill, no padding: a text button, not a chrome one.
+    backBorder: parseFloat(kcs.borderTopWidth) + parseFloat(kcs.borderLeftWidth),
+    backBg: kcs.backgroundColor,
+    backPad: kcs.padding,
+    backFont: `${kcs.fontSize}/${kcs.lineHeight}`,
+    backHeight: Math.round(R(back).height),
+    arrowSize: [Math.round(R(arrow).width), Math.round(R(arrow).height)],
+    arrowColour: getComputedStyle(arrow).color,
+    gapAboveBack: Math.round(R(back).top - R(body).bottom),
+    belowCaption: R(back).top >= R(body).bottom - 1,
     text: bn.textContent.replace(/\s+/g, ' ').trim(),
-    title: title.textContent.replace(/\s+/g, ' ').trim(),
-    backInside: bn.contains(back),
     strandedRows: document.querySelectorAll('player-info-panel .back').length,
-    rightInset: Math.round(br.right - parseFloat(cs.paddingRight) - kr.right),
-    wraps: cs.flexWrap === 'wrap',
-    onOwnRow: kr.top > title.getBoundingClientRect().top + 4,
   };
 });
-check('the way back lives inside the banner', banner.backInside);
-check('the stranded button row is gone', banner.strandedRows === 0, `${banner.strandedRows}`);
-check('copy is the trimmed one line',
-  banner.title === 'Snapshot from Open source searches · Captured 11 Aug 2026, 11:42',
-  banner.title);
+check('16px box, 8px radius', banner.pad === '16px' && banner.radius === '8px',
+  `${banner.pad} / ${banner.radius}`);
+check('alert tokens, not the primary family',
+  banner.bg === ALERT_BG && banner.ink === ALERT_INK,
+  `${banner.bg} / ${banner.ink}`);
+check('20px outlined icon, 8px from the text column',
+  banner.iconSize[0] === 20 && banner.iconSize[1] === 20 && banner.iconOutlined && banner.iconGap === 8,
+  `${banner.iconSize.join('x')} gap ${banner.iconGap} outlined=${banner.iconOutlined}`);
+check('title, caption and the way back share one left edge',
+  new Set(banner.column).size === 1, banner.column.join(','));
+check('title is the quoted source action at 14px/20px semibold',
+  banner.titleText === 'Snapshot from "Open source searches"' &&
+    banner.titleFont === '14px/20px' && banner.titleWeight === '600',
+  `${banner.titleText} ${banner.titleFont} w${banner.titleWeight}`);
+check('caption is the capture stamp alone',
+  banner.bodyText === 'Captured 11 Aug 2026, 11:42.' && banner.bodyFont === '12px',
+  `${banner.bodyText} ${banner.bodyFont}`);
 check('"This view is read-only" is gone', !/read-only/i.test(banner.text));
-check('the button is right-aligned', banner.rightInset === 0, `${banner.rightInset}px`);
-// At the info panel's fixed 420px there is no room to share the row, so the
-// button takes one of its own - the specified narrow behaviour. Give it room
-// and it must move back up, or the same-row rule is dead code.
-check('at 420px it drops to its own row, still right-aligned', banner.onOwnRow);
-const roomy = await page.evaluate(() => {
-  // flex-basis, not width: .body__left is flex: 0 0 420px, so an inline width
-  // alone changes nothing.
-  document.querySelector('player-info-panel').style.flex = '0 0 760px';
-  const bn = document.querySelector('player-info-panel .banner');
-  const back = bn.querySelector('.banner__back').getBoundingClientRect();
-  const title = bn.querySelector('.banner__title').getBoundingClientRect();
-  const cs = getComputedStyle(bn);
-  return {
-    sameRow: Math.abs(back.top - title.top) < 20,
-    rightInset: Math.round(bn.getBoundingClientRect().right - parseFloat(cs.paddingRight) - back.right),
-  };
-});
-check('given room, it sits on the title row, hard right',
-  roomy.sameRow && roomy.rightInset === 0, JSON.stringify(roomy));
+check('the way back sits under the caption, 12px below', banner.belowCaption && banner.gapAboveBack === 12,
+  `below=${banner.belowCaption} gap=${banner.gapAboveBack}`);
+check('it is a text button: no border, no fill, no padding',
+  banner.backBorder === 0 && banner.backBg === 'rgba(0, 0, 0, 0)' && banner.backPad === '0px',
+  `border=${banner.backBorder} bg=${banner.backBg} pad=${banner.backPad}`);
+check('arrow and label both carry the action colour',
+  banner.backColour === ALERT_ACTION && banner.arrowColour === ALERT_ACTION,
+  `${banner.backColour} / ${banner.arrowColour}`);
+check('16px arrow on a 16px row', banner.arrowSize[0] === 16 && banner.arrowSize[1] === 16 &&
+  banner.backHeight === 16 && banner.backFont === '14px/16px',
+  `${banner.arrowSize.join('x')} h${banner.backHeight} ${banner.backFont}`);
+check('the stranded button row under the banner is gone', banner.strandedRows === 0);
+// Colour alone is not an affordance; the underline is.
+await page.hover('player-info-panel .banner__back');
+await page.waitForTimeout(200);
+const hover = await page.evaluate(() =>
+  getComputedStyle(document.querySelector('.banner__back')).textDecorationLine);
+check('hover underlines it', hover === 'underline', hover);
 
 console.log('\nDialog footers carry the same padding as the workflow footer');
 await page.setViewportSize({ width: 1440, height: 1040 });
