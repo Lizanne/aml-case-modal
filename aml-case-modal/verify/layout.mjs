@@ -312,11 +312,15 @@ await page.setViewportSize({ width: 1500, height: 1040 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.segments', { timeout: 15000 });
 await page.waitForTimeout(500);
-const segPad = await page.evaluate(() => {
-  const c = getComputedStyle(document.querySelector('.segments'));
-  return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
+const seg = await page.evaluate(() => {
+  const pad = (s) => {
+    const c = getComputedStyle(document.querySelector(s));
+    return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
+  };
+  return { segments: pad('.segments'), narrowSlot: pad('action-placeholder .slot') };
 });
-check('09 segments: 12px 16px', segPad === '12px 16px 12px 16px', segPad);
+check('09 segments: 12px 16px', seg.segments === '12px 16px 12px 16px', seg.segments);
+check('09 slot: the same 16px 12px as wide', seg.narrowSlot === slotPad, seg.narrowSlot);
 
 console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
 for (const [state, width] of [['01', 1440], ['04', 1440], ['09', 1500]]) {

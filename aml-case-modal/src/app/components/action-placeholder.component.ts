@@ -71,9 +71,11 @@ import { ActionTypeId } from '../core/models';
         font-size: 12px;
         color: var(--ink-3);
       }
-      /* Narrow: a single row - label left, Record right. */
+      /* Narrow: a single row - label left, Record right. The box is now
+         identical to the wide slot, so the padding is inherited rather than
+         restated - a second 16px 12px here is what drifts later. Only the
+         type inside the box changes. */
       .slot--narrow {
-        padding: 8px 10px 8px 14px;
         gap: 10px;
       }
       .slot--narrow .slot__title {
