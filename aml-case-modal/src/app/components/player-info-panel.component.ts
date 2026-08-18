@@ -218,7 +218,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 16px 18px 24px;
+        padding: 16px 20px 24px;
       }
       .snapshot-head {
         display: flex;

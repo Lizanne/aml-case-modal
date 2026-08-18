@@ -138,10 +138,15 @@ const CHECKS = {
     'only one panel rendered': (await p.locator('workflow-panel').count()) + (await p.locator('player-info-panel').count()) === 1,
     'trigger strip shows the same single control': (await p.locator('trigger-strip .strip__verb').count()) === 1,
     'chips use short labels': (await p.locator('required-chips ui-pill').first().innerText()).includes('Searches'),
-    'footer buttons share the width': await (async () => {
+    // The narrow footer no longer splits into two full-width halves - it is
+    // the same right-aligned pair as every other footer.
+    'footer buttons sit right at their natural width': await (async () => {
+      const footer = await p.locator('workflow-panel .footer').boundingBox();
       const a = await p.locator('workflow-panel .footer button').first().boundingBox();
       const b = await p.locator('workflow-panel .footer button').last().boundingBox();
-      return !!a && !!b && Math.abs(a.width - b.width) < 8;
+      if (!footer || !a || !b) return false;
+      const usesFullWidth = a.x - footer.x <= 21;
+      return !usesFullWidth && Math.abs(footer.x + footer.width - (b.x + b.width) - 20) < 2;
     })(),
   }),
   '10': async (p) => ({

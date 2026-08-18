@@ -114,7 +114,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         <!-- Two controls, hard right. Why Submit is disabled lives on its
              tooltip; the required chips at the top of the panel carry the same
              state persistently. -->
-        <footer class="footer" [class.footer--narrow]="store.layoutNarrow()">
+        <footer class="footer">
           <button
             mat-stroked-button
             type="button"
@@ -238,10 +238,15 @@ import { RequiredChipsComponent } from './required-chips.component';
       .stream__add {
         margin-top: 4px;
       }
+      /* One footer everywhere, narrow included: buttons at their natural
+         width, hard right, 12px apart. Wrapping is the escape hatch if the
+         pair ever outgrows the panel - a shrunk Material button crushes its
+         own icon, so the buttons themselves must not give. */
       .footer {
         display: flex;
         align-items: center;
         justify-content: flex-end;
+        flex-wrap: wrap;
         gap: 12px;
         padding: 14px 20px;
         border-top: 1px solid var(--line);
@@ -252,25 +257,6 @@ import { RequiredChipsComponent } from './required-chips.component';
       .footer button {
         white-space: nowrap;
         flex: none;
-      }
-      /* Narrow: two equal halves, matching the segmented control above.
-         Grid rather than flex - Material's button box does not honour
-         flex-basis: 0 consistently, so two flex:1 children came out 341 vs
-         309. Equal grid tracks are not negotiable in the same way. */
-      .footer--narrow {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        padding: 11px 16px;
-        gap: 12px;
-      }
-      .footer--narrow > button,
-      .footer--narrow .footer__submit,
-      .footer--narrow .footer__submit > button {
-        width: 100%;
-        min-width: 0;
-      }
-      .footer--narrow .footer__submit {
-        display: block;
       }
     `,
   ],

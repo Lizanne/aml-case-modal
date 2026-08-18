@@ -42,18 +42,22 @@ import { PillComponent } from './ui-pill.component';
           }
         </div>
 
-        <button
-          class="head__close"
-          type="button"
-          aria-label="Minimise case"
-          matTooltip="Minimise"
-          (click)="minimise.emit()"
-        >
-          <mat-icon>remove</mat-icon>
-        </button>
-        <button class="head__close" type="button" aria-label="Close case" (click)="close.emit()">
-          <mat-icon>close</mat-icon>
-        </button>
+        <!-- Grouped so the 12px between the two controls is its own value,
+             independent of the 16px that separates them from the title. -->
+        <div class="head__actions">
+          <button
+            class="head__close"
+            type="button"
+            aria-label="Minimise case"
+            matTooltip="Minimise"
+            (click)="minimise.emit()"
+          >
+            <mat-icon>remove</mat-icon>
+          </button>
+          <button class="head__close" type="button" aria-label="Close case" (click)="close.emit()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
       </div>
 
       <div class="head__lock" [attr.data-lock]="store.lockState()">
@@ -128,6 +132,12 @@ import { PillComponent } from './ui-pill.component';
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+      .head__actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: none;
       }
       .head__close {
         display: inline-flex;

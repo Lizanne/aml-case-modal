@@ -249,21 +249,74 @@ for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
       measuredGap: Math.round(z.left - a.right),
       buttons: btns.length,
       hasSentence: /Record both required/i.test(el.textContent),
-      // In the narrow grid the buttons split the width, so "hard right" is
-      // only meaningful for the flex layout.
-      isGrid: cs.display === 'grid',
+      display: cs.display,
+      pads: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft],
       rightInset: Math.round(el.getBoundingClientRect().right - z.right),
       padRight: parseFloat(cs.paddingRight),
+      // Narrow used to split the footer into two full-width halves. Natural
+      // width means the pair leaves room to its left.
+      spanned: Math.round(el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)),
+      used: Math.round(z.right - a.left),
     };
   });
   check(`${state}: the gate sentence is gone`, !f.hasSentence);
   check(`${state}: exactly two controls`, f.buttons === 2);
   check(`${state}: 12px between them`, f.gapCss === '12px' && f.measuredGap === 12,
     `${f.gapCss} / ${f.measuredGap}px`);
-  if (!f.isGrid) {
-    check(`${state}: submit sits hard right`, f.rightInset === f.padRight,
-      `${f.rightInset} vs padding ${f.padRight}`);
+  check(`${state}: flex, not the old narrow grid`, f.display === 'flex', f.display);
+  check(`${state}: 14px 20px padding like every other footer`,
+    f.pads.join(' ') === '14px 20px 14px 20px', f.pads.join(' '));
+  check(`${state}: submit sits hard right`, f.rightInset === f.padRight,
+    `${f.rightInset} vs padding ${f.padRight}`);
+  check(`${state}: buttons keep their natural width`, f.used < f.spanned,
+    `${f.used} of ${f.spanned}px`);
+}
+
+console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
+for (const [state, width] of [['01', 1440], ['04', 1440], ['09', 1500]]) {
+  await page.setViewportSize({ width, height: 1040 });
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('workflow-panel, player-info-panel', { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const g = await page.evaluate(() =>
+    ['workflow-panel .stream', 'player-info-panel .info__body']
+      .map((s) => {
+        const el = document.querySelector(s);
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        return { s, l: cs.paddingLeft, r: cs.paddingRight };
+      })
+      .filter(Boolean),
+  );
+  // 09 shows one panel at a time, so only the selected one is asserted here.
+  check(`${state}: at least one scroll region on screen`, g.length > 0);
+  for (const r of g) {
+    check(`${state} ${r.s.split(' ').pop()}: 20px sides`, r.l === '20px' && r.r === '20px',
+      `${r.l} / ${r.r}`);
   }
+}
+// The Player info side of 09 only exists once the segmented control switches.
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('mat-button-toggle', { timeout: 15000 });
+await page.waitForTimeout(500);
+await page.click('mat-button-toggle:has-text("Player info")');
+await page.waitForTimeout(400);
+const infoNarrow = await page.evaluate(() => {
+  const cs = getComputedStyle(document.querySelector('player-info-panel .info__body'));
+  return `${cs.paddingLeft} / ${cs.paddingRight}`;
+});
+check('09 info__body (segmented): 20px sides', infoNarrow === '20px / 20px', infoNarrow);
+
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const state of ['00b', '05', '06']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.panel__title', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const t = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('.panel__title'));
+    return `${cs.fontSize} / ${cs.lineHeight}`;
+  });
+  check(`${state}: dialog title is 18px/28px`, t === '18px / 28px', t);
 }
 
 console.log('\nEvery close and minimise control is one size');
@@ -288,6 +341,18 @@ const chromeSizes = async (label) => {
   const off = rows.filter((r) => r.w !== 32 || r.h !== 32 || r.iw !== 16 || r.ih !== 16);
   check(`${label}: all 32x32 with 16x16 icons`, off.length === 0,
     off.map((r) => `${r.name} ${r.w}x${r.h}/${r.iw}x${r.ih}`).join(', '));
+  // The pair is grouped so its 12px is independent of the 16px that separates
+  // it from the title - a single .head__main gap could not express both.
+  const pair = await page.evaluate(() => {
+    const g = document.querySelector('case-header .head__actions');
+    if (!g) return null;
+    const b = [...g.querySelectorAll('button')].map((e) => e.getBoundingClientRect());
+    return { css: getComputedStyle(g).gap, measured: Math.round(b[1].left - b[0].right) };
+  });
+  if (pair) {
+    check(`${label}: 12px between minimise and close`,
+      pair.css === '12px' && pair.measured === 12, `${pair.css} / ${pair.measured}px`);
+  }
 };
 for (const state of ['01', '07', '10', '00b', '05', '06']) {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });

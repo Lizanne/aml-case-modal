@@ -92,7 +92,8 @@ let dialogSeq = 0;
       .panel__title {
         flex: 1;
         margin: 0;
-        font-size: 17px;
+        font-size: 18px;
+        line-height: 28px;
         font-weight: 600;
         color: var(--ink);
       }
