@@ -100,13 +100,19 @@ let dialogSeq = 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border: 0;
         border-radius: 8px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;
+      }
+      .panel__close mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
       .panel__close:hover {
         background: rgba(0, 0, 0, 0.05);

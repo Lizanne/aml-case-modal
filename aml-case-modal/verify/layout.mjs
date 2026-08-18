@@ -266,6 +266,57 @@ for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
   }
 }
 
+console.log('\nEvery close and minimise control is one size');
+// These lived in four components at three different button sizes and two icon
+// sizes. Nothing enforces one size but this: the rule is 32px square with a
+// 16px glyph, wherever the control appears.
+const CHROME_BTNS = '.head__close, .panel__close, .sg__btn, .bar__close';
+const chromeSizes = async (label) => {
+  const rows = await page.$$eval(CHROME_BTNS, (els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect();
+      const i = e.querySelector('mat-icon');
+      const ir = i.getBoundingClientRect();
+      return {
+        name: e.getAttribute('aria-label') ?? i.textContent.trim(),
+        w: Math.round(r.width), h: Math.round(r.height),
+        iw: Math.round(ir.width), ih: Math.round(ir.height),
+      };
+    }),
+  );
+  check(`${label}: controls found`, rows.length > 0, `${rows.length}`);
+  const off = rows.filter((r) => r.w !== 32 || r.h !== 32 || r.iw !== 16 || r.ih !== 16);
+  check(`${label}: all 32x32 with 16x16 icons`, off.length === 0,
+    off.map((r) => `${r.name} ${r.w}x${r.h}/${r.iw}x${r.ih}`).join(', '));
+};
+for (const state of ['01', '07', '10', '00b', '05', '06']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.head__close', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  await chromeSizes(state);
+}
+// 09 carries the SG modal's pair, and minimising both swaps them for bar
+// controls - the two places the sizes used to diverge most.
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.sg__btn', { timeout: 15000 });
+await page.waitForTimeout(500);
+await chromeSizes('09 dual');
+await page.click('button[aria-label="Minimise alert"]');
+await page.waitForTimeout(400);
+await page.click('button[aria-label="Minimise case"]');
+await page.waitForTimeout(400);
+await chromeSizes('09 minimised bars');
+// A fixed square cannot stretch to the bar's height, so it has to centre
+// itself; a top- or bottom-hugging close button would read as misaligned.
+check('bar close is vertically centred', await page.evaluate(() => {
+  const bars = [...document.querySelectorAll('minimised-bar .bar')];
+  return bars.length > 0 && bars.every((b) => {
+    const r = b.getBoundingClientRect();
+    const c = b.querySelector('.bar__close').getBoundingClientRect();
+    return Math.abs((c.top - r.top) - (r.bottom - c.bottom)) <= 1;
+  });
+}));
+
 console.log('\nThe lock band holds its height across every lock state');
 const bandState = () =>
   page.evaluate(() => {

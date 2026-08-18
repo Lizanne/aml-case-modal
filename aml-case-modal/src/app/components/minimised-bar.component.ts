@@ -85,13 +85,21 @@ import { PillComponent } from './ui-pill.component';
         width: 18px;
         height: 18px;
       }
+      /* 32px square with a 16px glyph, matching every other close and minimise
+         control. It used to be a full-height strip with a border-left divider;
+         at a fixed size it cannot stretch, so it centres itself and the divider
+         goes rather than hanging short of the bar edges. */
       .bar__close {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
+        flex: none;
+        align-self: center;
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
         border: 0;
-        border-left: 1px solid var(--line);
+        border-radius: 8px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;
@@ -101,9 +109,10 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink);
       }
       .bar__close mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
 
       /* One pulse, then done. Purely decorative, so it is dropped entirely

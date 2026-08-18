@@ -98,8 +98,8 @@ import { PillComponent } from './ui-pill.component';
         align-items: center;
         justify-content: center;
         flex: none;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border: 0;
         border-radius: 8px;
         background: transparent;
@@ -114,9 +114,10 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink);
       }
       .sg__btn mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
       .sg__body {
         flex: 1 1 auto;

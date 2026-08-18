@@ -142,6 +142,12 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink-3);
         cursor: pointer;
       }
+      .head__close mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       .head__close:hover {
         background: rgba(0, 0, 0, 0.05);
         color: var(--ink);
