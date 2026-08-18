@@ -87,7 +87,7 @@ export type PillTone =
       :host([data-tone='outline']) {
         background: var(--panel);
         color: var(--ink-2);
-        border-color: var(--line-strong);
+        border-color: var(--line);
       }
       :host([data-tone='dashed']) {
         background: transparent;

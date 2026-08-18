@@ -139,17 +139,28 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         background: var(--page);
         padding: 4px;
       }
-      .segments__group ::ng-deep .mat-button-toggle {
-        flex: 1 1 0;
-        min-width: 0;
-        border: 0;
-        background: transparent;
-      }
       /* 32px tall segments. Material sizes these off the label's line-height,
          so the height has to be set on the toggle AND the line box centred
          inside it, or the text sits high in a taller button. */
       .segments__group ::ng-deep .mat-button-toggle {
+        flex: 1 1 0;
+        min-width: 0;
         height: 32px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        transition: background-color 120ms ease-out;
+      }
+      /* Hover on the segment you can move TO. The current one is already a
+         raised white card and clicking it does nothing, so tinting it would
+         advertise an action that is not there. */
+      .segments__group ::ng-deep .mat-button-toggle:not(.mat-button-toggle-checked):hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .segments__group ::ng-deep .mat-button-toggle {
+          transition: none;
+        }
       }
       .segments__group ::ng-deep .mat-button-toggle .mat-button-toggle-button {
         height: 32px;
@@ -163,6 +174,9 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       /* The selected half reads as a raised card on the track. Material's
          default is a grey fill plus a checkmark, which reads as "checked"
          rather than "current". */
+      .segments__group ::ng-deep .mat-button-toggle-focus-overlay {
+        opacity: 0;
+      }
       .segments__group ::ng-deep .mat-button-toggle-checked {
         background: var(--panel);
         border-radius: 6px;

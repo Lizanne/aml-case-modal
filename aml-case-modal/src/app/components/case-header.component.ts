@@ -164,20 +164,20 @@ import { PillComponent } from './ui-pill.component';
       .head__lock {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 4px;
         min-height: 56px;
         box-sizing: border-box;
-        padding: 12px;
+        padding: 12px 20px;
       }
       .head__lock-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: var(--ink-3);
+        font-size:20px;
+        width: 20px;
+        height: 20px;
+        color: var(--ink-2);
       }
       /* Success green is the only "you can act here" signal. */
       .head__lock[data-lock='locked-to-me'] .head__lock-icon {
-        color: var(--success);
+        color: var(--foreground-success);
       }
       .head__lock-text {
         flex: 1;
@@ -187,7 +187,7 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink-2);
       }
       .head__lock[data-lock='locked-to-me'] .head__lock-text {
-        color: var(--success);
+        color: var(--foreground-success);
       }
 
       /* Narrow / dual-modal: two tight rows instead of a title block and a

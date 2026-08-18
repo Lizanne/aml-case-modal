@@ -345,6 +345,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
       }
       .banner__back:hover {
         text-decoration: underline;
+        color: #1E40AF;
       }
       .banner__back:focus-visible {
         outline: 2px solid var(--alert-info-action);

@@ -186,11 +186,20 @@ check('record form radio is primary blue',
 await page.goto(`${BASE}/?state=03`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('required-chips ui-pill', { timeout: 15000 });
 await page.waitForTimeout(400);
-check('green survives on the done chip and the lock band', await page.evaluate((g) => {
-  const chip = getComputedStyle(document.querySelector('required-chips ui-pill')).color;
-  const band = getComputedStyle(document.querySelector('case-header .head__lock-text')).color;
-  return chip === g && band === g;
-}, SUCCESS));
+// Two greens now, deliberately: the chip sits on a tint and uses --success,
+// the lock band sits on white and uses the lighter --foreground-success.
+// Asserting one value for both said "the band lost its green" when what had
+// actually happened is that it moved to its own token.
+const BAND_SUCCESS = await tokenRgb('--foreground-success');
+check('green survives on the done chip and the lock band',
+  await page.evaluate(
+    ({ chipGreen, bandGreen }) => {
+      const chip = getComputedStyle(document.querySelector('required-chips ui-pill')).color;
+      const band = getComputedStyle(document.querySelector('case-header .head__lock-text')).color;
+      return chip === chipGreen && band === bandGreen;
+    },
+    { chipGreen: SUCCESS, bandGreen: BAND_SUCCESS },
+  ));
 
 console.log('\nBanners: 16px, top-aligned, 20px outlined icons');
 const BANNERS = [
@@ -522,6 +531,30 @@ const seg = await page.evaluate(() => {
 check('09 segments: 16px 20px', seg.segments === '16px 20px 16px 20px', seg.segments);
 check('09 segment buttons are 32px tall',
   seg.toggles.length === 2 && seg.toggles.every((h) => h === 32), seg.toggles.join(','));
+// Hover belongs to the segment you can move TO. The current one is already a
+// raised white card and clicking it is a no-op, so a tint there would
+// advertise an action that does not exist.
+const HOVER_TINT = 'rgba(0, 0, 0, 0.06)';
+const segBg = () =>
+  page.$$eval('mat-button-toggle', (els) =>
+    els.map((t) => ({
+      checked: t.classList.contains('mat-button-toggle-checked'),
+      bg: getComputedStyle(t).backgroundColor,
+    })),
+  );
+const atRest = await segBg();
+check('09 segments: no tint at rest',
+  atRest.every((t) => t.checked || t.bg === 'rgba(0, 0, 0, 0)'),
+  JSON.stringify(atRest));
+await page.hover('mat-button-toggle:not(.mat-button-toggle-checked)');
+await page.waitForTimeout(300);
+const hovered = await segBg();
+check('09 segments: the unselected one takes the 6% tint on hover',
+  hovered.some((t) => !t.checked && t.bg === HOVER_TINT), JSON.stringify(hovered));
+check('09 segments: the current one stays a clean white card',
+  hovered.every((t) => !t.checked || t.bg === 'rgb(255, 255, 255)'), JSON.stringify(hovered));
+await page.hover('.segments');
+await page.waitForTimeout(250);
 check('09 slot: the same 16px 12px as wide', seg.narrowSlot === slotPad, seg.narrowSlot);
 
 console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
@@ -692,9 +725,9 @@ check('locked to you is the only green state', await (async () => {
   const green = byName['locked to you'];
   const others = ['unassigned', 'locked to other', 'resolved'].map((k) => byName[k]);
   return (
-    green.textColour === SUCCESS &&
-    green.iconColour === SUCCESS &&
-    others.every((o) => o.textColour !== SUCCESS && o.iconColour !== SUCCESS)
+    green.textColour === BAND_SUCCESS &&
+    green.iconColour === BAND_SUCCESS &&
+    others.every((o) => o.textColour !== BAND_SUCCESS && o.iconColour !== BAND_SUCCESS)
   );
 })());
 check('locked to you says only the fact',
