@@ -76,6 +76,14 @@ const CHECKS = {
       const met = p.locator('decision-dialog .met');
       if ((await met.count()) !== 1) return false;
       return met.evaluate((el) => {
+        const token = (n) => {
+          const probe = document.createElement('span');
+          probe.style.color = `var(${n})`;
+          document.body.appendChild(probe);
+          const c = getComputedStyle(probe).color;
+          probe.remove();
+          return c;
+        };
         const span = el.querySelector('span');
         const lines = Math.round(
           span.getBoundingClientRect().height / parseFloat(getComputedStyle(span).lineHeight),
@@ -93,8 +101,9 @@ const CHECKS = {
           !underlined &&
           el.querySelectorAll('a').length === 0 &&
           !!el.querySelector('mat-icon') &&
-          cs.backgroundColor === 'rgb(224, 245, 237)' &&
-          cs.color === 'rgb(15, 110, 87)'
+          // Assert the tokens reach the element, not which hex they hold.
+          cs.backgroundColor === token('--success-bg') &&
+          cs.color === token('--success')
         );
       });
     })(),

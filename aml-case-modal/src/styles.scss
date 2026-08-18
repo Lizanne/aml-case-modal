@@ -52,21 +52,23 @@
   --success: #14532D;
   --success-bg: #F0FDF4;
   /**
-   * Paler success tint, for filling a whole card rather than a chip.
+   * Success tint for filling a whole card rather than a chip.
    *
-   * --success-bg (#E0F5ED) is fine behind the short, high-contrast text on a
-   * chip, but as a card fill it drops the muted tones below AA: --ink-3 meta
-   * text lands at 4.25:1 and the --primary button label at 4.25:1, both under
-   * 4.5. This tint keeps every text token already used inside an outcome card
-   * compliant, so the card can be tinted without restating any text colour.
+   * It exists because the earlier --success-bg dropped the muted tokens inside
+   * an outcome card below AA. The current palette no longer has that problem -
+   * --ink-3 meta text is 7.38:1 on --success-bg and 7.04:1 here - so this is
+   * now a tone choice rather than a contrast fix, and either would pass.
    */
   --success-bg-subtle: #DCFCE7;
   --danger: #B91C1C;
   --danger-bg: #FEF2F2;
-  /* Same tone as --sev-edd, and darkened with it: 5.66:1 on the tint, and
-     6.32:1 for white text on a solid --warn fill (the NEW badge). */
-  --warn: #8c5200;
-  --warn-bg: #fdf1dc;
+  /* Same tone as --sev-edd, and moved with it: 9.16:1 on the tint, and
+     10.02:1 for white text on a solid --warn fill (the NEW badge). Note that
+     this now matches --danger-bg exactly and sits close to --danger, so warn
+     and danger no longer read as different states by colour alone - the icon
+     and copy are what separate them. */
+  --warn: #7F1D1D;
+  --warn-bg: #FEF2F2;
 }
 
 /* --------------------------------------------------------------------------

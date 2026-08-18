@@ -159,8 +159,25 @@ const radioColour = async (state, sel, pick) => {
     return r ? getComputedStyle(r.querySelector('.mdc-radio__inner-circle')).borderColor : null;
   }, sel);
 };
-const PRIMARY = 'rgb(26, 115, 201)';
-const SUCCESS = 'rgb(15, 110, 87)';
+/**
+ * Resolve a design token to the rgb() string the browser will report.
+ *
+ * Restating token hexes here is how these checks went stale: the palette moved
+ * and four assertions failed for saying "green is #0f6e57" rather than "green
+ * is --success". What is under test is that the RIGHT TOKEN reaches the right
+ * element, never which hex the token happens to hold today.
+ */
+const tokenRgb = (name) =>
+  page.evaluate((n) => {
+    const el = document.createElement('span');
+    el.style.color = `var(${n})`;
+    document.body.appendChild(el);
+    const c = getComputedStyle(el).color;
+    el.remove();
+    return c;
+  }, name);
+const PRIMARY = await tokenRgb('--primary');
+const SUCCESS = await tokenRgb('--success');
 check('severity dialog radio is primary blue',
   (await radioColour('05', 'severity-dialog', 'AML')) === PRIMARY);
 check('record form radio is primary blue',
@@ -510,9 +527,9 @@ check('locked to you is the only green state', await (async () => {
   const green = byName['locked to you'];
   const others = ['unassigned', 'locked to other', 'resolved'].map((k) => byName[k]);
   return (
-    green.textColour === 'rgb(15, 110, 87)' &&
-    green.iconColour === 'rgb(15, 110, 87)' &&
-    others.every((o) => o.textColour !== 'rgb(15, 110, 87)' && o.iconColour !== 'rgb(15, 110, 87)')
+    green.textColour === SUCCESS &&
+    green.iconColour === SUCCESS &&
+    others.every((o) => o.textColour !== SUCCESS && o.iconColour !== SUCCESS)
   );
 })());
 check('locked to you says only the fact',
@@ -520,11 +537,15 @@ check('locked to you says only the fact',
     !/record outcomes/i.test(byName['locked to you'].text),
   byName['locked to you'].text);
 check('locked to you offers Unlock', byName['locked to you'].button === 'Unlock');
+// Tokens again, not hexes: what matters is that the neutral row uses --ink-2
+// and the destructive button uses --danger, whatever those hold.
+const INK_2 = await tokenRgb('--ink-2');
+const DANGER = await tokenRgb('--danger');
 check('locked to other is neutral text with a red Force unlock',
-  byName['locked to other'].textColour === 'rgb(82, 82, 91)' &&
+  byName['locked to other'].textColour === INK_2 &&
     byName['locked to other'].button === 'Force unlock' &&
-    byName['locked to other'].btnColour === 'rgb(179, 38, 30)',
-  `${byName['locked to other'].textColour} / ${byName['locked to other'].btnColour}`);
+    byName['locked to other'].btnColour === DANGER,
+  `${byName['locked to other'].textColour} / ${byName['locked to other'].btnColour} (want ${INK_2} / ${DANGER})`);
 
 console.log('\nOne pill component: uniform box, colours preserved');
 const pills = new Map();
