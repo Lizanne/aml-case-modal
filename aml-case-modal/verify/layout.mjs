@@ -281,13 +281,33 @@ check('colours were preserved, not flattened',
   String(new Set(P.map((r) => r.bg + r.fg)).size) + ' distinct');
 check('no pill is interactive', P.every((r) => !r.role && !r.tabindex));
 // Nothing should still be styling a pill outside the component.
-check('required-action chip icons are 16x16', await page.evaluate(() => {
-  const icons = [...document.querySelectorAll('required-chips ui-pill mat-icon')];
-  return icons.length > 0 && icons.every((i) => {
-    const r = i.getBoundingClientRect();
-    return Math.round(r.width) === 16 && Math.round(r.height) === 16;
-  });
-}));
+// ui-pill deliberately does not size projected icons, so every caller that
+// puts one in a pill has to do it - and any that forgets falls back to
+// Material's 24px inside a 24px pill. Checked across the states that have them.
+const pillIcons = [];
+for (const st of ['01', '03', '05', '10']) {
+  await page.goto(`${BASE}/?state=${st}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('ui-pill', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  if (st === '05') {
+    await page
+      .locator('severity-dialog mat-radio-button:has-text("Compliance") input')
+      .check({ force: true });
+    await page.waitForTimeout(350);
+  }
+  pillIcons.push(
+    ...(await page.evaluate(() =>
+      [...document.querySelectorAll('ui-pill mat-icon')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { glyph: e.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height) };
+      }),
+    )),
+  );
+}
+check('pills carry icons to check', pillIcons.length >= 3, String(pillIcons.length));
+check('every icon inside a pill is 16x16',
+  pillIcons.every((i) => i.w === 16 && i.h === 16),
+  [...new Set(pillIcons.map((i) => `${i.glyph}:${i.w}x${i.h}`))].join(' '));
 // ::ng-deep de-scopes to a bare element selector, so a rule meant for one
 // component silently resizes every icon in the app. Nothing may declare one.
 check('no global bare mat-icon rule exists', await page.evaluate(() => {

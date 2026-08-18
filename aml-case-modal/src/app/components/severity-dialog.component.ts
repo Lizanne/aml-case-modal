@@ -32,7 +32,10 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         @if (target(); as to) {
           <ui-pill [severity]="to">{{ label(to) }}</ui-pill>
           <ui-pill tone="warn" [attr.data-direction]="direction()">
-            <mat-icon>{{ direction() === 'escalation' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            <!-- The word beside it already names the direction. -->
+            <mat-icon class="badge__arrow" aria-hidden="true">{{
+              direction() === 'escalation' ? 'arrow_upward' : 'arrow_downward'
+            }}</mat-icon>
             {{ direction() === 'escalation' ? 'Escalation' : 'De-escalation' }}
           </ui-pill>
         } @else {
@@ -78,6 +81,15 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         flex-wrap: wrap;
         gap: 10px;
         padding: 4px 0 16px;
+      }
+      /* mat-icon.<class>, not just .<class>: Material's own .mat-icon rule sets
+         24px at the same class specificity, so the element tag is what wins.
+         ui-pill deliberately does not size projected icons - the caller does. */
+      mat-icon.badge__arrow {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
       .pair__arrow {
         color: var(--ink-3);
