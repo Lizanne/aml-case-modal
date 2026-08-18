@@ -39,10 +39,11 @@ import { AttachmentListComponent } from './attachment-list.component';
         }
 
         <label class="field">
-          <span class="field__label">Note <span class="field__req">required</span></span>
+          <span class="field__label">Note</span>
           <textarea
             class="field__input"
             rows="4"
+            aria-required="true"
             [value]="draft.note"
             (input)="onNote($event)"
             placeholder="What did you do, and what did you find?"
@@ -84,7 +85,7 @@ import { AttachmentListComponent } from './attachment-list.component';
 
         <!-- Rule 5: explicit choice, neither option styled as the recommended one. -->
         <fieldset class="field field--lock">
-          <legend class="field__label">After saving <span class="field__req">choose one</span></legend>
+          <legend class="field__label">After saving <span class="field__hint">choose one</span></legend>
           <mat-radio-group
             class="lock-choice"
             [value]="draft.lockAfter"
@@ -164,12 +165,13 @@ import { AttachmentListComponent } from './attachment-list.component';
         color: var(--ink);
         padding: 0;
       }
-      .field__req,
+      .field__hint,
       .field__optional {
         font-weight: 400;
-        font-size: 12px;
+        font-size: 14px;
+        line-height: 20px;
         color: var(--ink-3);
-        margin-left: 6px;
+        margin-left: 2px;
       }
       .field__hint {
         margin: 0;

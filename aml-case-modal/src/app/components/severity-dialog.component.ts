@@ -50,10 +50,11 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
       </mat-radio-group>
 
       <label class="field">
-        <span class="field__label">Reason <span class="field__req">required</span></span>
+        <span class="field__label">Reason</span>
         <textarea
           class="field__input"
           rows="3"
+          aria-required="true"
           [value]="reason()"
           (input)="reason.set($any($event.target).value)"
           placeholder="Why is the severity changing?"
@@ -112,12 +113,6 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         line-height: 20px;
         font-weight: 600;
         color: var(--ink);
-      }
-      .field__req {
-        font-weight: 400;
-        font-size: 12px;
-        color: var(--ink-3);
-        margin-left: 6px;
       }
       .field__input {
         width: 100%;

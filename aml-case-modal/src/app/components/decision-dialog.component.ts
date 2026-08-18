@@ -26,10 +26,11 @@ import { DialogShellComponent } from './dialog-shell.component';
       </p>
 
       <label class="field">
-        <span class="field__label">Decision <span class="field__req">required</span></span>
+        <span class="field__label">Decision</span>
         <textarea
           class="field__input"
           rows="5"
+          aria-required="true"
           [value]="note()"
           (input)="note.set($any($event.target).value)"
           placeholder="What was decided, and on what basis?"
@@ -77,12 +78,6 @@ import { DialogShellComponent } from './dialog-shell.component';
         line-height: 20px;
         font-weight: 600;
         color: var(--ink);
-      }
-      .field__req {
-        font-weight: 400;
-        font-size: 12px;
-        color: var(--ink-3);
-        margin-left: 6px;
       }
       .field__input {
         width: 100%;

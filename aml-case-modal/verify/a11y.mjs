@@ -183,6 +183,32 @@ check('attachment errors are announced without breaking list semantics', await p
   );
 }));
 
+console.log('\nRequired fields say so programmatically, not just visually');
+// The visible "required" markers were removed. The fields are still required -
+// Save stays disabled without them - so the requirement has to reach a screen
+// reader some other way, or it reaches them not at all.
+for (const [state, sel] of [
+  ['02', 'record-form'],
+  ['05', 'severity-dialog'],
+  ['06', 'decision-dialog'],
+]) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(`${sel} textarea`, { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate((s) => {
+    const host = document.querySelector(s);
+    const areas = [...host.querySelectorAll('textarea')];
+    return {
+      allMarked: areas.length > 0 && areas.every((t) => t.getAttribute('aria-required') === 'true'),
+      noVisibleMarker: ![...host.querySelectorAll('.field__label')].some((l) =>
+        /\brequired\b/i.test(l.textContent),
+      ),
+    };
+  }, sel);
+  check(`${sel}: textarea is aria-required`, r.allMarked);
+  check(`${sel}: no visible "required" marker on labels`, r.noVisibleMarker);
+}
+
 console.log(`\npage errors: ${consoleErrors.length}`);
 consoleErrors.slice(0, 3).forEach((e) => console.log(`  ! ${e.slice(0, 160)}`));
 
