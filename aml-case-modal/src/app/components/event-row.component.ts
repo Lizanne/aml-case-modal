@@ -113,6 +113,31 @@ import { PillComponent } from './ui-pill.component';
         font-size: 12px;
         color: var(--ink-3);
       }
+
+      /**
+       * Mobile: the one-line rule is what has to give.
+       *
+       * At ~310px the reason had 9px to ellipsise into, which is not an
+       * annotation, it is a smudge. The row wraps instead: label and arrows
+       * hold the first line, the reason wraps below at full width, and the
+       * timestamp trails it.
+       */
+      @media (max-width: 719.98px) {
+        .row {
+          flex-wrap: wrap;
+          row-gap: 2px;
+        }
+        .row__reason {
+          flex: 1 1 100%;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+        }
+        .row__meta {
+          margin-left: 0;
+          text-align: left;
+        }
+      }
     `,
   ],
 })

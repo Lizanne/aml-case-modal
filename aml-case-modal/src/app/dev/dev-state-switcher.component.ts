@@ -125,7 +125,37 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
       .dev__actions .mdc-button:disabled {
         --mdc-outlined-button-disabled-label-text-color: rgba(255, 255, 255, 0.34);
       }
-    `,
+    
+      /**
+       * Mobile: the select's 340px minimum was the single biggest source of
+       * horizontal overflow on the whole page - it pushed the dev row to
+       * 388px inside a 343px container and gave the document a scrollbar that
+       * made every other measurement look wrong. Below 720px the field owns
+       * the full row and the select fills it.
+       */
+      @media (max-width: 719.98px) {
+        .dev {
+          align-items: stretch;
+          flex-direction: column;
+          gap: 10px;
+          padding: 12px;
+        }
+        .dev__field {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 6px;
+          width: 100%;
+        }
+        .dev__select {
+          min-width: 0;
+          width: 100%;
+        }
+        .dev__hint {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+      }
+`,
   ],
 })
 export class DevStateSwitcherComponent {

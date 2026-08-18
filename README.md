@@ -31,10 +31,11 @@ Fourteen states are reachable through a dev state switcher, mirroring the Figma
 frames — from unlocked, through recording outcomes and adjusting severity, to
 resolved and read-only.
 
-Six Playwright suites cover it: the states render correctly, the rules hold when
+Seven Playwright suites cover it: the states render correctly, the rules hold when
 driven live, the layout never latches or overflows, the dual-modal interaction
-behaves, the severity ranking is derived rather than hardcoded, and every state
-passes axe-core WCAG 2.1 AA plus real keyboard paths.
+behaves, the severity ranking is derived rather than hardcoded, every state
+passes axe-core WCAG 2.1 AA plus real keyboard paths, and the layout survives
+375px and 390px viewports without scrolling sideways.
 
 ```bash
 cd aml-case-modal

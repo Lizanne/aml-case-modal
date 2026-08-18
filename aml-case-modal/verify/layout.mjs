@@ -485,7 +485,14 @@ const bandState = () =>
     const text = el.querySelector('.head__lock-text');
     return {
       h: Math.round(el.getBoundingClientRect().height),
-      stripTop: Math.round(strip.getBoundingClientRect().top),
+      // Relative to the modal, NOT the viewport. Measured absolutely this
+      // tracked the height of the dev harness sitting above the modal - whose
+      // hint text wraps differently per state - so it failed for a reason that
+      // has nothing to do with the lock band it is meant to be watching.
+      stripTop: Math.round(
+        strip.getBoundingClientRect().top -
+          document.querySelector('aml-case-modal .modal').getBoundingClientRect().top,
+      ),
       text: text.textContent.trim(),
       textColour: getComputedStyle(text).color,
       iconColour: getComputedStyle(el.querySelector('.head__lock-icon')).color,

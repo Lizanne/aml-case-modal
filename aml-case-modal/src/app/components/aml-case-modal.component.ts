@@ -100,6 +100,10 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       :host {
         display: block;
         min-width: 0;
+        /* The width is set inline from the measured stage. This is the
+           backstop: whatever that number says, the modal never exceeds the
+           viewport and never creates a horizontal scrollbar. */
+        max-width: 100vw;
         /* The reflow. Width is animated, never opacity or pointer-events, so
            the modal stays fully interactive throughout. */
         transition: width 300ms ease-out;
@@ -128,6 +132,8 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       .segments__group {
         display: flex;
         width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--page);

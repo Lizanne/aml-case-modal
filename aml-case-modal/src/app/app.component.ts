@@ -119,11 +119,20 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         gap: 16px;
         min-width: 0;
       }
-      /* The entering modal slides in beside the incumbent while the incumbent
-         animates down to half width. Transform and opacity only, so it never
-         intercepts or blocks input during the move. */
+      /**
+       * The entering modal slides in beside the incumbent while the incumbent
+       * animates down to half width. Transform and opacity only, so it never
+       * intercepts or blocks input during the move.
+       *
+       * backwards, NOT both. "both" keeps the final keyframe applied forever,
+       * and a "transform: none" keyframe computes to an identity matrix
+       * rather than to none - which still makes this element a containing
+       * block for every position: fixed descendant, permanently. That is what
+       * pinned the mobile dialog sheet to the modal instead of the viewport.
+       * backwards gives the same pre-start state and leaves nothing behind.
+       */
       .stage__modal {
-        animation: modal-in 300ms ease-out both;
+        animation: modal-in 300ms ease-out backwards;
       }
       @keyframes modal-in {
         from {
@@ -151,6 +160,35 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       }
 
       @media (prefers-reduced-motion: reduce) {
+        .stage__modal {
+          animation: none;
+        }
+      }
+
+      /**
+       * Mobile: one 16px gutter, everywhere.
+       *
+       * The modal takes its width from the measured stage, so narrowing the
+       * page padding is what gives it calc(100vw - 32px) - there is no second
+       * width rule to keep in step, and nothing needs !important to beat the
+       * inline width the workspace sets.
+       */
+      @media (max-width: 719.98px) {
+        .page {
+          padding-left: 16px;
+          padding-right: 16px;
+          padding-bottom: 96px;
+        }
+        .page__dev {
+          padding: 16px;
+        }
+        .dock {
+          padding: 12px 16px;
+        }
+        /* No transform on the modal at all here: for the 300ms the animation
+           runs it is a containing block, and a dialog open on arrival (the
+           dev switcher lands straight on 05) would render as a sheet pinned
+           to the modal and then snap to the viewport. */
         .stage__modal {
           animation: none;
         }

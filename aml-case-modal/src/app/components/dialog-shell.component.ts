@@ -131,6 +131,69 @@ let dialogSeq = 0;
         gap: 8px;
         padding: 14px 20px 16px;
       }
+
+      /**
+       * Mobile: a bottom sheet, not a floating box.
+       *
+       * The desktop dialog is absolutely positioned inside .modal, which is
+       * fine while the modal is comfortably larger than the dialog. On a phone
+       * the modal is barely wider than the dialog, so a centred box sat on top
+       * of a clipped modal edge with no clear owner. Anchoring to the viewport
+       * instead - position: fixed, hard to the bottom edge, rounded only where
+       * it meets the screen - makes it read as a sheet over the whole page.
+       *
+       * position: fixed escapes .modal's overflow: hidden. It would NOT escape
+       * a transformed ancestor, which .stage__modal is for the 300ms of its
+       * entry animation; the animation ends on transform: none, so the
+       * containing block goes with it.
+       */
+      @media (max-width: 719.98px) {
+        :host {
+          position: fixed;
+          inset: 0;
+          padding: 0;
+          place-items: end stretch;
+        }
+        .panel {
+          width: auto;
+          /* Flush at the bottom, 16px of gutter at the sides - the same
+             gutter the page and the modal use. */
+          margin: 0 16px;
+          max-height: 90vh;
+          border-radius: 14px 14px 0 0;
+          /* The sheet is the query container for its own footer, so the
+             stacking rule is about the sheet's width rather than a viewport
+             width that happens to imply it. */
+          container-type: inline-size;
+        }
+        .panel__head {
+          padding: 16px;
+        }
+        .panel__body {
+          padding: 0 16px 4px;
+        }
+        .panel__foot {
+          padding: 16px;
+        }
+      }
+
+      /**
+       * Under 400px there is not enough width for two buttons side by side
+       * without one of them wrapping its label. Stack them full width, primary
+       * first: column-reverse, because the primary is last in DOM order (which
+       * is the correct reading order for a dialog's actions and must not
+       * change to satisfy a layout).
+       */
+      @container (max-width: 400px) {
+        .panel__foot {
+          flex-direction: column-reverse;
+          align-items: stretch;
+          gap: 8px;
+        }
+        .panel__foot ::ng-deep .mat-mdc-button-base {
+          width: 100%;
+        }
+      }
     `,
   ],
 })

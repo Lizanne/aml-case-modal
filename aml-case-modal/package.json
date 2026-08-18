@@ -9,11 +9,12 @@
     "test": "ng test",
     "verify:states": "node verify/states.mjs",
     "verify:rules": "node verify/rules.mjs",
-    "verify": "npm run verify:states && npm run verify:rules && npm run verify:layout && npm run verify:dual && npm run verify:severity && npm run verify:a11y",
+    "verify": "npm run verify:states && npm run verify:rules && npm run verify:layout && npm run verify:dual && npm run verify:severity && npm run verify:a11y && npm run verify:mobile",
     "verify:layout": "node verify/layout.mjs",
     "verify:dual": "node verify/dual.mjs",
     "verify:severity": "node verify/severity.mjs",
-    "verify:a11y": "node verify/a11y.mjs"
+    "verify:a11y": "node verify/a11y.mjs",
+    "verify:mobile": "node verify/mobile.mjs"
   },
   "private": true,
   "dependencies": {

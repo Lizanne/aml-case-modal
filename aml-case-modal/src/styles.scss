@@ -43,8 +43,8 @@
    * 12px pill text it is used for. Darkened to the same hue at 5.66:1.
    * Doubles as the warn tone below, so the two stay one colour.
    */
-  --sev-edd: #7F1D1D;
-  --sev-edd-bg: #FEF2F2;
+  --sev-edd: #78350F;
+  --sev-edd-bg: #FEF3C7;
   --sev-compliance: #270A6B;
   --sev-compliance-bg: #EBE8FF;
 
@@ -67,8 +67,8 @@
      this now matches --danger-bg exactly and sits close to --danger, so warn
      and danger no longer read as different states by colour alone - the icon
      and copy are what separate them. */
-  --warn: #7F1D1D;
-  --warn-bg: #FEF2F2;
+  --warn: #78350F;
+  --warn-bg: #FEF3C7;
 }
 
 /* --------------------------------------------------------------------------
@@ -163,6 +163,20 @@ $aml-theme: mat.define-light-theme(
 /* --------------------------------------------------------------------------
  * Base
  * ------------------------------------------------------------------------ */
+/**
+ * border-box everywhere.
+ *
+ * Padding and borders were being added on top of declared widths, so a rule
+ * saying "100%" rendered wider than its container. That is invisible on a
+ * 1440px desktop and the whole ball game at 375px, where 32px of gutter is
+ * 8.5% of the screen.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
   margin: 0;

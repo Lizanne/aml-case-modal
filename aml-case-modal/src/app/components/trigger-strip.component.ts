@@ -331,6 +331,79 @@ let stripSeq = 0;
       .trigger--new .cell__at {
         color: var(--ink-2);
       }
+
+      /**
+       * Mobile: the row stops being three columns and becomes two lines.
+       *
+       * The shared grid is what keeps rows aligned on desktop, and it is
+       * exactly what breaks here: the name column alone claims 140px of a
+       * ~310px content box, and the detail column was left with about 12px to
+       * render a full sentence into. Below 720px the list becomes a stack of
+       * blocks and each row owns its own grid - name and timestamp on the
+       * first line, the detail wrapping freely across the second.
+       *
+       * .trigger is display: contents on desktop, so the tint and border have
+       * to live on the cells there. Here the row has a box again and takes
+       * them back.
+       */
+      @media (max-width: 719.98px) {
+        .strip__bar {
+          padding: 0 16px;
+        }
+        .strip__list {
+          display: block;
+        }
+        .strip__list--expanded {
+          /* Rows are taller and no longer uniform, so a row-count height is
+             meaningless. Cap against the screen instead. */
+          max-height: 50vh;
+        }
+        .trigger {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: baseline;
+          column-gap: 12px;
+          row-gap: 2px;
+          padding: 10px 16px;
+          border-bottom: 1px solid var(--line);
+          background: var(--panel);
+        }
+        .trigger:last-child {
+          border-bottom: 0;
+        }
+        .cell {
+          height: auto;
+          padding: 0;
+          border-bottom: 0;
+          background: transparent;
+        }
+        /* Placed explicitly, by row and column. DOM order is name, detail,
+           meta - and auto-placement never backtracks, so once the full-width
+           detail has claimed row 2 the timestamp is pushed to a row 3 of its
+           own instead of sitting beside the name. Naming the cells is what
+           keeps it to two lines. */
+        .cell--name {
+          grid-area: 1 / 1;
+        }
+        .cell--meta {
+          grid-area: 1 / 2;
+        }
+        /* The whole point: full width on its own line, and allowed to wrap
+           instead of ellipsising a sentence down to nothing. */
+        .cell--detail {
+          grid-area: 2 / 1 / 3 / -1;
+          line-height: 20px;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+        }
+        .trigger--new {
+          background: var(--warn-bg);
+        }
+        .trigger--new .cell {
+          background: transparent;
+        }
+      }
     `,
   ],
   host: {

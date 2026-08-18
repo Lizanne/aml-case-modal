@@ -64,6 +64,7 @@ import { PillComponent } from './ui-pill.component';
     `
       :host {
         display: block;
+        max-width: 100vw;
         min-width: 0;
         transition: width 300ms ease-out;
       }

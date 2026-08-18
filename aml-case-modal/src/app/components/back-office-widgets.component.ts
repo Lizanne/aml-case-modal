@@ -79,9 +79,13 @@ import { PillComponent } from './ui-pill.component';
       :host {
         display: block;
       }
+      /* min(260px, 100%) rather than a bare 260px: an auto-fit track whose
+         floor is wider than the container overflows it instead of collapsing
+         to one column, which is exactly what a 260px minimum does on a phone
+         narrower than that. */
       .widgets {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
       }
       .widget {
@@ -115,6 +119,16 @@ import { PillComponent } from './ui-pill.component';
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+      }
+
+      /* Mobile: one card per row, full width inside the page's 16px gutter. */
+      @media (max-width: 719.98px) {
+        .widgets {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .widget__foot button {
+          flex: 1 1 auto;
+        }
       }
     `,
   ],
