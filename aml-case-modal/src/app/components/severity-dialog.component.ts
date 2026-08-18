@@ -62,7 +62,7 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
       </label>
 
       <p class="warn-note">
-        <mat-icon>lock_open</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">lock_open</mat-icon>
         The lock is lifted on severity change. You can lock the case again from the header.
       </p>
 
@@ -132,10 +132,10 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
       }
       .warn-note {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 8px;
         margin: 16px 0 4px;
-        padding: 10px 12px;
+        padding: 16px;
         border-radius: 8px;
         background: var(--warn-bg);
         color: var(--warn);
@@ -143,9 +143,10 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         line-height: 20px;
       }
       .warn-note mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
       }
     `,

@@ -175,6 +175,63 @@ check('green survives on the done chip and the lock band', await page.evaluate((
   return chip === g && band === g;
 }, SUCCESS));
 
+console.log('\nBanners: 16px, top-aligned, 20px outlined icons');
+const BANNERS = [
+  ['04', 'player-info-panel .banner'],
+  ['10', 'player-info-panel .warn-note'],
+  ['10', 'workflow-panel .resync'],
+  ['05', 'severity-dialog .warn-note'],
+  ['06', 'decision-dialog .met'],
+  ['00b', 'confirm-unlock-dialog .danger-note'],
+];
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const [state, sel] of BANNERS) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(sel, { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate((s) => {
+    const el = document.querySelector(s);
+    const cs = getComputedStyle(el);
+    const i = el.querySelector('mat-icon');
+    const ir = i.getBoundingClientRect();
+    return {
+      pads: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft],
+      align: cs.alignItems,
+      iw: Math.round(ir.width), ih: Math.round(ir.height),
+      outlined: /Outlined/.test(getComputedStyle(i).fontFamily),
+      // top-aligned means the icon sits at the padding edge, not floated to
+      // the vertical centre of a multi-line block
+      iconAtTop: Math.round(ir.top - el.getBoundingClientRect().top) === parseFloat(cs.paddingTop),
+    };
+  }, sel);
+  const name = sel.split(' ').pop();
+  check(`${state} ${name}: 16px padding`, r.pads.every((v) => v === '16px'), r.pads.join(' '));
+  check(`${state} ${name}: icon and text top-aligned`, r.align === 'flex-start' && r.iconAtTop);
+  check(`${state} ${name}: 20px outlined icon`, r.iw === 20 && r.ih === 20 && r.outlined,
+    `${r.iw}x${r.ih} outlined=${r.outlined}`);
+}
+
+console.log('\nAttachment chips: 8px sides, 16px outlined icon');
+await page.goto(`${BASE}/?state=02`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('record-form .file', { timeout: 15000 });
+await page.waitForTimeout(400);
+const chip = await page.evaluate(() => {
+  const f = document.querySelector('record-form .file');
+  const cs = getComputedStyle(f);
+  const i = f.querySelector('.file__icon');
+  const r = i.getBoundingClientRect();
+  return {
+    padL: cs.paddingLeft, padR: cs.paddingRight,
+    iw: Math.round(r.width), ih: Math.round(r.height),
+    outlined: /Outlined/.test(getComputedStyle(i).fontFamily),
+  };
+});
+check('chip has 8px left and right padding', chip.padL === '8px' && chip.padR === '8px',
+  `${chip.padL}/${chip.padR}`);
+check('chip icon is 16px and outlined',
+  chip.iw === 16 && chip.ih === 16 && chip.outlined,
+  `${chip.iw}x${chip.ih} outlined=${chip.outlined}`);
+
 console.log('\nWorkflow footer: two controls, hard right, 12px apart');
 for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
   await page.setViewportSize({ width, height: 1040 });

@@ -56,7 +56,7 @@ import { RequiredChipsComponent } from './required-chips.component';
       <!-- Rule 11: the resync gate sits above the stream, where it blocks work. -->
       @if (store.snapshotOutOfSync() && !store.isResolved()) {
         <div class="resync" role="alert">
-          <mat-icon>sync_problem</mat-icon>
+          <mat-icon fontSet="material-icons-outlined">sync_problem</mat-icon>
           <div class="resync__text">
             <p class="resync__title">Snapshot is out of sync</p>
             <p class="resync__body">
@@ -162,14 +162,22 @@ import { RequiredChipsComponent } from './required-chips.component';
       }
       .resync {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
-        padding: 12px 20px;
+        padding: 16px;
         background: var(--warn-bg);
         color: var(--warn);
         border-bottom: 1px solid var(--line);
       }
+      /* icon + text top-align; the action stays optically centred. */
+      .resync button {
+        align-self: center;
+      }
       .resync mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
       }
       .resync__text {

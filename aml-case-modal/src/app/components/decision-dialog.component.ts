@@ -21,7 +21,7 @@ import { DialogShellComponent } from './dialog-shell.component';
       <!-- One line. The action names were a stacked list restating the chip bar
            the agent just came from; the sentence is the whole message. -->
       <p class="met">
-        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        <mat-icon fontSet="material-icons-outlined" aria-hidden="true">check_circle</mat-icon>
         <span>All required actions are recorded. Submitting will resolve the case.</span>
       </p>
 
@@ -52,11 +52,11 @@ import { DialogShellComponent } from './dialog-shell.component';
       /* Plain weight throughout - nothing here is a link or a control. */
       .met {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 8px;
         font-weight: 400;
         margin: 4px 0 16px;
-        padding: 12px 14px;
+        padding: 16px;
         border-radius: 10px;
         background: var(--success-bg);
         color: var(--success);
@@ -64,9 +64,10 @@ import { DialogShellComponent } from './dialog-shell.component';
         line-height: 20px;
       }
       .met mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
       }
       .field {

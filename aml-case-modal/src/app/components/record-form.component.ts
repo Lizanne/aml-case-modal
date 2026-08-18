@@ -32,7 +32,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         <!-- Open question 2: the draft is preserved; Save is what stops. -->
         @if (store.snapshotOutOfSync()) {
           <p class="warn-note" role="alert">
-            <mat-icon>sync_problem</mat-icon>
+            <mat-icon fontSet="material-icons-outlined">sync_problem</mat-icon>
             Resync required. A new trigger arrived - resync the snapshot before saving this outcome.
             Your draft is kept.
           </p>
@@ -138,7 +138,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         align-items: flex-start;
         gap: 8px;
         margin: 0;
-        padding: 10px 12px;
+        padding: 16px;
         border-radius: 8px;
         background: var(--warn-bg);
         color: var(--warn);
@@ -146,9 +146,10 @@ import { AttachmentListComponent } from './attachment-list.component';
         line-height: 20px;
       }
       .warn-note mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
       }
       .field {

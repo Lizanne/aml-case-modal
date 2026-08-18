@@ -28,7 +28,9 @@ import { Attachment, AttachmentError } from '../core/models';
       <ul class="files" [attr.aria-label]="removable ? 'Attachments in this draft' : 'Attachments'">
         @for (file of attachments; track file.id) {
           <li class="file">
-            <mat-icon class="file__icon">{{ file.kind === 'pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+            <mat-icon class="file__icon" fontSet="material-icons-outlined" aria-hidden="true">{{
+              file.kind === 'pdf' ? 'picture_as_pdf' : 'image'
+            }}</mat-icon>
             <span class="file__name">{{ file.name }}</span>
             <span class="file__size">{{ file.sizeKb | fileSize }}</span>
             @if (removable) {
@@ -87,7 +89,7 @@ import { Attachment, AttachmentError } from '../core/models';
         align-items: center;
         gap: 8px;
         max-width: 100%;
-        padding: 5px 6px 5px 10px;
+        padding: 5px 8px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--page);
@@ -95,10 +97,14 @@ import { Attachment, AttachmentError } from '../core/models';
         line-height: 20px;
         color: var(--ink-2);
       }
-      .file__icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+      /* mat-icon.<class>: Material's own .mat-icon sets 24px at the same class
+         specificity, so the element tag is what wins. */
+      mat-icon.file__icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        flex: none;
         color: var(--ink-3);
       }
       .file__name {

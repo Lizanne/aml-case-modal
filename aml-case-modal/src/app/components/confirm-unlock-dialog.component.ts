@@ -26,7 +26,7 @@ import { DialogShellComponent } from './dialog-shell.component';
       </p>
 
       <p class="danger-note">
-        <mat-icon>warning_amber</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">warning_amber</mat-icon>
         <span>
           Unlocking takes the case from {{ owner() }}. Anything they have typed and not saved is
           lost. The unlock is recorded against your name in the case timeline.
@@ -57,7 +57,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         align-items: flex-start;
         gap: 8px;
         margin: 0 0 4px;
-        padding: 12px 14px;
+        padding: 16px;
         border-radius: 10px;
         background: var(--danger-bg);
         color: var(--danger);
@@ -65,9 +65,10 @@ import { DialogShellComponent } from './dialog-shell.component';
         line-height: 20px;
       }
       .danger-note mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
       }
     `,

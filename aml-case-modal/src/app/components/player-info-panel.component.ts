@@ -53,7 +53,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
             @if (store.viewedSnapshot(); as snap) {
               <!-- Historical view: name the action that captured it, and offer a way back. -->
               <div class="banner">
-                <mat-icon>history</mat-icon>
+                <mat-icon fontSet="material-icons-outlined">history</mat-icon>
                 <div>
                   <p class="banner__title">Snapshot from "{{ snap.title }}"</p>
                   <p class="banner__body">Captured {{ snap.at | stamp }}. This view is read-only.</p>
@@ -92,7 +92,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               </div>
               @if (store.snapshotOutOfSync()) {
                 <p class="warn-note" role="alert">
-                  <mat-icon>sync_problem</mat-icon>
+                  <mat-icon fontSet="material-icons-outlined">sync_problem</mat-icon>
                   Out of sync. A trigger arrived after this snapshot was taken.
                 </p>
               }
@@ -239,10 +239,10 @@ const TAB_LABEL: Record<InfoTab, string> = {
       }
       .warn-note {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 8px;
         margin: 14px 0 0;
-        padding: 10px 12px;
+        padding: 16px;
         border-radius: 8px;
         background: var(--warn-bg);
         color: var(--warn);
@@ -250,17 +250,27 @@ const TAB_LABEL: Record<InfoTab, string> = {
         line-height: 20px;
       }
       .warn-note mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        flex: none;
       }
       .banner {
         display: flex;
         gap: 10px;
-        padding: 12px 14px;
+        padding: 16px;
         border-radius: 10px;
         background: var(--primary-bg);
         color: var(--primary-ink);
+        align-items: flex-start;
+      }
+      .banner mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        flex: none;
       }
       .banner__title {
         margin: 0;
