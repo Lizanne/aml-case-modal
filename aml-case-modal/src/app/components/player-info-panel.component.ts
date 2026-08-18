@@ -52,6 +52,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
            so a keyboard user had no way to scroll it. -->
       <div
         class="info__body"
+        [class.info__body--flush]="store.infoTab() === 'past-cases'"
         #body
         tabindex="0"
         aria-label="Player information"
@@ -233,6 +234,17 @@ const TAB_LABEL: Record<InfoTab, string> = {
         min-height: 0;
         overflow-y: auto;
         padding: 12px 20px;
+      }
+      /**
+       * Past AML cases only: the body gives up its side padding so the rows
+       * reach both edges. The rows are buttons - a hover or active tint that
+       * stops 20px short of the panel edge reads as a floating strip rather
+       * than a row of a list. Their own 20px keeps the CONTENT on the same
+       * gutter as every other tab, so only the tint moves.
+       */
+      .info__body--flush {
+        padding-left: 0;
+        padding-right: 0;
       }
       .snapshot-head {
         display: flex;

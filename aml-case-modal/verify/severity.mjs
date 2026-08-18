@@ -382,6 +382,55 @@ const past = await page.evaluate(() => {
   }));
 });
 
+/**
+ * Flush on this tab only.
+ *
+ * The rule is two halves and both matter: .info__body drops its side padding
+ * so the rows reach the panel edges, and .past__row keeps 20px of its own so
+ * the CONTENT still lines up with every other tab. Checking one without the
+ * other would pass for a row whose text had slid to the edge with it.
+ *
+ * Source order is the trap here: .info__body--flush and .info__body have the
+ * same specificity, so the flush rule declared first lost to the shorthand
+ * that follows it. Asserting the computed padding is what catches that -
+ * the class was on the element the whole time.
+ */
+const flush = await page.evaluate(() => {
+  const body = document.querySelector('.info__body');
+  const row = document.querySelector('.past__row');
+  const br = body.getBoundingClientRect();
+  const rr = row.getBoundingClientRect();
+  const bcs = getComputedStyle(body);
+  const rcs = getComputedStyle(row);
+  return {
+    bodyPad: `${bcs.paddingLeft}/${bcs.paddingRight}`,
+    rowPad: `${rcs.paddingLeft}/${rcs.paddingRight}`,
+    fills: Math.round(rr.left - br.left) === 0 && Math.round(br.right - rr.right) === 0,
+    contentInset: [
+      Math.round(row.querySelector('.past__id').getBoundingClientRect().left - br.left),
+      Math.round(br.right - row.querySelector('.past__date').getBoundingClientRect().right),
+    ],
+  };
+});
+check('past-cases tab: the body has no side padding', flush.bodyPad === '0px/0px', flush.bodyPad);
+check('past-cases tab: rows fill it edge to edge', flush.fills);
+check('past-cases tab: the row carries the 20px instead', flush.rowPad === '20px/20px', flush.rowPad);
+check('past-cases tab: content still sits on the 20px gutter',
+  flush.contentInset.every((v) => v === 20), flush.contentInset.join(','));
+
+// Only this tab. Every other one keeps the body's own gutter.
+for (const tab of ['Snapshot', 'Timeline']) {
+  await page.locator(`player-info-panel .mat-mdc-tab:has-text("${tab}")`).click();
+  await page.waitForTimeout(400);
+  const pad = await page.evaluate(() => {
+    const c = getComputedStyle(document.querySelector('.info__body'));
+    return `${c.paddingLeft}/${c.paddingRight}`;
+  });
+  check(`${tab} tab keeps its 20px gutter`, pad === '20px/20px', pad);
+}
+await page.locator('player-info-panel .mat-mdc-tab:has-text("Past AML cases")').click();
+await page.waitForTimeout(400);
+
 check('one row per past case', past.length === FIXTURE.pastCases.length);
 check('rows are real buttons', past.every((r) => r.tag === 'button'));
 check('every row is a single line of equal height',
