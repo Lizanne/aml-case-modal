@@ -52,7 +52,7 @@ import { ActionTypeId } from '../core/models';
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 16px 12px;
+        padding: 12px 16px;
         border: 1px dashed var(--line-strong);
         border-radius: 12px;
         background: transparent;
@@ -73,10 +73,10 @@ import { ActionTypeId } from '../core/models';
       }
       /* Narrow: a single row - label left, Record right. The box is now
          identical to the wide slot, so the padding is inherited rather than
-         restated - a second 16px 12px here is what drifts later. Only the
+         restated - a second copy of the value here is what drifts later. Only the
          type inside the box changes. */
       .slot--narrow {
-        gap: 10px;
+        gap: 12px;
       }
       .slot--narrow .slot__title {
         font-size: 14px;

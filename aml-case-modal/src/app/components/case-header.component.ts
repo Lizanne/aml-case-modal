@@ -192,9 +192,13 @@ import { PillComponent } from './ui-pill.component';
 
       /* Narrow / dual-modal: two tight rows instead of a title block and a
          separate lock strip. */
+      /* align-items is inherited from .head__main (flex-start) on purpose.
+         Narrow used to centre, which measured the buttons against the WHOLE
+         title block - title row plus the identity line - and pushed them down
+         past the title they belong to. Top-aligned, they sit level with it,
+         the same way they do at full width. */
       .head--narrow .head__main {
         padding: 16px 20px 0;
-        align-items: center;
       }
       .head--narrow .head__title {
         font-size: 16px;

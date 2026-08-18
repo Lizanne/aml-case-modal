@@ -536,7 +536,10 @@ const slotPad = await page.evaluate(() => {
   const c = getComputedStyle(document.querySelector('action-placeholder .slot'));
   return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
 });
-check('slot: 16px 12px', slotPad === '16px 12px 16px 12px', slotPad);
+// The literal follows the component; what is actually under test is that BOTH
+// widths use one value, asserted below by comparing them rather than by
+// restating the number twice.
+check('slot: 12px 16px', slotPad === '12px 16px 12px 16px', slotPad);
 await page.setViewportSize({ width: 1500, height: 1040 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.segments', { timeout: 15000 });
@@ -580,7 +583,8 @@ check('09 segments: the current one stays a clean white card',
   hovered.every((t) => !t.checked || t.bg === 'rgb(255, 255, 255)'), JSON.stringify(hovered));
 await page.hover('.segments');
 await page.waitForTimeout(250);
-check('09 slot: the same 16px 12px as wide', seg.narrowSlot === slotPad, seg.narrowSlot);
+check('09 slot: the same padding as wide', seg.narrowSlot === slotPad,
+  `${seg.narrowSlot} vs ${slotPad}`);
 
 console.log('\nScroll regions share a 20px gutter; dialog titles share a size');
 for (const [state, width] of [['01', 1440], ['04', 1440], ['09', 1500]]) {
@@ -657,11 +661,21 @@ const chromeSizes = async (label) => {
     const g = document.querySelector('case-header .head__actions');
     if (!g) return null;
     const b = [...g.querySelectorAll('button')].map((e) => e.getBoundingClientRect());
-    return { css: getComputedStyle(g).gap, measured: Math.round(b[1].left - b[0].right) };
+    const title = document.querySelector('case-header .head__title').getBoundingClientRect();
+    return {
+      css: getComputedStyle(g).gap,
+      measured: Math.round(b[1].left - b[0].right),
+      topOffset: Math.round(b[0].top - title.top),
+    };
   });
   if (pair) {
     check(`${label}: 12px between minimise and close`,
       pair.css === '12px' && pair.measured === 12, `${pair.css} / ${pair.measured}px`);
+    // Level with the title, at BOTH widths. Narrow used to centre the row,
+    // which measured the buttons against the whole title block - title plus
+    // the identity line - and dropped them below the title they belong to.
+    check(`${label}: top-aligned with the title`, pair.topOffset === 0,
+      `${pair.topOffset}px below the title`);
   }
 };
 for (const state of ['01', '07', '10', '00b', '05', '06']) {
