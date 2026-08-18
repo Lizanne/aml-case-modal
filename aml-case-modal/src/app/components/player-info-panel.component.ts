@@ -75,9 +75,14 @@ const TAB_LABEL: Record<InfoTab, string> = {
                      36px stroked Resync occupies, and Material's button would
                      bring a ripple, a min-width and a border to a text
                      action. -->
-                <button type="button" class="snapshot-head__back" (click)="store.clearSnapshot()">
+                <button
+                  type="button"
+                  class="snapshot-head__back"
+                  aria-label="Back to current snapshot"
+                  (click)="store.clearSnapshot()"
+                >
                   <mat-icon aria-hidden="true">chevron_left</mat-icon>
-                  Back to current snapshot
+                  Back
                 </button>
               </div>
               <p class="placeholder">
@@ -297,10 +302,9 @@ const TAB_LABEL: Record<InfoTab, string> = {
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      /* Text style: no border, no fill, no min-width. --primary-ink rather
-         than --primary because this sits on the panel as body-sized text -
-         6.48:1 against 4.84:1. The underline is the hover affordance; colour
-         alone would not be one. */
+      /* Text style: no border, no fill, no min-width. The visible label is
+         just "Back"; aria-label carries the full sentence, because "Back" on
+         its own does not say where to out of context. */
       .snapshot-head__back {
         display: inline-flex;
         align-items: center;
@@ -313,12 +317,16 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--primary-ink);
+        color: var(--link);
         cursor: pointer;
         white-space: nowrap;
       }
-      .snapshot-head__back:hover {
-        text-decoration: underline;
+      /* Colour only - no underline. The icon has to be told as well: mat-icon
+         sets its own colour, so a rule on the button alone leaves the chevron
+         behind at the rest colour. */
+      .snapshot-head__back:hover,
+      .snapshot-head__back:hover mat-icon {
+        color: var(--link-hover);
       }
       .snapshot-head__back:focus-visible {
         outline: 2px solid var(--primary);

@@ -35,6 +35,12 @@
    */
   --primary-ink: #175fa8;
 
+  /* Text actions that are not chrome buttons - a label and an icon sitting
+     directly on a panel. Deeper than --primary, which is a fill colour and
+     only 4.84:1 as text on white; these are 6.70:1 and 8.72:1. */
+  --link: #1D4ED8;
+  --link-hover: #1E40AF;
+
   /* Severity language. Used ONLY for severity. */
   --sev-aml: #7F1D1D;
   --sev-aml-bg: #FEF2F2;

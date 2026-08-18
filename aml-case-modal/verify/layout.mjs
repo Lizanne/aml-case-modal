@@ -456,6 +456,7 @@ const snapHead = async (state) => {
       // Both lines single-line in both modes, or the fixed height is a lie.
       lines: [Math.round(R(label).height), Math.round(R(value).height)],
       control: ctrl ? ctrl.textContent.replace(/\s+/g, ' ').trim() : null,
+      controlName: ctrl ? (ctrl.getAttribute('aria-label') ?? ctrl.textContent.trim()) : null,
       controlIsMaterial: ctrl ? ctrl.classList.contains('mat-mdc-button-base') : null,
       controlDisabled: ctrl ? ctrl.disabled : null,
       controlRightInset: ctrl ? Math.round(R(h).right - R(ctrl).right) : null,
@@ -484,9 +485,40 @@ check('historical: label names the source action',
 check('historical: timestamp reads "Captured ..."',
   historical.value === 'Captured 11 Aug 2026, 11:42', historical.value);
 check('historical: the control is a text Back with a chevron',
-  /chevron_left Back to current snapshot/.test(historical.control ?? '') &&
+  /^chevron_left Back$/.test(historical.control ?? '') &&
     historical.controlIsMaterial === false,
   `${historical.control} material=${historical.controlIsMaterial}`);
+// "Back" alone does not say where to, so the full sentence lives on the label.
+check('historical: the short label keeps a full accessible name',
+  historical.controlName === 'Back to current snapshot', historical.controlName);
+
+const LINK = await tokenRgb('--link');
+const LINK_HOVER = await tokenRgb('--link-hover');
+const backStyle = () =>
+  page.evaluate(() => {
+    const btn = document.querySelector('.snapshot-head__back');
+    const icon = btn.querySelector('mat-icon');
+    return {
+      colour: getComputedStyle(btn).color,
+      iconColour: getComputedStyle(icon).color,
+      underline: getComputedStyle(btn).textDecorationLine,
+    };
+  });
+const backRest = await backStyle();
+check('historical: label and chevron share the link colour',
+  backRest.colour === LINK && backRest.iconColour === LINK,
+  `${backRest.colour} / ${backRest.iconColour}`);
+await page.hover('.snapshot-head__back');
+await page.waitForTimeout(250);
+const backHover = await backStyle();
+// mat-icon sets its own colour, so a hover rule on the button alone leaves the
+// chevron behind at the rest colour.
+check('historical: both deepen together on hover',
+  backHover.colour === LINK_HOVER && backHover.iconColour === LINK_HOVER,
+  `${backHover.colour} / ${backHover.iconColour}`);
+check('historical: no underline, at rest or on hover',
+  backRest.underline === 'none' && backHover.underline === 'none',
+  `${backRest.underline} / ${backHover.underline}`);
 check('the tinted banner is gone', !historical.hasOldBanner);
 
 // The whole point of the shared layout.
