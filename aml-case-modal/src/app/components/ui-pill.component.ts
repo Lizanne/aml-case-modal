@@ -44,7 +44,9 @@ export type PillTone =
       :host {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        /* Icon to text. One value for every pill: a per-instance override here
+           is how eight near-copies started last time. */
+        gap: 4px;
         flex: none;
         height: 24px;
         padding: 0 8px;

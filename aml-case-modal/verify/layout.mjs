@@ -254,7 +254,7 @@ for (const state of ['01', '03', '05', '07', '10', '11']) {
       return {
         key: `${e.getAttribute('data-sev') || e.getAttribute('data-tone')}`,
         h: Math.round(e.getBoundingClientRect().height),
-        padL: cs.paddingLeft, padR: cs.paddingRight,
+        padL: cs.paddingLeft, padR: cs.paddingRight, gap: cs.gap,
         fs: cs.fontSize, lh: cs.lineHeight, radius: cs.borderTopLeftRadius,
         bg: cs.backgroundColor, fg: cs.color,
         role: e.getAttribute('role'), tabindex: e.getAttribute('tabindex'),
@@ -267,6 +267,9 @@ const P = [...pills.values()];
 check('pills are rendered at all', P.length >= 8, String(P.length));
 check('every pill is 24px tall', P.every((r) => r.h === 24),
   [...new Set(P.map((r) => r.h))].join(','));
+check('every pill uses a 4px icon-to-text gap',
+  P.every((r) => r.gap === '4px'),
+  [...new Set(P.map((r) => r.gap))].join(','));
 check('every pill has 8px horizontal padding',
   P.every((r) => r.padL === '8px' && r.padR === '8px'),
   [...new Set(P.map((r) => r.padL + '/' + r.padR))].join(' '));
