@@ -298,6 +298,33 @@ for (const [state, width, expectName] of [['01', 1440, true], ['09', 1500, false
     h.text.includes('Howard Williams') === expectName, h.text);
 }
 
+console.log('\nEvery form field puts 8px between its label and its control');
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const [state, host] of [['02', 'record-form'], ['05', 'severity-dialog'], ['06', 'decision-dialog']]) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(`${host} .field`, { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const fields = await page.$$eval(`${host} .field`, (els) =>
+    els.map((e) => {
+      const label = e.querySelector('label, .field__label');
+      const next = label?.nextElementSibling;
+      return {
+        text: label ? label.textContent.trim().slice(0, 24) : '(none)',
+        cssGap: getComputedStyle(e).rowGap,
+        // A <legend> is not a grid item, so the gap cannot reach it. Those
+        // fields are measured as null and only the declared gap is asserted.
+        measured: label && next && label.tagName !== 'LEGEND'
+          ? Math.round(next.getBoundingClientRect().top - label.getBoundingClientRect().bottom)
+          : null,
+      };
+    }),
+  );
+  check(`${state} ${host}: fields found`, fields.length > 0, `${fields.length}`);
+  const off = fields.filter((f) => f.cssGap !== '8px' || (f.measured !== null && f.measured !== 8));
+  check(`${state} ${host}: 8px label to control`, off.length === 0,
+    off.map((f) => `${f.text} ${f.cssGap}/${f.measured}`).join(', '));
+}
+
 console.log('\nSlot and segment padding');
 await page.setViewportSize({ width: 1440, height: 1040 });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });

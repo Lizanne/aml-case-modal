@@ -154,7 +154,7 @@ import { AttachmentListComponent } from './attachment-list.component';
       }
       .field {
         display: grid;
-        gap: 6px;
+        gap: 8px;
         border: 0;
         padding: 0;
         margin: 0;

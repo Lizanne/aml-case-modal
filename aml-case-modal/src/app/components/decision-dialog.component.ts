@@ -72,7 +72,7 @@ import { DialogShellComponent } from './dialog-shell.component';
       }
       .field {
         display: grid;
-        gap: 6px;
+        gap: 8px;
       }
       .field__label {
         font-size: 14px;

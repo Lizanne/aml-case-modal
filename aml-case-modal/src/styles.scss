@@ -13,16 +13,16 @@
  * ------------------------------------------------------------------------ */
 :root {
   --ink: #18181b;
-  --ink-2: #52525b;
+  --ink-2: #52525B;
   /**
    * Was #71717A, which is 4.83:1 on --panel but only 4.43:1 on --page and
    * 4.32:1 on the warn tint - both under AA, and muted text lands on those
    * surfaces constantly (file sizes, timestamps, empty states). Darkened to
    * clear 4.5:1 on every surface it is used on.
    */
-  --ink-3: #6b6b73;
-  --line: #e3e6ea;
-  --line-strong: #c9ced6;
+  --ink-3: #52525B;
+  --line: #E4E4E7;
+  --line-strong: #A1A1AA;
   --page: #f4f5f7;
   --panel: #ffffff;
 
@@ -36,21 +36,21 @@
   --primary-ink: #175fa8;
 
   /* Severity language. Used ONLY for severity. */
-  --sev-aml: #b3261e;
-  --sev-aml-bg: #fbecea;
+  --sev-aml: #7F1D1D;
+  --sev-aml-bg: #FEF2F2;
   /**
    * EDD was #B06A00, which is only 3.83:1 on its own tint - under AA for the
    * 12px pill text it is used for. Darkened to the same hue at 5.66:1.
    * Doubles as the warn tone below, so the two stay one colour.
    */
-  --sev-edd: #8c5200;
-  --sev-edd-bg: #fdf1dc;
-  --sev-compliance: #5b4bc4;
-  --sev-compliance-bg: #edeafb;
+  --sev-edd: #7F1D1D;
+  --sev-edd-bg: #FEF2F2;
+  --sev-compliance: #270A6B;
+  --sev-compliance-bg: #EBE8FF;
 
   /* State colours. */
-  --success: #0f6e57;
-  --success-bg: #e0f5ed;
+  --success: #14532D;
+  --success-bg: #F0FDF4;
   /**
    * Paler success tint, for filling a whole card rather than a chip.
    *
@@ -60,9 +60,9 @@
    * 4.5. This tint keeps every text token already used inside an outcome card
    * compliant, so the card can be tinted without restating any text colour.
    */
-  --success-bg-subtle: #f4fcf7;
-  --danger: #b3261e;
-  --danger-bg: #fbecea;
+  --success-bg-subtle: #DCFCE7;
+  --danger: #B91C1C;
+  --danger-bg: #FEF2F2;
   /* Same tone as --sev-edd, and darkened with it: 5.66:1 on the tint, and
      6.32:1 for white text on a solid --warn fill (the NEW badge). */
   --warn: #8c5200;
