@@ -76,6 +76,11 @@
   --success-bg-subtle: #DCFCE7;
   --danger: #B91C1C;
   --danger-bg: #FEF2F2;
+  /* Hover/pressed pair for destructive controls: one step deeper in the same
+     red family, so a control that is red at rest stays red under the cursor
+     instead of falling back to neutral ink. 6.80:1 on its own fill. */
+  --danger-strong: #991B1B;
+  --danger-bg-strong: #FEE2E2;
   /* Same tone as --sev-edd, and moved with it: 9.16:1 on the tint, and
      10.02:1 for white text on a solid --warn fill (the NEW badge). Note that
      this now matches --danger-bg exactly and sits close to --danger, so warn

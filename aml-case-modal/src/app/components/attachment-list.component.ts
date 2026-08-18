@@ -130,10 +130,16 @@ import { Attachment, AttachmentError } from '../core/models';
         color: var(--ink-3);
         cursor: pointer;
       }
-      .file__remove:hover,
-      .error__dismiss:hover {
+      .file__remove:hover {
         background: rgba(0, 0, 0, 0.06);
         color: var(--ink);
+      }
+      /* Not in the rule above: the dismiss is red at rest, and the shared
+         neutral hover was quietly turning it grey on the way to being
+         clicked - the one moment it should read as destructive. */
+      .error__dismiss:hover {
+        background: var(--danger-bg-strong);
+        color: var(--danger-strong);
       }
       .file__remove mat-icon,
       .error__dismiss mat-icon {

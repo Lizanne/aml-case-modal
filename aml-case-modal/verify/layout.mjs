@@ -261,6 +261,38 @@ check('chip icon is 20px and outlined',
   chip.iw === 20 && chip.ih === 20 && chip.outlined,
   `${chip.iw}x${chip.ih} outlined=${chip.outlined}`);
 
+console.log('\nThe error dismiss stays red under the cursor');
+await page.setViewportSize({ width: 1440, height: 1040 });
+await page.goto(`${BASE}/?state=02`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('record-form .error__dismiss', { timeout: 15000 });
+await page.waitForTimeout(450);
+const DANGER = await tokenRgb('--danger');
+const DANGER_STRONG = await tokenRgb('--danger-strong');
+const DANGER_BG_STRONG = await tokenRgb('--danger-bg-strong');
+const style = (sel) =>
+  page.evaluate((s) => {
+    const cs = getComputedStyle(document.querySelector(s));
+    return { color: cs.color, bg: cs.backgroundColor };
+  }, sel);
+const dismissRest = await style('record-form .error__dismiss');
+check('dismiss is red at rest', dismissRest.color === DANGER, dismissRest.color);
+await page.hover('record-form .error__dismiss');
+await page.waitForTimeout(250);
+const dismissHover = await style('record-form .error__dismiss');
+// It used to share a neutral hover with the file remove, so the one control
+// that IS destructive turned grey at the moment of acting on it.
+check('dismiss deepens in red on hover, never goes neutral',
+  dismissHover.color === DANGER_STRONG && dismissHover.bg === DANGER_BG_STRONG,
+  `${dismissHover.color} on ${dismissHover.bg}`);
+
+// The file remove is a different control - it keeps the neutral hover.
+await page.hover('record-form .file__remove');
+await page.waitForTimeout(250);
+const removeHover = await style('record-form .file__remove');
+check('the file remove keeps its neutral hover',
+  removeHover.color !== DANGER_STRONG && removeHover.bg === 'rgba(0, 0, 0, 0.06)',
+  `${removeHover.color} on ${removeHover.bg}`);
+
 console.log('\nWorkflow footer: two controls, hard right, 12px apart');
 for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
   await page.setViewportSize({ width, height: 1040 });
@@ -777,7 +809,6 @@ check('locked to you offers Unlock', byName['locked to you'].button === 'Unlock'
 // Tokens again, not hexes: what matters is that the neutral row uses --ink-2
 // and the destructive button uses --danger, whatever those hold.
 const INK_2 = await tokenRgb('--ink-2');
-const DANGER = await tokenRgb('--danger');
 check('locked to other is neutral text with a red Force unlock',
   byName['locked to other'].textColour === INK_2 &&
     byName['locked to other'].button === 'Force unlock' &&
