@@ -248,7 +248,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         justify-content: flex-end;
         flex-wrap: wrap;
         gap: 12px;
-        padding: 14px 20px;
+        padding: 16px 20px;
         border-top: 1px solid var(--line);
         background: var(--panel);
       }

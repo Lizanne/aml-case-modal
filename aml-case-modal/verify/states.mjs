@@ -62,7 +62,7 @@ const CHECKS = {
   '04': async (p) => ({
     'snapshot banner shown': (await p.locator('player-info-panel .banner').count()) === 1,
     'names source action': (await p.locator('player-info-panel .banner__title').innerText()).includes('Open source searches'),
-    'back link present': (await p.locator('player-info-panel .back').count()) === 1,
+    'way back lives inside the banner': (await p.locator('player-info-panel .banner .banner__back').count()) === 1,
   }),
   '05': async (p) => ({
     'severity dialog open': (await p.locator('severity-dialog').count()) === 1,

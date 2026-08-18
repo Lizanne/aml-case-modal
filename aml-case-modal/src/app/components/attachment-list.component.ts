@@ -89,8 +89,7 @@ import { Attachment, AttachmentError } from '../core/models';
         align-items: center;
         gap: 8px;
         max-width: 100%;
-        padding: 5px 8px;
-        border: 1px solid var(--line);
+        padding: 6px 8px;
         border-radius: 8px;
         background: var(--page);
         font-size: 14px;
@@ -100,12 +99,12 @@ import { Attachment, AttachmentError } from '../core/models';
       /* mat-icon.<class>: Material's own .mat-icon sets 24px at the same class
          specificity, so the element tag is what wins. */
       mat-icon.file__icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         flex: none;
-        color: var(--ink-3);
+        color: var(--ink);
       }
       .file__name {
         color: var(--ink);
@@ -122,8 +121,8 @@ import { Attachment, AttachmentError } from '../core/models';
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         padding: 0;
         border: 0;
         border-radius: 6px;
@@ -138,9 +137,9 @@ import { Attachment, AttachmentError } from '../core/models';
       }
       .file__remove mat-icon,
       .error__dismiss mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
+        font-size: 20px;
+        width: 20x;
+        height: 20px;
       }
       .errors {
         list-style: none;
@@ -153,7 +152,7 @@ import { Attachment, AttachmentError } from '../core/models';
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        padding: 8px 8px 8px 10px;
+        padding: 6px 8px;
         border-radius: 8px;
         background: var(--danger-bg);
         color: var(--danger);
@@ -161,9 +160,9 @@ import { Attachment, AttachmentError } from '../core/models';
         line-height: 20px;
       }
       .error__icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
         flex: none;
       }
       .error__message {

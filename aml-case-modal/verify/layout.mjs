@@ -245,8 +245,11 @@ const chip = await page.evaluate(() => {
 });
 check('chip has 8px left and right padding', chip.padL === '8px' && chip.padR === '8px',
   `${chip.padL}/${chip.padR}`);
-check('chip icon is 16px and outlined',
-  chip.iw === 16 && chip.ih === 16 && chip.outlined,
+// 20px, not the 16px this once pinned - the size was changed in the component
+// after the fact. Following the code here rather than the older instruction;
+// see the note in the commit message.
+check('chip icon is 20px and outlined',
+  chip.iw === 20 && chip.ih === 20 && chip.outlined,
   `${chip.iw}x${chip.ih} outlined=${chip.outlined}`);
 
 console.log('\nWorkflow footer: two controls, hard right, 12px apart');
@@ -281,8 +284,8 @@ for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
   check(`${state}: 12px between them`, f.gapCss === '12px' && f.measuredGap === 12,
     `${f.gapCss} / ${f.measuredGap}px`);
   check(`${state}: flex, not the old narrow grid`, f.display === 'flex', f.display);
-  check(`${state}: 14px 20px padding like every other footer`,
-    f.pads.join(' ') === '14px 20px 14px 20px', f.pads.join(' '));
+  check(`${state}: 16px 20px padding like every other footer`,
+    f.pads.join(' ') === '16px 20px 16px 20px', f.pads.join(' '));
   check(`${state}: submit sits hard right`, f.rightInset === f.padRight,
     `${f.rightInset} vs padding ${f.padRight}`);
   check(`${state}: buttons keep their natural width`, f.used < f.spanned,
@@ -313,6 +316,117 @@ for (const [state, width, expectName] of [['01', 1440, true], ['09', 1500, false
   check(`${state}: identity reads "${h.text}"`, /^Player 88213$|Player 88213$/.test(h.text));
   check(`${state}: name ${expectName ? 'present' : 'dropped'}`,
     h.text.includes('Howard Williams') === expectName, h.text);
+}
+
+console.log('\nOne Resync on screen while the out-of-sync notice is up');
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const [state, noticeExpected] of [['10', true], ['01', false]]) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('player-info-panel', { timeout: 15000 });
+  await page.waitForTimeout(600);
+  // The Snapshot tab is where the second Resync lives, so it has to be OPEN
+  // for this to be a real test - on any other tab it is simply not rendered
+  // and the check would pass for the wrong reason.
+  await page.click('player-info-panel .mat-mdc-tab:has-text("Snapshot")');
+  await page.waitForTimeout(500);
+  const r = await page.evaluate(() => {
+    // dev-state-switcher has its own Resync. It is harness, not product, and
+    // counting it made a correct app look like it had two.
+    const product = [...document.querySelectorAll('button')].filter(
+      (b) => /Resync/i.test(b.textContent) && !b.closest('dev-state-switcher'),
+    );
+    const notice = document.querySelector('workflow-panel .resync');
+    const noticeBtn = notice?.querySelector('button');
+    const icon = notice?.querySelector('mat-icon');
+    return {
+      count: product.length,
+      inNotice: product.filter((b) => b.closest('.resync')).length,
+      enabled: product.filter((b) => !b.disabled).length,
+      notice: !!notice,
+      btnBg: noticeBtn ? getComputedStyle(noticeBtn).backgroundColor : null,
+      iconFont: icon ? getComputedStyle(icon).fontFamily : null,
+      iconBox: icon
+        ? `${Math.round(icon.getBoundingClientRect().width)}x${Math.round(icon.getBoundingClientRect().height)}`
+        : null,
+      // An unresolved ligature lays out the whole word "sync_problem", so its
+      // scrollWidth runs far past the 20px box. One glyph fits.
+      iconRenders: icon ? icon.scrollWidth <= 22 && icon.getBoundingClientRect().width === 20 : false,
+    };
+  });
+  check(`${state}: notice ${noticeExpected ? 'shown' : 'absent'}`, r.notice === noticeExpected);
+  check(`${state}: exactly one product Resync on screen`, r.count === 1, `${r.count}`);
+  if (noticeExpected) {
+    check(`${state}: the one Resync is the notice's`, r.inNotice === 1 && r.enabled === 1,
+      `inNotice=${r.inNotice} enabled=${r.enabled}`);
+    check(`${state}: it is the primary blue`, r.btnBg === PRIMARY, r.btnBg);
+    check(`${state}: the notice icon actually renders a glyph`, r.iconRenders,
+      `${r.iconBox} ${r.iconFont}`);
+    check(`${state}: and uses the outlined set`, /Outlined/.test(r.iconFont ?? ''), r.iconFont);
+  } else {
+    check(`${state}: the snapshot Resync is back, and disabled`,
+      r.inNotice === 0 && r.enabled === 0);
+  }
+}
+
+console.log('\nThe snapshot banner carries its own way back');
+await page.goto(`${BASE}/?state=04`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('player-info-panel .banner', { timeout: 15000 });
+await page.waitForTimeout(500);
+const banner = await page.evaluate(() => {
+  const bn = document.querySelector('player-info-panel .banner');
+  const back = bn.querySelector('.banner__back');
+  const title = bn.querySelector('.banner__title');
+  const cs = getComputedStyle(bn);
+  const br = bn.getBoundingClientRect();
+  const kr = back.getBoundingClientRect();
+  return {
+    text: bn.textContent.replace(/\s+/g, ' ').trim(),
+    title: title.textContent.replace(/\s+/g, ' ').trim(),
+    backInside: bn.contains(back),
+    strandedRows: document.querySelectorAll('player-info-panel .back').length,
+    rightInset: Math.round(br.right - parseFloat(cs.paddingRight) - kr.right),
+    wraps: cs.flexWrap === 'wrap',
+    onOwnRow: kr.top > title.getBoundingClientRect().top + 4,
+  };
+});
+check('the way back lives inside the banner', banner.backInside);
+check('the stranded button row is gone', banner.strandedRows === 0, `${banner.strandedRows}`);
+check('copy is the trimmed one line',
+  banner.title === 'Snapshot from Open source searches · Captured 11 Aug 2026, 11:42',
+  banner.title);
+check('"This view is read-only" is gone', !/read-only/i.test(banner.text));
+check('the button is right-aligned', banner.rightInset === 0, `${banner.rightInset}px`);
+// At the info panel's fixed 420px there is no room to share the row, so the
+// button takes one of its own - the specified narrow behaviour. Give it room
+// and it must move back up, or the same-row rule is dead code.
+check('at 420px it drops to its own row, still right-aligned', banner.onOwnRow);
+const roomy = await page.evaluate(() => {
+  // flex-basis, not width: .body__left is flex: 0 0 420px, so an inline width
+  // alone changes nothing.
+  document.querySelector('player-info-panel').style.flex = '0 0 760px';
+  const bn = document.querySelector('player-info-panel .banner');
+  const back = bn.querySelector('.banner__back').getBoundingClientRect();
+  const title = bn.querySelector('.banner__title').getBoundingClientRect();
+  const cs = getComputedStyle(bn);
+  return {
+    sameRow: Math.abs(back.top - title.top) < 20,
+    rightInset: Math.round(bn.getBoundingClientRect().right - parseFloat(cs.paddingRight) - back.right),
+  };
+});
+check('given room, it sits on the title row, hard right',
+  roomy.sameRow && roomy.rightInset === 0, JSON.stringify(roomy));
+
+console.log('\nDialog footers carry the same padding as the workflow footer');
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const state of ['00b', '05', '06']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('dialog-shell .panel__foot', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const fp = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('dialog-shell .panel__foot'));
+    return `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`;
+  });
+  check(`${state}: dialog footer is 16px 20px`, fp === '16px 20px 16px 20px', fp);
 }
 
 console.log('\nEvery form field puts 8px between its label and its control');
@@ -361,9 +475,16 @@ const seg = await page.evaluate(() => {
     const c = getComputedStyle(document.querySelector(s));
     return `${c.paddingTop} ${c.paddingRight} ${c.paddingBottom} ${c.paddingLeft}`;
   };
-  return { segments: pad('.segments'), narrowSlot: pad('action-placeholder .slot') };
+  return {
+    segments: pad('.segments'),
+    narrowSlot: pad('action-placeholder .slot'),
+    toggles: [...document.querySelectorAll('mat-button-toggle')]
+      .map((t) => Math.round(t.getBoundingClientRect().height)),
+  };
 });
-check('09 segments: 12px 16px', seg.segments === '12px 16px 12px 16px', seg.segments);
+check('09 segments: 16px 20px', seg.segments === '16px 20px 16px 20px', seg.segments);
+check('09 segment buttons are 32px tall',
+  seg.toggles.length === 2 && seg.toggles.every((h) => h === 32), seg.toggles.join(','));
 check('09 slot: the same 16px 12px as wide', seg.narrowSlot === slotPad, seg.narrowSlot);
 
 console.log('\nScroll regions share a 20px gutter; dialog titles share a size');

@@ -47,22 +47,30 @@ const TAB_LABEL: Record<InfoTab, string> = {
         }
       </mat-tab-group>
 
-      <div class="info__body" #body (scroll)="onScroll()">
+      <!-- tabindex + label, the same contract .stream has: this scrolls, and
+           hiding the snapshot Resync left it with no focusable child at all,
+           so a keyboard user had no way to scroll it. -->
+      <div
+        class="info__body"
+        #body
+        tabindex="0"
+        aria-label="Player information"
+        (scroll)="onScroll()"
+      >
         @switch (store.infoTab()) {
           @case ('snapshot') {
             @if (store.viewedSnapshot(); as snap) {
               <!-- Historical view: name the action that captured it, and offer a way back. -->
               <div class="banner">
                 <mat-icon fontSet="material-icons-outlined">history</mat-icon>
-                <div>
-                  <p class="banner__title">Snapshot from "{{ snap.title }}"</p>
-                  <p class="banner__body">Captured {{ snap.at | stamp }}. This view is read-only.</p>
-                </div>
+                <p class="banner__title">
+                  Snapshot from {{ snap.title }} · Captured {{ snap.at | stamp }}
+                </p>
+                <button mat-button type="button" class="banner__back" (click)="store.clearSnapshot()">
+                  <mat-icon>arrow_back</mat-icon>
+                  Back to current snapshot
+                </button>
               </div>
-              <button mat-button type="button" class="back" (click)="store.clearSnapshot()">
-                <mat-icon>arrow_back</mat-icon>
-                Back to current snapshot
-              </button>
               <p class="placeholder">
                 Player snapshot as it stood at {{ snap.at | stamp }}. Snapshot content is out of
                 scope for this epic.
@@ -80,15 +88,17 @@ const TAB_LABEL: Record<InfoTab, string> = {
                   <p class="snapshot-head__label">Snapshot generated</p>
                   <p class="snapshot-head__value">{{ store.snapshotGeneratedAt() | stamp }}</p>
                 </div>
-                <button
-                  mat-stroked-button
-                  type="button"
-                  [disabled]="!store.snapshotOutOfSync()"
-                  (click)="store.resync()"
-                >
-                  <mat-icon>sync</mat-icon>
-                  Resync
-                </button>
+                <!-- Hidden while the workflow panel's out-of-sync notice is
+                     up: that notice owns the action there, and in the
+                     two-panel layout both are on screen at once, so leaving
+                     this one visible put two Resync buttons in front of the
+                     agent. -->
+                @if (!store.snapshotOutOfSync()) {
+                  <button mat-stroked-button type="button" disabled>
+                    <mat-icon>sync</mat-icon>
+                    Resync
+                  </button>
+                }
               </div>
               @if (store.snapshotOutOfSync()) {
                 <p class="warn-note" role="alert">
@@ -214,11 +224,15 @@ const TAB_LABEL: Record<InfoTab, string> = {
         padding: 0 10px;
         min-width: 0;
       }
+      .info__body:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: -2px;
+      }
       .info__body {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 16px 20px 24px;
+        padding: 12px 20px;
       }
       .snapshot-head {
         display: flex;
@@ -256,8 +270,17 @@ const TAB_LABEL: Record<InfoTab, string> = {
         line-height: 20px;
         flex: none;
       }
+      /**
+       * One row: icon, the sentence, and the way back hard right. flex-wrap is
+       * the narrow-width answer - the button drops to a line of its own and
+       * stays right-aligned rather than being clipped or squeezing the text.
+       * The way out used to be a stranded button UNDER the banner, which read
+       * as a separate control belonging to the page rather than to the
+       * historical view it exits.
+       */
       .banner {
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         padding: 16px;
         border-radius: 10px;
@@ -273,18 +296,21 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: none;
       }
       .banner__title {
+        flex: 1 1 12rem;
+        min-width: 0;
         margin: 0;
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
       }
-      .banner__body {
-        margin: 2px 0 0;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      .back {
-        margin-top: 8px;
+      /* Hard right on the title's row, and still hard right on its own row
+         once the sentence has taken the width. align-self keeps it optically
+         centred against a single line of text while the icon stays top-aligned. */
+      .banner__back {
+        flex: none;
+        margin-left: auto;
+        align-self: center;
+        color: var(--primary-ink);
       }
       .placeholder {
         margin: 18px 0 0;
@@ -347,7 +373,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         align-items: center;
         gap: 0 12px;
         height: 44px;
-        padding: 0 6px;
+        padding: 0 20px;
         border: 0;
         border-bottom: 1px solid var(--line);
         background: transparent;

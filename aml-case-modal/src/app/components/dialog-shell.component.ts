@@ -129,7 +129,7 @@ let dialogSeq = 0;
         display: flex;
         justify-content: flex-end;
         gap: 8px;
-        padding: 14px 20px 16px;
+        padding: 16px 20px;
       }
 
       /**

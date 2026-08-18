@@ -125,7 +125,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       /* Full-bleed, two equal halves - the segmented control is the primary
          navigation in this mode, not a secondary toggle. */
       .segments {
-        padding: 12px 16px;
+        padding: 16px 20px;
         border-bottom: 1px solid var(--line);
         background: var(--panel);
       }
@@ -145,10 +145,19 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         border: 0;
         background: transparent;
       }
+      /* 32px tall segments. Material sizes these off the label's line-height,
+         so the height has to be set on the toggle AND the line box centred
+         inside it, or the text sits high in a taller button. */
+      .segments__group ::ng-deep .mat-button-toggle {
+        height: 32px;
+      }
+      .segments__group ::ng-deep .mat-button-toggle .mat-button-toggle-button {
+        height: 32px;
+      }
       .segments__group ::ng-deep .mat-button-toggle-label-content {
         width: 100%;
         text-align: center;
-        line-height: 27px;
+        line-height: 32px;
         font-size: 14px;
       }
       /* The selected half reads as a raised card on the track. Material's

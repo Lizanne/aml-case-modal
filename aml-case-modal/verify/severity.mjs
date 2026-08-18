@@ -341,6 +341,27 @@ await go('01');
 await page.locator('player-info-panel .mat-mdc-tab:has-text("Past AML cases")').click();
 await page.waitForTimeout(400);
 
+/**
+ * The declared track, and what a subgrid row actually renders of it.
+ *
+ * .past declares the 90px ID column; each row is grid-template-columns:
+ * subgrid with its own horizontal padding and column-gap, and BOTH eat into
+ * the first track - the rendered cell is the parent track minus the row's
+ * left padding minus half its gap. Asserting a hand-tuned band of pixels made
+ * a padding change look like a broken column, so the band is derived instead
+ * and the 90px design value is pinned separately, where it belongs.
+ */
+const track = await page.evaluate(() => {
+  const parent = document.querySelector('.past');
+  const row = document.querySelector('.past__row');
+  const rcs = getComputedStyle(row);
+  return {
+    declared: parseFloat(getComputedStyle(parent).gridTemplateColumns.split(' ')[0]),
+    padLeft: parseFloat(rcs.paddingLeft),
+    gap: parseFloat(rcs.columnGap),
+  };
+});
+
 const past = await page.evaluate(() => {
   const rows = [...document.querySelectorAll('.past__row')];
   const cell = (r, sel) => r.querySelector(sel).getBoundingClientRect();
@@ -368,8 +389,12 @@ check('every row is a single line of equal height',
 check('all rows share the ID column', new Set(past.map((r) => r.idLeft)).size === 1);
 check('all rows share the severity column', new Set(past.map((r) => r.sevLeft)).size === 1);
 check('all dates end on the same right edge', new Set(past.map((r) => r.dateRight)).size === 1);
-check('the ID column is the fixed 90px track', past.every((r) => r.idWidth >= 74 && r.idWidth <= 90),
-  past.map((r) => r.idWidth).join(','));
+check('the ID column is declared at 90px', track.declared === 90, `${track.declared}px`);
+const expectedId = Math.round(track.declared - track.padLeft - track.gap / 2);
+check('every ID cell renders that track less the row inset',
+  past.every((r) => Math.abs(r.idWidth - expectedId) <= 1),
+  `${past.map((r) => r.idWidth).join(',')} vs ${expectedId} ` +
+    `(90 - ${track.padLeft} padding - ${track.gap / 2} half-gap)`);
 check('IDs render as #NNNN at weight 600',
   past.every((r, i) => r.idText === `#${FIXTURE.pastCases[i].caseId}` && r.idWeight === '600'));
 check('dates are right-aligned and never wrap',
