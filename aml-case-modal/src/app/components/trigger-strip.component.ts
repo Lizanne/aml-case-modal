@@ -92,7 +92,7 @@ let stripSeq = 0;
       -->
       <div class="strip__bar">
         <ui-pill
-          [tone]="showsArrival() ? 'warn' : 'primary'"
+          [tone]="showsArrival() ? 'warn' : 'info'"
         >
           {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
         </ui-pill>

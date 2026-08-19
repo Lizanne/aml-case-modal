@@ -27,7 +27,7 @@ import { PillComponent } from './ui-pill.component';
       <article class="widget">
         <div class="widget__head">
           <h2 class="widget__title">Responsible gambling alerts</h2>
-          <ui-pill tone="primary">SG alert</ui-pill>
+          <ui-pill tone="info">SG alert</ui-pill>
         </div>
         <p class="widget__body">1 active alert for this player.</p>
         <footer class="widget__foot">

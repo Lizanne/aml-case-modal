@@ -23,7 +23,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
  */
 export type PillTone =
   | 'neutral'
-  | 'primary'
+  | 'info'
   | 'success'
   | 'warn'
   | 'warn-solid'
@@ -63,9 +63,9 @@ export type PillTone =
       }
 
       /* ---- tones. Colours are unchanged from the blocks these replaced. ---- */
-      :host([data-tone='primary']) {
-        background: var(--primary-bg);
-        color: var(--primary-ink);
+      :host([data-tone='info']) {
+        background: var(--color-background-info-subdued);
+        color: var(--color-foreground-on-info);
       }
       :host([data-tone='success']) {
         background: var(--success-bg);

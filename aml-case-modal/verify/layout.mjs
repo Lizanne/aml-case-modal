@@ -433,6 +433,52 @@ for (const state of ['01', '07', '11']) {
   check(`${state}: labels stay vertically centred`, t.labelCentred);
 }
 
+console.log('\nBlue pills are the info tone, not primary');
+await page.setViewportSize({ width: 1440, height: 1040 });
+const INFO_BG = await tokenRgb('--color-background-info-subdued');
+const INFO_FG = await tokenRgb('--color-foreground-on-info');
+for (const state of ['01', '09', '10']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('ui-pill', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const pills = await page.$$eval('ui-pill', (els) =>
+    els.map((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        text: el.textContent.trim(),
+        tone: el.getAttribute('data-tone'),
+        bg: cs.backgroundColor,
+        fg: cs.color,
+      };
+    }),
+  );
+  // The tone is gone from the component, so nothing can still be asking for
+  // it - a stale tone attribute would silently fall through to the base.
+  check(`${state}: no pill is still on the primary tone`,
+    pills.every((p) => p.tone !== 'primary'),
+    pills.filter((p) => p.tone === 'primary').map((p) => p.text).join(', '));
+  const info = pills.filter((p) => p.tone === 'info');
+  check(`${state}: the blue pills carry the info tone`, info.length > 0,
+    pills.map((p) => `${p.text}:${p.tone}`).join(' '));
+  check(`${state}: info pills use the info tokens`,
+    info.every((p) => p.bg === INFO_BG && p.fg === INFO_FG),
+    info.map((p) => `${p.text} ${p.bg}/${p.fg}`).join('; '));
+}
+// The two the request named, by name.
+await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('trigger-strip ui-pill', { timeout: 15000 });
+await page.waitForTimeout(500);
+const named = await page.evaluate(() => {
+  const find = (t) =>
+    [...document.querySelectorAll('ui-pill')].find((el) => new RegExp(t).test(el.textContent));
+  const read = (el) => (el ? el.getAttribute('data-tone') : null);
+  return { sg: read(find('SG alert')), count: read(find('triggers')) };
+});
+check('SG alert is info', named.sg === 'info', String(named.sg));
+// The count goes amber on an unresynced arrival; state 10 is exactly that.
+check('the trigger count is warn while an arrival is unresynced',
+  named.count === 'warn', String(named.count));
+
 console.log('\nThe snapshot header is one layout in both modes');
 await page.setViewportSize({ width: 1440, height: 1040 });
 const snapHead = async (state) => {

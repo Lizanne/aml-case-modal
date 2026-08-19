@@ -38,6 +38,11 @@
   /* Text actions that are not chrome buttons - a label and an icon sitting
      directly on a panel. Deeper than --primary, which is a fill colour and
      only 4.84:1 as text on white; these are 6.70:1 and 8.72:1. */
+  /* Informational. Named as the design system names them, so the two can be
+     diffed without translating. 9.52:1 - the pill text is small and bold, so
+     it is held to the text bar rather than the 3:1 non-text one. */
+  --color-background-info-subdued: #EFF6FF;
+  --color-foreground-on-info: #1E3A8A;
   --link: #1D4ED8;
   --link-hover: #1E40AF;
 

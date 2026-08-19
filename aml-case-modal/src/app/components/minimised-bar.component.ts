@@ -21,7 +21,7 @@ import { PillComponent } from './ui-pill.component';
   template: `
     <div class="bar" [class.bar--pulse]="pulsing()">
       <button class="bar__restore" type="button" (click)="ws.restore(id)">
-        <ui-pill [severity]="severity()" tone="primary">{{ tag() }}</ui-pill>
+        <ui-pill [severity]="severity()" tone="info">{{ tag() }}</ui-pill>
         <span class="bar__title">{{ title() }}</span>
         <span class="bar__hint">Restore</span>
         <mat-icon class="bar__icon">expand_less</mat-icon>

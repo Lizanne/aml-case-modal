@@ -27,7 +27,7 @@ import { PillComponent } from './ui-pill.component';
       <div class="sg__head">
         <h2 class="sg__title">Resolve &amp; archive active alert</h2>
         <!-- SG-alert material stays in the primary blue family, never severity. -->
-        <ui-pill tone="primary">SG alert</ui-pill>
+        <ui-pill tone="info">SG alert</ui-pill>
         <button
           class="sg__btn"
           type="button"
