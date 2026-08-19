@@ -477,35 +477,29 @@ const TAB_LABEL: Record<InfoTab, string> = {
       }
 
       /**
-       * Matches Past AML cases: one grid owns the columns, each row is a
-       * subgrid of it, and the row carries the 20px gutter so the separator
-       * and any tint run the full width of the panel.
+       * Figma node 22224:18961.
        *
-       * min-height rather than height, which is where it has to part company
-       * with .past__row: that row holds an ID, a pill and a date, all short.
-       * "What happened" is a sentence - "Severity changed AML to EDD
-       * (escalation); lock lifted" - and a fixed 44px would ellipsise most of
-       * this list down to nothing. Short rows match Past AML exactly; only the
-       * long ones grow.
+       * Two lines in the left column - timestamp over what happened - and the
+       * actor right-aligned on the second of them. 8px 20px inside a 52px row
+       * with a 1px rule under it: 8 + 16 + 20 + 8 = 52, so the height falls
+       * out of the type rather than being asserted on top of it.
+       *
+       * The cells are placed by hand. Auto-placement never backtracks, so the
+       * actor would take a third row of its own instead of sitting beside the
+       * second line - the same trap the trigger strip fell into.
        */
       .timeline {
         list-style: none;
         margin: 0;
         padding: 0;
-        display: grid;
-        grid-template-columns: 120px minmax(0, 1fr) auto;
       }
       .timeline__item {
         display: grid;
-        grid-column: 1 / -1;
-        grid-template-columns: subgrid;
-        align-items: center;
-        gap: 0 12px;
-        min-height: 44px;
-        padding: 10px 20px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 12px;
+        min-height: 52px;
+        padding: 8px 20px;
         border-bottom: 1px solid var(--line);
-        font-size: 14px;
-        line-height: 20px;
       }
       .timeline__item:last-of-type {
         border-bottom: 0;
@@ -513,19 +507,24 @@ const TAB_LABEL: Record<InfoTab, string> = {
       /* No hover tint: these rows are records, not controls. See the trigger
          strip - a tint on something that cannot be clicked is a lie. */
       .timeline__at {
-        color: var(--ink-3);
-        font-variant-numeric: tabular-nums;
+        grid-area: 1 / 1;
         font-size: 12px;
         line-height: 16px;
+        color: var(--ink-3);
+        font-variant-numeric: tabular-nums;
       }
       .timeline__what {
+        grid-area: 2 / 1;
         min-width: 0;
+        font-size: 14px;
+        line-height: 20px;
         color: var(--ink);
       }
       .timeline__who {
+        grid-area: 2 / 2;
+        font-size: 14px;
+        line-height: 20px;
         color: var(--ink-3);
-        font-size: 12px;
-        line-height: 16px;
         text-align: right;
         white-space: nowrap;
         text-transform: capitalize;

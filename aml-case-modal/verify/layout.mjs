@@ -492,36 +492,68 @@ await page.click('.past__row');
 await page.waitForTimeout(450);
 assertEdges('Past AML cases with the stub open', await edgesIn());
 
-// Timeline is the same row shape as Past AML cases.
+// Timeline row, per Figma node 22224:18961: two stacked lines on the left,
+// the actor right-aligned on the second of them.
 await page.click('player-info-panel .mat-mdc-tab:has-text("Timeline")');
 await page.waitForTimeout(450);
+const INK = await tokenRgb('--ink');
+const INK_3 = await tokenRgb('--ink-3');
+const LINE = await tokenRgb('--line');
 const tl = await page.evaluate(() => {
-  const list = document.querySelector('.timeline');
-  const row = document.querySelector('.timeline__item');
+  const rows = [...document.querySelectorAll('.timeline__item')];
+  const row = rows[0];
   const body = document.querySelector('.info__body');
   const R = (e) => e.getBoundingClientRect();
+  const at = row.querySelector('.timeline__at');
+  const what = row.querySelector('.timeline__what');
+  const who = row.querySelector('.timeline__who');
+  const cs = getComputedStyle(row);
+  const type = (e) => {
+    const c = getComputedStyle(e);
+    return { size: c.fontSize, line: c.lineHeight, colour: c.color };
+  };
   return {
-    cols: getComputedStyle(list).gridTemplateColumns.split(' ').length,
-    rowIsSubgrid: getComputedStyle(row).gridTemplateColumns.startsWith('subgrid'),
-    rowPad: getComputedStyle(row).paddingLeft + '/' + getComputedStyle(row).paddingRight,
-    bodyPad: getComputedStyle(body).paddingLeft + '/' + getComputedStyle(body).paddingRight,
-    rowSpansPanel:
+    pad: cs.padding,
+    // 8 + 16 + 20 + 8 = 52, plus the 1px rule. The last row has no rule.
+    heights: [...new Set(rows.map((r) => Math.round(R(r).height)))].sort(),
+    borderW: cs.borderBottomWidth,
+    borderColour: cs.borderBottomColor,
+    spansPanel:
       Math.round(R(row).left - R(body).left) === 0 &&
       Math.round(R(body).right - R(row).right) === 0,
-    minHeight: getComputedStyle(row).minHeight,
-    // Records, not controls: no pointer, and nothing focusable in the list.
-    cursor: getComputedStyle(row).cursor,
-    buttons: document.querySelectorAll('.timeline button, .timeline [tabindex]').length,
+    atLeft: Math.round(R(at).left - R(row).left),
+    whatLeft: Math.round(R(what).left - R(row).left),
+    whoRight: Math.round(R(row).right - R(who).right),
+    atAboveWhat: R(at).bottom <= R(what).top + 1,
+    whoOnWhatLine: Math.abs(Math.round(R(who).top) - Math.round(R(what).top)) <= 1,
+    at: type(at), what: type(what), who: type(who),
+    cursor: cs.cursor,
+    controls: document.querySelectorAll('.timeline button, .timeline [tabindex]').length,
   };
 });
-check('timeline: three columns owned by the list', tl.cols === 3, String(tl.cols));
-check('timeline: rows are subgrids of it', tl.rowIsSubgrid, tl.rowIsSubgrid ? '' : 'not subgrid');
-check('timeline: body is flush, row carries the 20px',
-  tl.bodyPad === '0px/0px' && tl.rowPad === '20px/20px', `${tl.bodyPad} row ${tl.rowPad}`);
-check('timeline: rows span the panel edge to edge', tl.rowSpansPanel);
-check('timeline: 44px floor, not a fixed height', tl.minHeight === '44px', tl.minHeight);
+check('timeline: 8px 20px in a 52px row', tl.pad === '8px 20px' &&
+  tl.heights.every((h) => h === 52 || h === 53), `${tl.pad} heights ${tl.heights.join(',')}`);
+check('timeline: 1px rule in the line colour',
+  tl.borderW === '1px' && tl.borderColour === LINE, `${tl.borderW} ${tl.borderColour}`);
+check('timeline: rows span the panel edge to edge', tl.spansPanel);
+check('timeline: both left lines sit on the 20px gutter',
+  tl.atLeft === 20 && tl.whatLeft === 20, `${tl.atLeft} / ${tl.whatLeft}`);
+check('timeline: the actor ends 20px from the right edge', tl.whoRight === 20, String(tl.whoRight));
+check('timeline: timestamp is 12px/16px muted',
+  tl.at.size === '12px' && tl.at.line === '16px' && tl.at.colour === INK_3,
+  `${tl.at.size}/${tl.at.line} ${tl.at.colour}`);
+check('timeline: what happened is 14px/20px full ink',
+  tl.what.size === '14px' && tl.what.line === '20px' && tl.what.colour === INK,
+  `${tl.what.size}/${tl.what.line} ${tl.what.colour}`);
+check('timeline: the actor is 14px/20px muted',
+  tl.who.size === '14px' && tl.who.line === '20px' && tl.who.colour === INK_3,
+  `${tl.who.size}/${tl.who.line} ${tl.who.colour}`);
+check('timeline: timestamp sits above what happened', tl.atAboveWhat);
+// Auto-placement would push the actor onto a third row of its own; the cells
+// are placed by hand so it lands beside the second line.
+check('timeline: the actor is level with what happened', tl.whoOnWhatLine);
 check('timeline: rows are records, not controls',
-  tl.cursor !== 'pointer' && tl.buttons === 0, `${tl.cursor} buttons=${tl.buttons}`);
+  tl.cursor !== 'pointer' && tl.controls === 0, `${tl.cursor} controls=${tl.controls}`);
 
 console.log('\nBlue pills are the info tone, not primary');
 await page.setViewportSize({ width: 1440, height: 1040 });
