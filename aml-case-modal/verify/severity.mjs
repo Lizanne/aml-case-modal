@@ -418,8 +418,9 @@ check('past-cases tab: the row carries the 20px instead', flush.rowPad === '20px
 check('past-cases tab: content still sits on the 20px gutter',
   flush.contentInset.every((v) => v === 20), flush.contentInset.join(','));
 
-// Only this tab. Every other one keeps the body's own gutter.
-for (const tab of ['Snapshot', 'Timeline']) {
+// Timeline is a full-bleed row list too now, so Snapshot is the comparison:
+// it is the tab whose content is prose rather than rows.
+for (const tab of ['Snapshot']) {
   await page.locator(`player-info-panel .mat-mdc-tab:has-text("${tab}")`).click();
   await page.waitForTimeout(400);
   const pad = await page.evaluate(() => {

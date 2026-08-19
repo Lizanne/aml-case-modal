@@ -433,6 +433,96 @@ for (const state of ['01', '07', '11']) {
   check(`${state}: labels stay vertically centred`, t.labelCentred);
 }
 
+console.log('\nOne 20px left edge across the stream and all four tabs');
+await page.setViewportSize({ width: 1440, height: 1040 });
+const GUTTER_PX = 20;
+const edgesIn = () =>
+  page.evaluate(() => {
+    const out = {};
+    const wf = document.querySelector('workflow-panel');
+    const info = document.querySelector('player-info-panel');
+    const at = (label, sel, base) => {
+      const el = document.querySelector(sel);
+      if (el) out[label] = Math.round(el.getBoundingClientRect().left - base);
+    };
+    if (wf) {
+      const l = wf.getBoundingClientRect().left;
+      // The bar's FIRST CHILD, not its first pill - the pills sit after the
+      // "Required" label, so measuring a pill reports the label's width.
+      at('chip bar', 'required-chips .chip-bar > *', l);
+      at('outcome card', 'outcome-card .card', l);
+      at('placeholder slot', 'action-placeholder .slot', l);
+      at('add action', 'workflow-panel .stream__add button', l);
+      at('event row', 'event-row .row', l);
+    }
+    if (info) {
+      const l = info.getBoundingClientRect().left;
+      at('snapshot label', '.snapshot-head__label', l);
+      at('snapshot stub', '.info__body > .placeholder', l);
+      at('past row', '.past__id', l);
+      at('timeline row', '.timeline__at', l);
+      at('starred row', '.rows .row', l);
+    }
+    return out;
+  });
+const assertEdges = (label, edges) => {
+  const off = Object.entries(edges).filter(([, v]) => v !== GUTTER_PX);
+  check(`${label}: everything starts at ${GUTTER_PX}px`, off.length === 0 && Object.keys(edges).length > 0,
+    off.map(([k, v]) => `${k}=${v}`).join(', ') || 'nothing measured');
+};
+for (const state of ['01', '03', '07']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('player-info-panel', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  assertEdges(`state ${state}`, await edgesIn());
+}
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('player-info-panel', { timeout: 15000 });
+await page.waitForTimeout(500);
+for (const tab of ['Past AML cases', 'Starred', 'Timeline']) {
+  await page.click(`player-info-panel .mat-mdc-tab:has-text("${tab}")`);
+  await page.waitForTimeout(450);
+  assertEdges(`${tab} tab`, await edgesIn());
+}
+// The stub only exists after a row click, and it is the one thing in a flush
+// tab that has to be pulled back onto the gutter.
+await page.click('player-info-panel .mat-mdc-tab:has-text("Past AML cases")');
+await page.waitForTimeout(400);
+await page.click('.past__row');
+await page.waitForTimeout(450);
+assertEdges('Past AML cases with the stub open', await edgesIn());
+
+// Timeline is the same row shape as Past AML cases.
+await page.click('player-info-panel .mat-mdc-tab:has-text("Timeline")');
+await page.waitForTimeout(450);
+const tl = await page.evaluate(() => {
+  const list = document.querySelector('.timeline');
+  const row = document.querySelector('.timeline__item');
+  const body = document.querySelector('.info__body');
+  const R = (e) => e.getBoundingClientRect();
+  return {
+    cols: getComputedStyle(list).gridTemplateColumns.split(' ').length,
+    rowIsSubgrid: getComputedStyle(row).gridTemplateColumns.startsWith('subgrid'),
+    rowPad: getComputedStyle(row).paddingLeft + '/' + getComputedStyle(row).paddingRight,
+    bodyPad: getComputedStyle(body).paddingLeft + '/' + getComputedStyle(body).paddingRight,
+    rowSpansPanel:
+      Math.round(R(row).left - R(body).left) === 0 &&
+      Math.round(R(body).right - R(row).right) === 0,
+    minHeight: getComputedStyle(row).minHeight,
+    // Records, not controls: no pointer, and nothing focusable in the list.
+    cursor: getComputedStyle(row).cursor,
+    buttons: document.querySelectorAll('.timeline button, .timeline [tabindex]').length,
+  };
+});
+check('timeline: three columns owned by the list', tl.cols === 3, String(tl.cols));
+check('timeline: rows are subgrids of it', tl.rowIsSubgrid, tl.rowIsSubgrid ? '' : 'not subgrid');
+check('timeline: body is flush, row carries the 20px',
+  tl.bodyPad === '0px/0px' && tl.rowPad === '20px/20px', `${tl.bodyPad} row ${tl.rowPad}`);
+check('timeline: rows span the panel edge to edge', tl.rowSpansPanel);
+check('timeline: 44px floor, not a fixed height', tl.minHeight === '44px', tl.minHeight);
+check('timeline: rows are records, not controls',
+  tl.cursor !== 'pointer' && tl.buttons === 0, `${tl.cursor} buttons=${tl.buttons}`);
+
 console.log('\nBlue pills are the info tone, not primary');
 await page.setViewportSize({ width: 1440, height: 1040 });
 const INFO_BG = await tokenRgb('--color-background-info-subdued');

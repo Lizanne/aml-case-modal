@@ -52,7 +52,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
            so a keyboard user had no way to scroll it. -->
       <div
         class="info__body"
-        [class.info__body--flush]="store.infoTab() === 'past-cases'"
+        [class.info__body--flush]="isFlushTab()"
         #body
         tabindex="0"
         aria-label="Player information"
@@ -195,10 +195,18 @@ const TAB_LABEL: Record<InfoTab, string> = {
           }
 
           @case ('timeline') {
+            <!--
+              Same shape as Past AML cases: one grid owns the columns, each row
+              is a subgrid, and the rows carry the 20px gutter so the list runs
+              edge to edge. Not buttons, though - a timeline entry is a record,
+              not an action.
+            -->
             <ol class="timeline">
               @for (entry of store.timeline(); track $index) {
                 <li class="timeline__item">
-                  <span class="timeline__at">{{ entry.at | stamp }}</span>
+                  <time class="timeline__at" [attr.datetime]="entry.at">
+                    {{ entry.at | stamp }}
+                  </time>
                   <span class="timeline__what">{{ entry.what }}</span>
                   <span class="timeline__who">{{ entry.who }}</span>
                 </li>
@@ -258,6 +266,14 @@ const TAB_LABEL: Record<InfoTab, string> = {
       .info__body--flush {
         padding-left: 0;
         padding-right: 0;
+      }
+      /* The stub that appears after a row click still has to line up with
+         every other tab. Margin, not padding: this is a dashed box, and
+         padding would inset its text while leaving the border itself hard
+         against the panel edge. */
+      .info__body--flush .placeholder {
+        margin-left: 20px;
+        margin-right: 20px;
       }
       /**
        * One header, two fillings.
@@ -460,33 +476,58 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-variant-numeric: tabular-nums;
       }
 
+      /**
+       * Matches Past AML cases: one grid owns the columns, each row is a
+       * subgrid of it, and the row carries the 20px gutter so the separator
+       * and any tint run the full width of the panel.
+       *
+       * min-height rather than height, which is where it has to part company
+       * with .past__row: that row holds an ID, a pill and a date, all short.
+       * "What happened" is a sentence - "Severity changed AML to EDD
+       * (escalation); lock lifted" - and a fixed 44px would ellipsise most of
+       * this list down to nothing. Short rows match Past AML exactly; only the
+       * long ones grow.
+       */
       .timeline {
         list-style: none;
         margin: 0;
         padding: 0;
         display: grid;
-        gap: 2px;
+        grid-template-columns: 120px minmax(0, 1fr) auto;
       }
       .timeline__item {
         display: grid;
-        grid-template-columns: 130px 1fr;
-        gap: 4px 12px;
-        padding: 10px 0;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        align-items: center;
+        gap: 0 12px;
+        min-height: 44px;
+        padding: 10px 20px;
         border-bottom: 1px solid var(--line);
         font-size: 14px;
         line-height: 20px;
       }
+      .timeline__item:last-of-type {
+        border-bottom: 0;
+      }
+      /* No hover tint: these rows are records, not controls. See the trigger
+         strip - a tint on something that cannot be clicked is a lie. */
       .timeline__at {
         color: var(--ink-3);
         font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        line-height: 16px;
       }
       .timeline__what {
+        min-width: 0;
         color: var(--ink);
       }
       .timeline__who {
-        grid-column: 2;
         color: var(--ink-3);
         font-size: 12px;
+        line-height: 16px;
+        text-align: right;
+        white-space: nowrap;
         text-transform: capitalize;
       }
     `,
@@ -511,6 +552,16 @@ export class PlayerInfoPanelComponent implements AfterViewInit {
   readonly selectedIndex = computed(() => {
     const index = this.store.visibleInfoTabs().indexOf(this.store.infoTab());
     return index === -1 ? 0 : index;
+  });
+
+  /**
+   * Tabs whose content is a full-bleed row list. The body drops its side
+   * padding and each row carries the 20px itself, so a separator or a tint
+   * reaches the panel edge while the text still lands on the shared gutter.
+   */
+  readonly isFlushTab = computed(() => {
+    const tab = this.store.infoTab();
+    return tab === 'past-cases' || tab === 'timeline';
   });
 
   label(tab: InfoTab): string {
