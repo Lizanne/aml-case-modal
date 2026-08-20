@@ -443,6 +443,47 @@ for (const state of ['01', '07', '11']) {
   check(`${state}: labels stay vertically centred`, t.labelCentred);
 }
 
+console.log('\nWidgets share the row, truncate, then stack');
+for (const width of [1500, 1100, 900, 720, 600, 390]) {
+  await page.setViewportSize({ width, height: 1040 });
+  await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('back-office-widgets .widget', { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const w = await page.evaluate(() => {
+    const row = document.querySelector('back-office-widgets .widgets');
+    const cards = [...document.querySelectorAll('back-office-widgets .widget')];
+    const rr = row.getBoundingClientRect();
+    const buttons = cards.flatMap((c) => [...c.querySelectorAll('button')]);
+    return {
+      fillsRow:
+        Math.round(Math.min(...cards.map((c) => c.getBoundingClientRect().left)) - rr.left) === 0 &&
+        Math.round(rr.right - Math.max(...cards.map((c) => c.getBoundingClientRect().right))) === 0,
+      stacked:
+        Math.round(cards[0].getBoundingClientRect().top) !==
+        Math.round(cards[1].getBoundingClientRect().top),
+      // The secondary line is held to one line whatever happens.
+      bodyLines: cards.map((c) =>
+        Math.round(c.querySelector('.widget__body').getBoundingClientRect().height / 20),
+      ),
+      // Buttons neither clip their own label nor escape their card.
+      clipped: buttons.filter(
+        (btn) =>
+          btn.scrollWidth > btn.clientWidth + 1 ||
+          btn.getBoundingClientRect().right >
+            btn.closest('.widget').getBoundingClientRect().right + 0.5,
+      ).length,
+    };
+  });
+  check(`${width}px: widgets fill the content width`, w.fillsRow);
+  check(`${width}px: secondary text stays one line`, w.bodyLines.every((n) => n === 1),
+    w.bodyLines.join(','));
+  check(`${width}px: no button clips or overflows its card`, w.clipped === 0, `${w.clipped}`);
+  // Side by side while they fit, stacked once they do not.
+  check(`${width}px: ${width > 719 ? 'side by side' : 'stacked'}`,
+    w.stacked === (width <= 719), `stacked=${w.stacked}`);
+}
+await page.setViewportSize({ width: 1440, height: 1040 });
+
 console.log('\nOne 20px left edge across the stream and all four tabs');
 await page.setViewportSize({ width: 1440, height: 1040 });
 const GUTTER_PX = 20;

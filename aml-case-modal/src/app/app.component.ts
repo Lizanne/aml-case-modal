@@ -1,3 +1,4 @@
+import { animate, style, transition, trigger } from '@angular/animations';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -8,6 +9,7 @@ import {
   ViewChild,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
@@ -38,6 +40,27 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   host: {
     '[style.--dock-h.px]': 'dockHeight()',
   },
+  /**
+   * The drawer convention: a panel arrives from the right edge and leaves the
+   * same way, 300ms ease-out.
+   *
+   * :leave takes the panel out of flow first. Left in flow it would hold its
+   * width for the whole 300ms and the survivor could not start widening until
+   * it had gone - two sequential moves instead of the one continuous one the
+   * spec asks for.
+   */
+  animations: [
+    trigger('panel', [
+      transition(':enter', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms ease-out', style({ transform: 'translateX(0)', opacity: 1 })),
+      ]),
+      transition(':leave', [
+        style({ position: 'absolute', top: 0, right: 0 }),
+        animate('300ms ease-out', style({ transform: 'translateX(100%)', opacity: 0 })),
+      ]),
+    ]),
+  ],
   template: `
     <a class="skip-link" href="#workspace">Skip to case workspace</a>
 
@@ -51,12 +74,18 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       <h1 class="visually-hidden">AML case workspace</h1>
       <back-office-widgets />
 
-      <div class="stage" #stage>
-        @if (ws.sgVisible()) {
-          <sg-alert-modal class="stage__modal" />
-        }
-        @if (ws.amlVisible()) {
-          <aml-case-modal class="stage__modal" />
+      <!--
+        Rendered straight from the open order, so the DOM order IS the dock
+        order: incumbent left, newest right. No component knows which side it
+        is on, because no side is assigned to it.
+      -->
+      <div class="stage" #stage [@.disabled]="reducedMotion()">
+        @for (id of ws.visibleOrder(); track id) {
+          @if (id === 'sg') {
+            <sg-alert-modal class="stage__modal" @panel />
+          } @else {
+            <aml-case-modal class="stage__modal" @panel />
+          }
         }
       </div>
     </main>
@@ -112,39 +141,18 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
           transition: none;
         }
       }
+      /* Right-docked, per frame 09: a solo panel sits against the right edge of
+         the content area rather than centred, so opening a second one pushes
+         the first leftward instead of shunting both sideways.
+         position: relative is what the leaving panel is absolute against. */
       .stage {
+        position: relative;
         display: flex;
-        justify-content: center;
+        justify-content: flex-end;
         align-items: flex-start;
         gap: 16px;
         min-width: 0;
       }
-      /**
-       * The entering modal slides in beside the incumbent while the incumbent
-       * animates down to half width. Transform and opacity only, so it never
-       * intercepts or blocks input during the move.
-       *
-       * backwards, NOT both. "both" keeps the final keyframe applied forever,
-       * and a "transform: none" keyframe computes to an identity matrix
-       * rather than to none - which still makes this element a containing
-       * block for every position: fixed descendant, permanently. That is what
-       * pinned the mobile dialog sheet to the modal instead of the viewport.
-       * backwards gives the same pre-start state and leaves nothing behind.
-       */
-      .stage__modal {
-        animation: modal-in 300ms ease-out backwards;
-      }
-      @keyframes modal-in {
-        from {
-          opacity: 0;
-          transform: translateY(8px) scale(0.995);
-        }
-        to {
-          opacity: 1;
-          transform: none;
-        }
-      }
-
       /* Bars dock to the bottom edge and stack. */
       .dock {
         position: fixed;
@@ -159,11 +167,6 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         padding: 12px 20px;
       }
 
-      @media (prefers-reduced-motion: reduce) {
-        .stage__modal {
-          animation: none;
-        }
-      }
 
       /**
        * Mobile: one 16px gutter, everywhere.
@@ -185,13 +188,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         .dock {
           padding: 12px 16px;
         }
-        /* No transform on the modal at all here: for the 300ms the animation
-           runs it is a containing block, and a dialog open on arrival (the
-           dev switcher lands straight on 05) would render as a sheet pinned
-           to the modal and then snap to the viewport. */
-        .stage__modal {
-          animation: none;
-        }
+
       }
     `,
   ],
@@ -209,12 +206,22 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     return n === 0 ? 0 : 24 + n * 46 + (n - 1) * 8;
   });
 
+  /**
+   * Angular animations do not consult prefers-reduced-motion, so the trigger
+   * is disabled outright rather than sped up - a slide is a slide.
+   */
+  private readonly motionQuery =
+    typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  readonly reducedMotion = signal(this.motionQuery?.matches ?? false);
+
   private readonly zone = inject(NgZone);
 
   @ViewChild('stage') private stage?: ElementRef<HTMLElement>;
   private observer?: ResizeObserver;
 
   ngAfterViewInit(): void {
+    this.motionQuery?.addEventListener('change', this.onMotionChange);
+
     const element = this.stage?.nativeElement;
     if (!element) return;
 
@@ -230,6 +237,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.motionQuery?.removeEventListener('change', this.onMotionChange);
     this.observer?.disconnect();
   }
+
+  private readonly onMotionChange = (event: MediaQueryListEvent): void =>
+    this.zone.run(() => this.reducedMotion.set(event.matches));
 }

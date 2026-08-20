@@ -88,10 +88,14 @@ import { PillComponent } from './ui-pill.component';
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
       }
+      /* min-width: 0 so a widget may be narrower than its own content. Without
+         it a grid item floors at min-content and the pair stops sharing the
+         row long before the stacking point. */
       .widget {
         display: flex;
         flex-direction: column;
         gap: 8px;
+        min-width: 0;
         padding: 14px 16px;
         border: 1px solid var(--line);
         border-radius: 12px;
@@ -103,25 +107,45 @@ import { PillComponent } from './ui-pill.component';
         gap: 8px;
       }
       .widget__title {
+        min-width: 0;
         margin: 0;
         font-size: 14px;
         font-weight: 600;
         color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
+      /* The secondary line is what gives way first: one line, ellipsised. The
+         buttons below it are the widget's whole purpose, so they must never be
+         the thing that wraps or clips to make room for a sentence. */
       .widget__body {
         margin: 0;
+        min-width: 0;
         font-size: 14px;
         line-height: 20px;
         color: var(--ink-3);
         flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
+      /* flex: none on the buttons: a Material button that shrinks crushes its
+         own label and icon rather than ellipsising cleanly. They keep their
+         size and the row wraps instead - and below the stacking width there is
+         a full column each, so it never comes to that. */
       .widget__foot {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
       }
+      .widget__foot button {
+        flex: none;
+        max-width: 100%;
+      }
 
-      /* Mobile: one card per row, full width inside the page's 16px gutter. */
+      /* Mobile: one card per row, full width inside the page's 16px gutter, and
+         the buttons share that width rather than huddling at the left. */
       @media (max-width: 719.98px) {
         .widgets {
           grid-template-columns: minmax(0, 1fr);

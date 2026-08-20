@@ -21,8 +21,13 @@ const CLOSED: ModalState = { open: false, minimised: false };
  * anywhere, because dual mode is not a mode. It is what you get when two
  * modals are open at once.
  *
- * Docking is fixed: SG is always left, AML always right, whichever was opened
- * first. Order of arrival never moves a modal.
+ * Docking is ORDER-BASED: the incumbent ends left, the newest arrival ends
+ * right. There are no fixed sides - which panel sits where is a consequence of
+ * which was opened first, nothing else.
+ *
+ * The order is set when a panel is OPENED from its widget, and a restore does
+ * not re-order: a panel coming back from its bar returns to the slot it left,
+ * because having it jump sides on the way back would be the surprising thing.
  */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceStore {
@@ -31,6 +36,9 @@ export class WorkspaceStore {
 
   readonly sg = this._sg.asReadonly();
   readonly aml = this._aml.asReadonly();
+
+  /** Open order, oldest first. Drives which side each panel docks to. */
+  private readonly _order = signal<ModalId[]>([]);
 
   /** Measured width of the stage the modals live in. */
   readonly stageWidth = signal(1400);
@@ -43,6 +51,15 @@ export class WorkspaceStore {
   readonly amlVisible = computed(() => this._aml().open && !this._aml().minimised);
 
   readonly visibleCount = computed(() => (this.sgVisible() ? 1 : 0) + (this.amlVisible() ? 1 : 0));
+
+  /**
+   * The panels on the stage, in the order they dock: oldest left, newest
+   * right. The template renders straight from this, so docking needs no side
+   * rule anywhere - position IS order.
+   */
+  readonly visibleOrder = computed<ModalId[]>(() =>
+    this._order().filter((id) => (id === 'sg' ? this.sgVisible() : this.amlVisible())),
+  );
 
   /** Bars stack in fixed order too: SG above AML. */
   readonly minimisedBars = computed<ModalId[]>(() => {
@@ -96,10 +113,14 @@ export class WorkspaceStore {
       this.pulse(otherId);
     }
 
+    // Opening is what sets the slot. Re-opening something that was closed
+    // makes it the newest again, so it docks right.
+    this._order.update((order) => [...order.filter((x) => x !== id), id]);
     this.set(id, { open: true, minimised: false });
   }
 
   close(id: ModalId): void {
+    this._order.update((order) => order.filter((x) => x !== id));
     this.set(id, { ...CLOSED });
   }
 
@@ -130,11 +151,15 @@ export class WorkspaceStore {
   seed(patch: { sg?: Partial<ModalState>; aml?: Partial<ModalState> }): void {
     if (patch.sg) this._sg.set({ ...CLOSED, ...patch.sg });
     if (patch.aml) this._aml.set({ ...CLOSED, ...patch.aml });
+    // Seeded scenarios have no click history, so the order is stated here:
+    // SG first, matching frame 09.
+    this._order.set((['sg', 'aml'] as ModalId[]).filter((id) => this.state(id).open));
   }
 
   reset(): void {
     this._sg.set({ ...CLOSED });
     this._aml.set({ ...CLOSED });
+    this._order.set([]);
     this.pulsingBar.set(null);
     clearTimeout(this.pulseTimer);
   }

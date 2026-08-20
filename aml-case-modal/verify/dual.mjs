@@ -58,11 +58,15 @@ await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
 check('AML widget opens the second modal', (await sg().count()) === 1 && (await aml().count()) === 1);
 
-console.log('\nFixed docking: SG left, AML right, regardless of open order');
+console.log('\nOrder-based docking: incumbent left, newest right');
+// This REPLACES a fixed-sides rule. Nothing is assigned a side any more, so
+// the only way to be wrong is to dock by identity rather than by arrival -
+// which is exactly what opening in the opposite order catches.
 const sgBox1 = await sg().boundingBox();
 const amlBox1 = await aml().boundingBox();
-check('SG is left of AML when SG opened first', sgBox1.x < amlBox1.x);
-// Now the other order.
+check('SG opened first sits left of AML', sgBox1.x < amlBox1.x,
+  `sg ${Math.round(sgBox1.x)} vs aml ${Math.round(amlBox1.x)}`);
+// Now the other order: the sides must swap.
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
@@ -70,7 +74,23 @@ await page.locator('back-office-widgets button:has-text("Open alert")').click();
 await settle();
 const sgBox2 = await sg().boundingBox();
 const amlBox2 = await aml().boundingBox();
-check('SG is still left when AML opened first', sgBox2.x < amlBox2.x);
+check('AML opened first sits left of SG', amlBox2.x < sgBox2.x,
+  `aml ${Math.round(amlBox2.x)} vs sg ${Math.round(sgBox2.x)}`);
+check('the DOM order is the dock order', await page.evaluate(() =>
+  [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase())
+    .join() === 'aml-case-modal,sg-alert-modal'));
+
+console.log('\nA solo panel docks right, not centre');
+await fresh();
+await page.locator('back-office-widgets button:has-text("Open case")').click();
+await settle();
+const solo = await page.evaluate(() => {
+  const stage = document.querySelector('.stage').getBoundingClientRect();
+  const modal = document.querySelector('aml-case-modal').getBoundingClientRect();
+  return { rightInset: Math.round(stage.right - modal.right), leftGap: Math.round(modal.left - stage.left) };
+});
+check('flush to the right edge of the stage', solo.rightInset === 0, `${solo.rightInset}px`);
+check('and the room it does not use is on the left', solo.leftGap > 0, `${solo.leftGap}px`);
 
 console.log('\nSecond open halves the incumbent; closing restores it');
 await fresh();
@@ -147,7 +167,11 @@ await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
 check('AML alone', (await aml().count()) === 1 && (await bars().count()) === 0);
 await page.locator('back-office-widgets button:has-text("Open alert")').click();
-await settle(200);
+// 200ms was enough while removal was instant. The panel now slides out over
+// 300ms and is still in the DOM for all of it, so a short wait would report
+// "not minimised" for a panel that is mid-exit. The pulse below still starts
+// immediately, which is what proves the minimise itself was not delayed.
+await settle(450);
 check('AML auto-minimised to its bar', (await aml().count()) === 0 && (await bars().count()) === 1);
 check('SG has the stage to itself', (await sg().count()) === 1);
 check('the bar pulses once so it is findable',
@@ -195,6 +219,56 @@ const clickable = await page.evaluate(() => {
 });
 check('the reflowing modal still receives pointer events', clickable);
 await settle(400);
+
+console.log('\nDrawer motion: in from the right, out to the right');
+const tx = (sel) =>
+  page.evaluate((s) => {
+    const el = document.querySelector(s);
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    const m = new DOMMatrixReadOnly(cs.transform === 'none' ? '' : cs.transform);
+    return {
+      x: Math.round(m.m41),
+      opacity: Number(cs.opacity),
+      position: cs.position,
+      width: Math.round(el.getBoundingClientRect().width),
+    };
+  }, sel);
+
+await fresh();
+await page.locator('back-office-widgets button:has-text("Open case")').click();
+await page.waitForTimeout(60);
+const entering = await tx('aml-case-modal');
+check('a panel enters displaced to the right', entering && entering.x > 100, JSON.stringify(entering));
+check('and faded', entering && entering.opacity < 1, String(entering?.opacity));
+await settle(500);
+const landed = await tx('aml-case-modal');
+check('and lands with no transform left behind',
+  landed.x === 0 && landed.opacity === 1, JSON.stringify(landed));
+
+// One continuous motion: the incumbent must already be narrowing while the
+// newcomer is still on its way in, not after it has arrived.
+await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.waitForTimeout(90);
+const push = { incumbent: await tx('aml-case-modal'), entering: await tx('sg-alert-modal') };
+check('the incumbent is already narrowing as the newcomer slides in',
+  push.entering.x > 0 && push.incumbent.width < 1000,
+  `entering x=${push.entering.x} incumbent w=${push.incumbent.width}`);
+await settle(500);
+
+// The leaver is taken out of flow so the survivor can widen into the space
+// immediately rather than waiting for the exit to finish.
+await page.locator('sg-alert-modal button[aria-label="Close alert"]').click();
+await page.waitForTimeout(90);
+const exit = { leaving: await tx('sg-alert-modal'), survivor: await tx('aml-case-modal') };
+check('the leaving panel is out of flow and moving right',
+  exit.leaving && exit.leaving.position === 'absolute' && exit.leaving.x > 0,
+  JSON.stringify(exit.leaving));
+check('the survivor is already widening', exit.survivor.width > 672,
+  `${exit.survivor.width}`);
+await settle(500);
+check('the leaver is gone and the survivor is full width',
+  (await sg().count()) === 0 && (await widthOf(aml())) === 1000);
 
 console.log('\nReduced motion makes it instant');
 const rm = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
