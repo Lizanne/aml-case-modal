@@ -196,8 +196,19 @@ import { WorkspaceStore } from '../core/workspace-store';
       }
 
       /* ---- inner: content then actions ---------------------------------- */
+      /**
+       * Wraps when it must, not at a width someone guessed.
+       *
+       * The identity block claims 140px - the mobile node's own min-width - so
+       * the actions drop to a second line exactly when holding them on the
+       * first would squeeze the name and meta below that. A container
+       * threshold instead put every 566px card (two widgets at 1440, the most
+       * ordinary desktop there is) into the mobile layout, which is why the
+       * desktop widgets did not look like the desktop node.
+       */
       .w__inner {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 8px;
         flex: 1 1 auto;
@@ -207,8 +218,8 @@ import { WorkspaceStore } from '../core/workspace-store';
         display: flex;
         flex-direction: column;
         gap: 2px;
-        flex: 1 1 auto;
-        min-width: 0;
+        flex: 1 1 140px;
+        min-width: 140px;
       }
       .w__titles {
         display: flex;
@@ -417,7 +428,13 @@ import { WorkspaceStore } from '../core/workspace-store';
        * viewport's, so two widgets sharing a 1440px screen get it too - which
        * is the case a viewport query cannot see.
        */
-      @container (max-width: 613.98px) {
+      /**
+       * The mobile node, 22263:20943: chip under the meta at 24px with a 20px
+       * avatar, actions on their own row. Keyed to the mobile card's own width
+       * rather than the viewport, so a narrow widget on a wide screen gets it
+       * too.
+       */
+      @container (max-width: 419.98px) {
         .w {
           align-items: flex-start;
         }
@@ -425,12 +442,6 @@ import { WorkspaceStore } from '../core/workspace-store';
           flex-direction: column;
           align-items: stretch;
           gap: 8px;
-        }
-        .w__content {
-          min-width: 140px;
-        }
-        .w__actions {
-          flex-wrap: wrap;
         }
         .w__chip {
           height: 24px;
@@ -440,11 +451,6 @@ import { WorkspaceStore } from '../core/workspace-store';
         .w__avatar {
           width: 20px;
           height: 20px;
-        }
-        /* Mobile node draws the buttons at 8px, desktop at 4px - see the note
-           in the commit. Each node governs its own width. */
-        .w__btn {
-          border-radius: 8px;
         }
       }
 

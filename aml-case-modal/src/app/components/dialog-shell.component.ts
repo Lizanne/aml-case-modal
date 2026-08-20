@@ -146,6 +146,14 @@ let dialogSeq = 0;
         gap: 8px;
         padding: 16px 20px;
       }
+      /* Material gives a text button less side padding than a filled one, so
+         Cancel sat visibly tighter than the action beside it. 16px on both
+         puts the pair on the same rhythm. Applied in the shell rather than in
+         two dialogs, so the third one cannot drift. */
+      .panel__foot ::ng-deep .mat-mdc-button {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
 
       /**
        * Mobile: a bottom sheet, not a floating box.

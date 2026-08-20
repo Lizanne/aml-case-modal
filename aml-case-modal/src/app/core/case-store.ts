@@ -212,6 +212,22 @@ export class CaseStore {
   /** Rule 9. Enabled only once rule 4 is satisfied - and you still need the lock to save. */
   readonly canSubmitDecision = computed(() => this.canAct() && this.allRequiredRecorded());
 
+  /**
+   * A draft the agent has actually put something into.
+   *
+   * An untouched form is not work in progress - opening one and walking away
+   * should not raise a warning about losing something that does not exist.
+   * Note, attachments and the lock choice each count as content.
+   */
+  readonly draftDirty = computed(() => {
+    const d = this.draft();
+    if (!d) return false;
+    return d.note.trim().length > 0 || d.attachments.length > 0 || d.lockAfter !== null;
+  });
+
+  /** What to call that draft in the warning. */
+  readonly draftLabel = computed(() => this.draft()?.title ?? '');
+
   /** Rule 8. Adjust severity is always enabled while the case is open. */
   readonly canAdjustSeverity = computed(() => !this.isResolved());
 

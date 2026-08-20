@@ -489,6 +489,132 @@ check('09 narrow footer has no rule, so no padding above one',
   `${narrowCard.footBorder} / ${narrowCard.footPadTop}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+console.log('\nWidget rows follow the desktop node until they cannot');
+for (const width of [1600, 1440, 1200, 1024, 375, 320]) {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const close = page.locator('aml-case-modal button[aria-label="Close case"]');
+  if (await close.count()) {
+    await close.click();
+    await page.waitForTimeout(400);
+  }
+  const w = await page.evaluate(() => {
+    const card = document.querySelector('back-office-widgets .w');
+    const R = (s) => {
+      const e = card.querySelector(s);
+      return e ? e.getBoundingClientRect() : null;
+    };
+    const parts = [...card.querySelectorAll('.w__name,.w__count,.w__sev,.w__meta,.w__chip,.w__btn')];
+    let overlaps = 0;
+    for (let i = 0; i < parts.length; i++) {
+      for (let j = i + 1; j < parts.length; j++) {
+        if (parts[i].contains(parts[j]) || parts[j].contains(parts[i])) continue;
+        const a = parts[i].getBoundingClientRect();
+        const b = parts[j].getBoundingClientRect();
+        if (a.left < b.right - 0.5 && b.left < a.right - 0.5 &&
+            a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) overlaps++;
+      }
+    }
+    const chip = R('.w__chip');
+    return {
+      card: Math.round(card.getBoundingClientRect().width),
+      // The desktop node is one row: the chip sits level with the identity.
+      oneRow: Math.abs(chip.top - R('.w__name').top) < 12,
+      chipH: Math.round(chip.height),
+      avatar: Math.round(card.querySelector('.w__avatar').getBoundingClientRect().width),
+      radius: getComputedStyle(card.querySelector('.w__btn')).borderRadius,
+      overlaps,
+      hScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  // 4px on every button, both layouts.
+  check(`${width}px: widget buttons are 4px`, w.radius === '4px', w.radius);
+  check(`${width}px: nothing overlaps`, w.overlaps === 0, `${w.overlaps}`);
+  check(`${width}px: no horizontal scroll`, w.hScroll === 0, `${w.hScroll}`);
+  // Three bands, not two. Wrapping and the chip step are separate rules:
+  // the actions wrap as soon as the identity block would go under 140px,
+  // while the chip only steps down at the mobile card width. Between them
+  // sits a real intermediate - wrapped actions, desktop chip - and a binary
+  // desktop/mobile assertion called that a failure when it is the design.
+  // The chip step is a CONTAINER query, and a size container measures its
+  // content box: the card's 24px of padding and 2px of border come off
+  // before the 420px threshold is applied. Deriving it here rather than
+  // guessing a card width is what keeps this honest at the boundary.
+  const mobileChip = w.card - 26 <= 419.98;
+  check(`${width}px (${w.card}px card): chip is the ${mobileChip ? 'mobile' : 'desktop'} size`,
+    mobileChip ? w.chipH === 24 && w.avatar === 20 : w.chipH === 32 && w.avatar === 24,
+    `chip=${w.chipH} avatar=${w.avatar}`);
+  if (w.card >= 560) {
+    // Room for the desktop node as drawn: everything on one row.
+    check(`${width}px: desktop row, chip level with the identity`, w.oneRow,
+      `oneRow=${w.oneRow}`);
+  }
+}
+await page.setViewportSize({ width: 1440, height: 1040 });
+
+console.log('\nDialog Cancel carries the same side padding as the action');
+for (const state of ['05', '06']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('dialog-shell .panel__foot', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const pad = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('dialog-shell .panel__foot button')].find(
+      (b) => b.textContent.trim() === 'Cancel',
+    );
+    const cs = getComputedStyle(c);
+    return `${cs.paddingLeft}/${cs.paddingRight}`;
+  });
+  check(`${state}: Cancel is 16px either side`, pad === '16px/16px', pad);
+}
+
+console.log('\nAn open draft never gates Submit, and is named before it is lost');
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('workflow-panel .footer', { timeout: 15000 });
+await page.waitForTimeout(600);
+await page.click('add-action-menu button');
+await page.waitForTimeout(400);
+await page.click('.mat-mdc-menu-item');
+await page.waitForTimeout(500);
+// Untouched: nothing to lose, so nothing to warn about.
+await page.click('workflow-panel .footer button:has-text("Submit decision")');
+await page.waitForTimeout(500);
+check('an untouched draft raises no warning',
+  (await page.locator('.draft-warning').count()) === 0);
+await page.click('dialog-shell .panel__foot button:has-text("Cancel")');
+await page.waitForTimeout(400);
+
+await page.fill('record-form textarea', 'Half-written note.');
+await page.locator('record-form mat-radio-button input').first().check({ force: true });
+await page.waitForTimeout(400);
+const gates = await page.evaluate(() => {
+  const save = [...document.querySelectorAll('record-form button')].find((b) =>
+    /Save outcome/.test(b.textContent),
+  );
+  const submit = [...document.querySelectorAll('workflow-panel .footer button')].find((b) =>
+    /Submit decision/.test(b.textContent),
+  );
+  return { save: !save.disabled, submit: !submit.disabled };
+});
+check('Save and Submit are enabled at the same time', gates.save && gates.submit,
+  JSON.stringify(gates));
+await page.click('workflow-panel .footer button:has-text("Submit decision")');
+await page.waitForTimeout(500);
+const warning = await page.evaluate(() =>
+  document.querySelector('.draft-warning')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
+check('a dirty draft is named in the warning',
+  warning !== null && /You have an unsaved .+ draft\. Submitting will discard it\./.test(warning),
+  String(warning));
+await page.click('dialog-shell .panel__foot button:has-text("Cancel")');
+await page.waitForTimeout(500);
+const kept = await page.evaluate(() => ({
+  note: document.querySelector('record-form textarea')?.value ?? null,
+  lock: document.querySelectorAll('record-form .mat-mdc-radio-checked').length,
+}));
+check('Cancel returns the form intact', kept.note === 'Half-written note.' && kept.lock === 1,
+  JSON.stringify(kept));
+
 console.log('\nOne lock sentence on every surface');
 await page.setViewportSize({ width: 1500, height: 1040 });
 for (const state of ['00a', '00b', '01', '07', '09']) {
