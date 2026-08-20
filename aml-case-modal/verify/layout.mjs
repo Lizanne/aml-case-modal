@@ -489,6 +489,48 @@ check('09 narrow footer has no rule, so no padding above one',
   `${narrowCard.footBorder} / ${narrowCard.footPadTop}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+console.log('\nOne lock sentence on every surface');
+await page.setViewportSize({ width: 1500, height: 1040 });
+for (const state of ['00a', '00b', '01', '07', '09']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('back-office-widgets', { timeout: 15000 });
+  await page.waitForTimeout(600);
+  const copy = await page.evaluate(() => {
+    const text = document.body.innerText;
+    return {
+      widgetLocks: [...document.querySelectorAll('.widget__lock')].map((e) =>
+        e.textContent.replace(/\s+/g, ' ').trim(),
+      ),
+      band: document.querySelector('case-header .head__lock-text')?.textContent.trim() ?? null,
+      dialog: document.querySelector('confirm-unlock-dialog .lead')?.textContent.trim() ?? null,
+      // The two phrasings that had crept in.
+      lockedBy: /Locked by/.test(text),
+      notLocked: /Not locked/.test(text),
+    };
+  });
+  check(`${state}: nothing says "Locked by"`, !copy.lockedBy);
+  check(`${state}: nothing says "Not locked"`, !copy.notLocked);
+  const lockish = [...copy.widgetLocks, copy.band, copy.dialog].filter(
+    (t) => t && /Locked/.test(t),
+  );
+  check(`${state}: every lock line reads "Locked to ..."`,
+    lockish.every((t) => /(^|\s)Locked to (you|[A-Z])/.test(t)), lockish.join(' | '));
+}
+// The dialog must not restate the lock in a form of its own.
+await page.goto(`${BASE}/?state=00b`, { waitUntil: 'domcontentloaded' });
+// The host element has no box of its own - the panel inside it is fixed - so
+// waiting on the host's visibility never resolves. Wait for the text instead.
+await page.waitForSelector('confirm-unlock-dialog .lead', { timeout: 15000 });
+await page.waitForTimeout(600);
+const agree = await page.evaluate(() => {
+  const band = document.querySelector('case-header .head__lock-text').textContent.trim();
+  const lead = document.querySelector('confirm-unlock-dialog .lead').textContent.trim();
+  return { band, lead, same: lead.replace(/\.$/, '') === band };
+});
+check('the force-unlock dialog repeats the band verbatim', agree.same,
+  `${agree.band} | ${agree.lead}`);
+await page.setViewportSize({ width: 1440, height: 1040 });
+
 console.log('\nEvery time-ordered list runs newest first');
 const descending = (times) => times.every((v, i) => i === 0 || times[i - 1] >= v);
 const openTab = async (label) => {

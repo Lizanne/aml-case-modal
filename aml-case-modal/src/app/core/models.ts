@@ -13,6 +13,32 @@ export type Severity = 'AML' | 'EDD' | 'COMPLIANCE';
 /** Rule 3. */
 export type LockState = 'unlocked' | 'locked-to-me' | 'locked-to-other';
 
+/**
+ * The lock status sentence. ONE implementation, used by the panel band, both
+ * widgets and the force-unlock dialog.
+ *
+ * It was written out separately in the header and in the widget, which is how
+ * "Locked to you" and "Locked by you" ended up on screen at the same time,
+ * one of them with a full stop. Copy that appears on four surfaces is not four
+ * strings.
+ */
+export function lockStatusLine(
+  state: LockState,
+  ownerName: string | null | undefined,
+  options: { since?: string; resolved?: boolean } = {},
+): string {
+  if (options.resolved) return 'Resolved - read-only';
+  const since = options.since ? ` since ${options.since}` : '';
+  switch (state) {
+    case 'locked-to-me':
+      return `Locked to you${since}`;
+    case 'locked-to-other':
+      return `Locked to ${ownerName ?? 'another agent'}${since}`;
+    default:
+      return 'Unassigned';
+  }
+}
+
 export type ActionTypeId =
   | 'open-source-searches'
   | 'player-contact'

@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
+import { lockStatusLine } from '../core/models';
 import { StampPipe } from '../core/format';
 import { DialogShellComponent } from './dialog-shell.component';
 
@@ -20,10 +21,9 @@ import { DialogShellComponent } from './dialog-shell.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog-shell heading="Force unlock this case?" initialFocus=".panel__foot button" (dismiss)="close()">
-      <p class="lead">
-        <strong>{{ owner() }}</strong> has held this case since
-        {{ store.lockedSince() | stamp }}.
-      </p>
+      <!-- Same sentence as the panel band and the widget, so the dialog does
+           not restate the lock in a third form. -->
+      <p class="lead">{{ lockLine() }}.</p>
 
       <p class="danger-note">
         <mat-icon fontSet="material-icons-outlined">warning_amber</mat-icon>
@@ -75,6 +75,14 @@ import { DialogShellComponent } from './dialog-shell.component';
   ],
 })
 export class ConfirmUnlockDialogComponent {
+  readonly lockLine = computed(() =>
+    lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
+      since: this.store.lockedSince()
+        ? new StampPipe().transform(this.store.lockedSince())
+        : undefined,
+    }),
+  );
+
   readonly store = inject(CaseStore);
 
   owner(): string {

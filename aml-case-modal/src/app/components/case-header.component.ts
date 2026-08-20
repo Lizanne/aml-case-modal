@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
-import { SEVERITY_LABEL } from '../core/models';
+import { SEVERITY_LABEL, lockStatusLine } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
 /**
@@ -263,17 +263,11 @@ export class CaseHeaderComponent {
    * Narrow layout: the lock state matters, the timestamp does not fit. The full
    * "since" stamp stays available in the Timeline tab.
    */
-  readonly shortLockLine = computed(() => {
-    if (this.store.isResolved()) return 'Resolved - read-only';
-    switch (this.store.lockState()) {
-      case 'locked-to-me':
-        return 'Locked to you';
-      case 'locked-to-other':
-        return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'}`;
-      default:
-        return 'Unassigned';
-    }
-  });
+  readonly shortLockLine = computed(() =>
+    lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
+      resolved: this.store.isResolved(),
+    }),
+  );
 
   /**
    * States the fact and stops. The button beside it already says what you can
@@ -282,14 +276,8 @@ export class CaseHeaderComponent {
   readonly lockLine = computed(() => {
     if (this.store.isResolved()) return 'This case is resolved and read-only.';
     const since = this.store.lockedSince();
-    const stamp = since ? new StampPipe().transform(since) : '';
-    switch (this.store.lockState()) {
-      case 'locked-to-me':
-        return `Locked to you since ${stamp}`;
-      case 'locked-to-other':
-        return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'} since ${stamp}`;
-      default:
-        return 'Unassigned';
-    }
+    return lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
+      since: since ? new StampPipe().transform(since) : undefined,
+    });
   });
 }

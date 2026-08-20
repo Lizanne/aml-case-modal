@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
+import { lockStatusLine } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { PillComponent } from './ui-pill.component';
 
@@ -42,7 +43,7 @@ import { PillComponent } from './ui-pill.component';
         <div class="widget__foot">
           <span class="widget__lock">
             <span class="widget__avatar" aria-hidden="true">LF</span>
-            Locked by you
+            {{ sgLockLine }}
           </span>
           <!--
             One owner for the lock control. While the panel is open its header
@@ -285,17 +286,14 @@ export class BackOfficeWidgetsComponent {
 
   readonly lockBlocked = computed(() => this.store.lockState() === 'locked-to-other');
 
-  readonly lockLine = computed(() => {
-    if (this.store.isResolved()) return 'Resolved. Read-only.';
-    switch (this.store.lockState()) {
-      case 'locked-to-me':
-        return 'Locked to you.';
-      case 'locked-to-other':
-        return `Locked to ${this.store.lockOwner()?.name ?? 'another agent'}.`;
-      default:
-        return 'Not locked.';
-    }
-  });
+  /** The SG alert's own lock. Static in this prototype, but worded once. */
+  readonly sgLockLine = lockStatusLine('locked-to-me', null);
+
+  readonly lockLine = computed(() =>
+    lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
+      resolved: this.store.isResolved(),
+    }),
+  );
 
   readonly openBlockedReason = computed(() =>
     this.store.lockState() === 'locked-to-other'
