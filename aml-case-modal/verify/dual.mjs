@@ -50,7 +50,7 @@ async function fresh(state = '01') {
 console.log('\nEach modal opens only from its own widget');
 await fresh();
 check('nothing open to begin with', (await sg().count()) === 0 && (await aml().count()) === 0);
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await settle();
 check('SG widget opens the SG modal alone', (await sg().count()) === 1 && (await aml().count()) === 0);
 check('opening one never auto-opens the other', (await bars().count()) === 0);
@@ -70,7 +70,7 @@ check('SG opened first sits left of AML', sgBox1.x < amlBox1.x,
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await settle();
 const sgBox2 = await sg().boundingBox();
 const amlBox2 = await aml().boundingBox();
@@ -99,7 +99,7 @@ await settle();
 const soloWidth = await widthOf(aml());
 check('solo AML is full width', soloWidth > 900);
 check('solo AML is two-panel', !(await isSegmented()));
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await settle();
 const halfWidth = await widthOf(aml());
 check('AML reflows to roughly half', halfWidth < soloWidth * 0.8 && halfWidth > soloWidth * 0.4);
@@ -126,7 +126,7 @@ console.log('\nMinimise docks to a bar; restore re-splits');
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await settle();
 await page.locator('sg-alert-modal button[aria-label="Minimise alert"]').click();
 await settle();
@@ -166,7 +166,7 @@ await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
 check('AML alone', (await aml().count()) === 1 && (await bars().count()) === 0);
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 // 200ms was enough while removal was instant. The panel now slides out over
 // 300ms and is still in the DOM for all of it, so a short wait would report
 // "not minimised" for a panel that is mid-exit. The pulse below still starts
@@ -190,7 +190,7 @@ await settle(300);
 await page.locator('record-form textarea').fill('Half-written note that must survive.');
 await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
 await settle(300);
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await settle(600);
 check('reflowed to segmented', await isSegmented());
 check('the segmented control landed on Player info',
@@ -206,7 +206,7 @@ console.log('\nTransitions never block input');
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 // Mid-reflow - do not wait for it to finish.
 await page.waitForTimeout(90);
 const clickable = await page.evaluate(() => {
@@ -219,6 +219,88 @@ const clickable = await page.evaluate(() => {
 });
 check('the reflowing modal still receives pointer events', clickable);
 await settle(400);
+
+console.log('\nThe panels live inside the chrome, never over it');
+await fresh();
+await page.locator('back-office-widgets button:has-text("Open case")').click();
+await settle(500);
+const chrome = await page.evaluate(() => {
+  const R = (s) => {
+    const el = document.querySelector(s);
+    return el ? el.getBoundingClientRect() : null;
+  };
+  const top = R('app-top-bar');
+  const ph = R('player-header');
+  const nav = R('side-nav');
+  const panel = R('aml-case-modal');
+  const navBtn = document.querySelector('side-nav .nav__item');
+  const nb = navBtn.getBoundingClientRect();
+  // Whatever sits at the nav's own coordinates must BE the nav, or something
+  // is lying on top of it.
+  const hit = document.elementFromPoint(nb.left + nb.width / 2, nb.top + nb.height / 2);
+  return {
+    order: top.bottom <= ph.top + 0.5,
+    belowPlayerBar: panel.top >= ph.bottom - 0.5,
+    rightOfNav: panel.left >= nav.right - 0.5,
+    withinViewport: panel.bottom <= window.innerHeight + 0.5,
+    navReachable: !!navBtn.closest('side-nav') && navBtn.contains(hit ?? navBtn) === false
+      ? navBtn === hit || navBtn.contains(hit)
+      : true,
+    navHit: hit ? hit.tagName.toLowerCase() : null,
+    navIsHit: !!(hit && hit.closest('side-nav')),
+  };
+});
+check('the top bar sits above the player bar', chrome.order);
+check('the panel starts below the player bar', chrome.belowPlayerBar);
+check('and to the right of the nav', chrome.rightOfNav);
+check('and never runs past the bottom of the viewport', chrome.withinViewport);
+check('the nav is still the thing at its own coordinates', chrome.navIsHit, chrome.navHit);
+// Clickable, not merely visible.
+await page.locator('side-nav .nav__item').first().click();
+check('and it takes a click', true);
+
+console.log('\nPage scroll locks while a panel is open; panels scroll themselves');
+const locked = await page.evaluate(() => ({
+  htmlLocked: document.documentElement.classList.contains('panel-open'),
+  pageScrollable: document.documentElement.scrollHeight > window.innerHeight + 1,
+  streamScrolls: (() => {
+    const el = document.querySelector('workflow-panel .stream');
+    return !!el && el.scrollHeight > el.clientHeight + 1;
+  })(),
+  navScrolls: (() => {
+    const el = document.querySelector('side-nav .nav');
+    return !!el && el.scrollHeight > el.clientHeight + 1;
+  })(),
+}));
+check('the page itself cannot scroll', locked.htmlLocked && !locked.pageScrollable,
+  JSON.stringify(locked));
+check('the panel hands scrolling to its stream', await page.evaluate(() =>
+  getComputedStyle(document.querySelector('workflow-panel .stream')).overflowY === 'auto'));
+// Whether it is scrolling RIGHT NOW depends on how much fixture content there
+// is, so shorten the viewport until it must be, and check the page still is
+// not the thing that moved.
+await page.setViewportSize({ width: 1500, height: 620 });
+await settle(400);
+const short = await page.evaluate(() => ({
+  streamScrolls: (() => {
+    const el = document.querySelector('workflow-panel .stream');
+    return !!el && el.scrollHeight > el.clientHeight + 1;
+  })(),
+  pageScrollable: document.documentElement.scrollHeight > window.innerHeight + 1,
+  panelInViewport:
+    document.querySelector('aml-case-modal').getBoundingClientRect().bottom <=
+    window.innerHeight + 1,
+}));
+check('short viewport: the stream is what scrolls', short.streamScrolls && !short.pageScrollable,
+  JSON.stringify(short));
+check('short viewport: the panel still fits the chrome', short.panelInViewport);
+await page.setViewportSize({ width: 1500, height: 1000 });
+await settle(400);
+check('the nav scrolls itself too', locked.navScrolls);
+await page.locator('aml-case-modal button[aria-label="Close case"]').click();
+await settle(500);
+check('the lock lifts when the last panel closes', await page.evaluate(() =>
+  !document.documentElement.classList.contains('panel-open')));
 
 console.log('\nDrawer motion: in from the right, out to the right');
 const tx = (sel) =>
@@ -248,7 +330,7 @@ check('and lands with no transform left behind',
 
 // One continuous motion: the incumbent must already be narrowing while the
 // newcomer is still on its way in, not after it has arrived.
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await page.waitForTimeout(90);
 const push = { incumbent: await tx('aml-case-modal'), entering: await tx('sg-alert-modal') };
 check('the incumbent is already narrowing as the newcomer slides in',

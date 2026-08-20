@@ -26,6 +26,16 @@
   --page: #f4f5f7;
   --panel: #ffffff;
 
+  /* Host-app chrome, sampled from frame 09. Not part of the case language:
+     nothing inside a panel may use these. */
+  --brand-bar: #E1F737;
+  --brand-bar-ink: #18181b;
+  --brand-bar-accent: #1D4ED8;
+  --player-bar: #0A0A0A;
+  --player-bar-ink: #ffffff;
+  --nav-w: 256px;
+  --top-bar-h: 56px;
+  --player-bar-h: 64px;
   --primary: #1a73c9;
   --primary-bg: #eaf2fb;
   /**
@@ -198,6 +208,20 @@ html,
 body {
   margin: 0;
   padding: 0;
+}
+
+/**
+ * Page scroll lock.
+ *
+ * Set on <html> while a panel is open. The shell is already sized to the
+ * viewport, so this is a guard rather than the mechanism - without it a stray
+ * overflowing child would let the whole composition scroll under the chrome,
+ * which is the one thing the chrome exists to prevent.
+ */
+html.panel-open,
+html.panel-open body {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {

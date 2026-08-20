@@ -73,8 +73,10 @@ import { PillComponent } from './ui-pill.component';
         flex-direction: column;
         width: 100%;
         /* Leave room for any docked bars, or one will cover the footer. */
-        height: min(820px, calc(100vh - 240px - var(--dock-h, 0px)));
-        min-height: 520px;
+        /* Fills the stage, which is already sized to what the chrome leaves. */
+        height: 100%;
+        max-height: calc(100% - var(--dock-h, 0px));
+        min-height: 0;
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 16px;

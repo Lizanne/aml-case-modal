@@ -24,53 +24,70 @@ import { PillComponent } from './ui-pill.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="widgets">
+      <!--
+        Frame 09's two widget states, which are the ONLY way onto the stage.
+        Icon, title and count on the first line, the secondary detail under it,
+        and the actions hard right: lock state, Unlock, then the primary that
+        opens the panel.
+      -->
       <article class="widget">
-        <div class="widget__head">
-          <h2 class="widget__title">Responsible gambling alerts</h2>
-          <ui-pill tone="info">SG alert</ui-pill>
+        <mat-icon class="widget__icon" fontSet="material-icons-outlined">shield</mat-icon>
+        <div class="widget__text">
+          <div class="widget__head">
+            <h2 class="widget__title">SG Alerts</h2>
+            <ui-pill tone="info">41 triggers hit</ui-pill>
+          </div>
+          <p class="widget__body">12 snoozed · Last trigger 1mo ago</p>
         </div>
-        <p class="widget__body">1 active alert for this player.</p>
-        <footer class="widget__foot">
+        <div class="widget__foot">
+          <span class="widget__lock">
+            <span class="widget__avatar" aria-hidden="true">LF</span>
+            Locked by you
+          </span>
+          <button mat-stroked-button type="button">Unlock</button>
           @if (ws.isOpen('sg')) {
             <button mat-stroked-button type="button" (click)="ws.close('sg')">Close alert</button>
           } @else {
             <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
-              Open alert
+              <mat-icon>check</mat-icon>
+              Resolve and archive
             </button>
           }
-        </footer>
+        </div>
       </article>
 
       <article class="widget">
-        <div class="widget__head">
-          <h2 class="widget__title">AML case #{{ store.caseId() }}</h2>
-          <ui-pill [severity]="store.severity()">
-            {{ store.severity() }}
-          </ui-pill>
+        <mat-icon class="widget__icon" fontSet="material-icons-outlined">work_outline</mat-icon>
+        <div class="widget__text">
+          <div class="widget__head">
+            <h2 class="widget__title">AML Case</h2>
+            <ui-pill [severity]="store.severity()">{{ store.severity() }}</ui-pill>
+          </div>
+          <p class="widget__body">
+            #AML-1042 · {{ store.isResolved() ? 'Resolved' : 'In progress' }} · Opened 12d ago
+          </p>
         </div>
-        <p class="widget__body">{{ lockLine() }}</p>
-        <footer class="widget__foot">
+        <div class="widget__foot">
+          <span class="widget__lock">
+            <span class="widget__avatar" aria-hidden="true">LF</span>
+            {{ lockLine() }}
+          </span>
           @if (!store.isResolved() && store.lockState() !== 'locked-to-me') {
             <button mat-stroked-button type="button" (click)="store.lock()" [disabled]="lockBlocked()">
               Lock case
             </button>
+          } @else if (!store.isResolved()) {
+            <button mat-stroked-button type="button" (click)="store.requestUnlock()">Unlock</button>
           }
           @if (ws.isOpen('aml')) {
             <button mat-stroked-button type="button" (click)="ws.close('aml')">Close case</button>
           } @else {
-            <span [matTooltip]="openBlockedReason()" [matTooltipDisabled]="canOpenAml()">
-              <button
-                mat-flat-button
-                color="primary"
-                type="button"
-                [disabled]="!canOpenAml()"
-                (click)="ws.open('aml')"
-              >
-                Open case
-              </button>
-            </span>
+            <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
+              <mat-icon>open_in_new</mat-icon>
+              Open case
+            </button>
           }
-        </footer>
+        </div>
       </article>
     </div>
   `,
@@ -88,28 +105,43 @@ import { PillComponent } from './ui-pill.component';
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
       }
-      /* min-width: 0 so a widget may be narrower than its own content. Without
-         it a grid item floors at min-content and the pair stops sharing the
-         row long before the stacking point. */
+      /* One row: icon, the text column, then the actions hard right.
+         min-width: 0 so a widget may be narrower than its own content -
+         without it a grid item floors at min-content and the pair stops
+         sharing the row long before the stacking point. */
       .widget {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
+        align-items: center;
+        gap: 12px;
         min-width: 0;
-        padding: 14px 16px;
+        padding: 12px 16px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--panel);
+      }
+      mat-icon.widget__icon {
+        flex: none;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        color: var(--ink-2);
+      }
+      .widget__text {
+        flex: 1;
+        min-width: 0;
       }
       .widget__head {
         display: flex;
         align-items: center;
         gap: 8px;
+        min-width: 0;
       }
       .widget__title {
         min-width: 0;
         margin: 0;
         font-size: 14px;
+        line-height: 20px;
         font-weight: 600;
         color: var(--ink);
         white-space: nowrap;
@@ -117,18 +149,40 @@ import { PillComponent } from './ui-pill.component';
         text-overflow: ellipsis;
       }
       /* The secondary line is what gives way first: one line, ellipsised. The
-         buttons below it are the widget's whole purpose, so they must never be
-         the thing that wraps or clips to make room for a sentence. */
+         buttons are the widget's whole purpose, so they must never be the
+         thing that wraps or clips to make room for a sentence. */
       .widget__body {
-        margin: 0;
+        margin: 2px 0 0;
         min-width: 0;
-        font-size: 14px;
-        line-height: 20px;
+        font-size: 12px;
+        line-height: 16px;
         color: var(--ink-3);
-        flex: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      .widget__lock {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--foreground-success);
+        white-space: nowrap;
+      }
+      .widget__avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--success-bg-subtle);
+        color: var(--success);
+        font-size: 10px;
+        letter-spacing: 0;
       }
       /* flex: none on the buttons: a Material button that shrinks crushes its
          own label and icon rather than ellipsising cleanly. They keep their
@@ -136,8 +190,11 @@ import { PillComponent } from './ui-pill.component';
          a full column each, so it never comes to that. */
       .widget__foot {
         display: flex;
+        align-items: center;
         gap: 8px;
+        flex: none;
         flex-wrap: wrap;
+        justify-content: flex-end;
       }
       .widget__foot button {
         flex: none;
@@ -146,6 +203,22 @@ import { PillComponent } from './ui-pill.component';
 
       /* Mobile: one card per row, full width inside the page's 16px gutter, and
          the buttons share that width rather than huddling at the left. */
+      /* Not enough room for text and actions on one line: the actions drop
+         under the text, still right-aligned, before anything truncates away
+         to nothing. */
+      @media (max-width: 1279.98px) {
+        .widget {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .widget__text {
+          flex: 1 1 100%;
+        }
+        .widget__foot {
+          flex: 1 1 100%;
+        }
+      }
+
       @media (max-width: 719.98px) {
         .widgets {
           grid-template-columns: minmax(0, 1fr);

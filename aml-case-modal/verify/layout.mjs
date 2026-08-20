@@ -146,7 +146,7 @@ for (const state of ['00a', '01', '02', '02b', '03', '04', '07', '08', '10']) {
 await page.setViewportSize({ width: 1500, height: 1040 });
 await page.goto(`${BASE}/?state=03`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-await page.locator('back-office-widgets button:has-text("Open alert")').click();
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
 await page.waitForTimeout(800);
 await streamFit('dual-modal, full stream');
 
@@ -782,13 +782,20 @@ for (const state of ['01', '09', '10']) {
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('trigger-strip ui-pill', { timeout: 15000 });
 await page.waitForTimeout(500);
+// Scoped, not text-matched across the page: the SG widget now carries a
+// "41 triggers hit" pill of its own, which a loose /triggers/ search finds
+// before the strip's count and reports the wrong tone for.
 const named = await page.evaluate(() => {
-  const find = (t) =>
-    [...document.querySelectorAll('ui-pill')].find((el) => new RegExp(t).test(el.textContent));
-  const read = (el) => (el ? el.getAttribute('data-tone') : null);
-  return { sg: read(find('SG alert')), count: read(find('triggers')) };
+  const read = (sel) => {
+    const el = document.querySelector(sel);
+    return el ? el.getAttribute('data-tone') : null;
+  };
+  return {
+    sgWidget: read('back-office-widgets .widget:first-of-type ui-pill'),
+    count: read('trigger-strip .strip__bar ui-pill'),
+  };
 });
-check('SG alert is info', named.sg === 'info', String(named.sg));
+check('the SG widget count pill is info', named.sgWidget === 'info', String(named.sgWidget));
 // The count goes amber on an unresynced arrival; state 10 is exactly that.
 check('the trigger count is warn while an arrival is unresynced',
   named.count === 'warn', String(named.count));

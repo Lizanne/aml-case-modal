@@ -50,6 +50,16 @@ const IGNORE = `
     if (el.classList.contains('mat-mdc-radio-touch-target')) return true;
     // Deliberate single-line truncation: the ellipsis IS the design.
     if (cs.textOverflow === 'ellipsis' && cs.overflow !== 'visible') return true;
+    // A child of a clipping ancestor does not render past the viewport even
+    // when its own box does - the ancestor cuts it off. Without this the
+    // "(ENABLED)" inside an ellipsised player title reads as an overflow when
+    // what is on screen is an ellipsis.
+    for (let a = el.parentElement; a; a = a.parentElement) {
+      const acs = getComputedStyle(a);
+      if (acs.overflowX !== 'visible' && a.getBoundingClientRect().right <= window.innerWidth + 0.5) {
+        return true;
+      }
+    }
     return false;
   };
   window.label = (el) => el.tagName.toLowerCase() +

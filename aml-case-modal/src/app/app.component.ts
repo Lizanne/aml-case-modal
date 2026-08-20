@@ -8,10 +8,14 @@ import {
   OnDestroy,
   ViewChild,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 
+import { AppTopBarComponent } from './chrome/app-top-bar.component';
+import { PlayerHeaderComponent } from './chrome/player-header.component';
+import { SideNavComponent } from './chrome/side-nav.component';
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
 import { BackOfficeWidgetsComponent } from './components/back-office-widgets.component';
 import { MinimisedBarComponent } from './components/minimised-bar.component';
@@ -35,6 +39,9 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     BackOfficeWidgetsComponent,
     MinimisedBarComponent,
     DevStateSwitcherComponent,
+    AppTopBarComponent,
+    PlayerHeaderComponent,
+    SideNavComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -64,31 +71,47 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   template: `
     <a class="skip-link" href="#workspace">Skip to case workspace</a>
 
-    <!-- The dev harness is not product content, so it sits outside <main> in
-         its own labelled complementary landmark. -->
+    <!-- The dev harness is not product content, so it sits outside the app
+         shell entirely, above the chrome, in its own labelled landmark. -->
     <aside class="page__dev" aria-label="Prototype dev harness">
       <dev-state-switcher />
     </aside>
 
-    <main class="page" id="workspace">
-      <h1 class="visually-hidden">AML case workspace</h1>
-      <back-office-widgets />
+    <!--
+      Frame 09's composition. The panels live INSIDE the main column, below the
+      player bar and beside the nav, so they can never cover either: they are
+      in normal flow, not an overlay. The nav stays reachable throughout.
+    -->
+    <app-top-bar />
+
+    <div class="shell">
+      <aside class="shell__nav">
+        <side-nav />
+      </aside>
+
+      <div class="shell__main">
+        <player-header />
+
+        <main class="page" id="workspace">
+          <back-office-widgets />
 
       <!--
         Rendered straight from the open order, so the DOM order IS the dock
         order: incumbent left, newest right. No component knows which side it
         is on, because no side is assigned to it.
       -->
-      <div class="stage" #stage [@.disabled]="reducedMotion()">
-        @for (id of ws.visibleOrder(); track id) {
-          @if (id === 'sg') {
-            <sg-alert-modal class="stage__modal" @panel />
-          } @else {
-            <aml-case-modal class="stage__modal" @panel />
-          }
-        }
+          <div class="stage" #stage [@.disabled]="reducedMotion()">
+            @for (id of ws.visibleOrder(); track id) {
+              @if (id === 'sg') {
+                <sg-alert-modal class="stage__modal" @panel />
+              } @else {
+                <aml-case-modal class="stage__modal" @panel />
+              }
+            }
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
 
     @if (ws.minimisedBars().length) {
       <div class="dock">
@@ -100,23 +123,57 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   `,
   styles: [
     `
+      /* One column exactly the height of the viewport: dev harness, top bar,
+         then the shell taking whatever is left. Measuring the shell against
+         100vh instead would ignore the harness above it and push the panels
+         off the bottom of a locked page, where nothing can scroll them back. */
       :host {
-        display: block;
-        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
         background: var(--page);
       }
+      /**
+       * Nav beside main, both filling what the top bar leaves. Sized to the
+       * viewport rather than to content, which is what makes the page itself
+       * unscrollable and hands scrolling to the nav and the panels instead.
+       */
+      .shell__bar {
+        flex: none;
+      }
+      .shell {
+        flex: 1;
+        display: flex;
+        align-items: stretch;
+        min-height: 0;
+      }
+      .shell__nav {
+        flex: none;
+        width: var(--nav-w);
+        min-height: 0;
+      }
+      .shell__main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      /* The content area under the player bar. It is the panels' container, so
+         the panels start exactly where the chrome ends. */
       .page {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 20px 120px;
-        display: grid;
+        flex: 1;
+        min-height: 0;
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
         gap: 16px;
+        overflow: hidden;
       }
       .page__dev {
-        display: block;
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px 20px 16px;
+        flex: none;
+        padding: 12px 20px;
+        background: var(--page);
       }
       /* Visible only on focus - the first thing a keyboard user reaches. */
       .skip-link {
@@ -145,13 +202,17 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
          the content area rather than centred, so opening a second one pushes
          the first leftward instead of shunting both sideways.
          position: relative is what the leaving panel is absolute against. */
+      /* Fills the height the widgets leave. Panels are stretched to it and
+         scroll internally, so nothing here ever grows the page. */
       .stage {
         position: relative;
         display: flex;
         justify-content: flex-end;
-        align-items: flex-start;
+        align-items: stretch;
         gap: 16px;
+        flex: 1;
         min-width: 0;
+        min-height: 0;
       }
       /* Bars dock to the bottom edge and stack. */
       .dock {
@@ -176,11 +237,18 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * width rule to keep in step, and nothing needs !important to beat the
        * inline width the workspace sets.
        */
+      /* No room for a 256px nav beside a panel much below this, and the panel
+         is the point of the page. */
+      @media (max-width: 1023.98px) {
+        .shell__nav {
+          display: none;
+        }
+      }
+
       @media (max-width: 719.98px) {
         .page {
           padding-left: 16px;
           padding-right: 16px;
-          padding-bottom: 96px;
         }
         .page__dev {
           padding: 16px;
@@ -215,6 +283,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   readonly reducedMotion = signal(this.motionQuery?.matches ?? false);
 
   private readonly zone = inject(NgZone);
+
+  /**
+   * Page scroll lock. While a panel is up the composition is fixed to the
+   * viewport: the chrome stays put, the nav scrolls itself, and the panel
+   * scrolls internally. Without this a tall panel would drag the whole page
+   * and take the player bar off screen with it.
+   */
+  private readonly scrollLock = effect(() => {
+    const open = this.ws.visibleOrder().length > 0;
+    document.documentElement.classList.toggle('panel-open', open);
+  });
 
   @ViewChild('stage') private stage?: ElementRef<HTMLElement>;
   private observer?: ResizeObserver;
