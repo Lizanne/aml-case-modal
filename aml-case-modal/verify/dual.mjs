@@ -243,6 +243,8 @@ const lockView = () =>
         b.textContent.replace(/\s+/g, ' ').trim(),
       );
     const hasLockBtn = (list) => list.some((l) => /Unlock|Lock case/.test(l));
+    const hasOpen = (list) => list.some((l) => /Open case|Resolve and archive/.test(l));
+    const hasClose = (list) => list.some((l) => /^Close /.test(l));
     return {
       sgOpen: !!document.querySelector('sg-alert-modal'),
       amlOpen: !!document.querySelector('aml-case-modal'),
@@ -250,6 +252,8 @@ const lockView = () =>
       amlHasLock: hasLockBtn(labels(1)),
       sgPill: !!cards[0].querySelector('.widget__lock'),
       amlPill: !!cards[1].querySelector('.widget__lock'),
+      sgActions: { open: hasOpen(labels(0)), close: hasClose(labels(0)) },
+      amlActions: { open: hasOpen(labels(1)), close: hasClose(labels(1)) },
       panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
     };
   });
@@ -258,6 +262,12 @@ await fresh();
 const bothClosed = await lockView();
 check('both closed: each widget keeps its lock control',
   bothClosed.sgHasLock && bothClosed.amlHasLock, JSON.stringify(bothClosed));
+// One slot, swapped: an Open action while the panel is up would be an action
+// with nothing to do, and the two must never be on screen together.
+check('both closed: each shows its open action and no Close',
+  bothClosed.sgActions.open && !bothClosed.sgActions.close &&
+    bothClosed.amlActions.open && !bothClosed.amlActions.close,
+  JSON.stringify([bothClosed.sgActions, bothClosed.amlActions]));
 
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle(500);
@@ -266,6 +276,10 @@ const amlUp = await lockView();
 check('AML open: its widget drops the lock control, SG keeps its own',
   !amlUp.amlHasLock && amlUp.sgHasLock, JSON.stringify(amlUp));
 check('the status pill stays on both', amlUp.sgPill && amlUp.amlPill);
+check('AML open: its widget reads Close, SG still reads its open action',
+  amlUp.amlActions.close && !amlUp.amlActions.open &&
+    amlUp.sgActions.open && !amlUp.sgActions.close,
+  JSON.stringify([amlUp.sgActions, amlUp.amlActions]));
 check('the panel header is the lock control', amlUp.panelLock !== null, String(amlUp.panelLock));
 
 await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
@@ -273,6 +287,10 @@ await settle(500);
 const bothUp = await lockView();
 check('both open: neither widget carries a lock control',
   !bothUp.sgHasLock && !bothUp.amlHasLock, JSON.stringify(bothUp));
+check('both open: both widgets read Close only',
+  bothUp.sgActions.close && !bothUp.sgActions.open &&
+    bothUp.amlActions.close && !bothUp.amlActions.open,
+  JSON.stringify([bothUp.sgActions, bothUp.amlActions]));
 
 // State change on the panel reaches the widget with no reload.
 const before = await page.evaluate(() =>
@@ -289,6 +307,8 @@ await settle(500);
 const amlGone = await lockView();
 check('closing the panel gives the lock control back', amlGone.amlHasLock,
   JSON.stringify(amlGone));
+check('and the open action with it', amlGone.amlActions.open && !amlGone.amlActions.close,
+  JSON.stringify(amlGone.amlActions));
 
 console.log('\nThe panels live inside the chrome, never over it');
 await fresh();

@@ -54,12 +54,19 @@ import { PillComponent } from './ui-pill.component';
           @if (!ws.isOpen('sg')) {
             <button mat-stroked-button type="button">Unlock</button>
           }
-          <!-- Static label, per frame 09. A panel is closed by its own X, not
-               by the widget changing what it says. -->
-          <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
-            <mat-icon>check</mat-icon>
-            Resolve and archive
-          </button>
+          <!--
+            One slot, swapped by panel state - never both at once. Open while
+            the panel is up would be an action with nothing to do, and it is
+            the same button that has to take you back out.
+          -->
+          @if (ws.isOpen('sg')) {
+            <button mat-stroked-button type="button" (click)="ws.close('sg')">Close alert</button>
+          } @else {
+            <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
+              <mat-icon>check</mat-icon>
+              Resolve and archive
+            </button>
+          }
         </div>
       </article>
 
@@ -95,10 +102,14 @@ import { PillComponent } from './ui-pill.component';
               </button>
             }
           }
-          <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
-            <mat-icon>open_in_new</mat-icon>
-            Open case
-          </button>
+          @if (ws.isOpen('aml')) {
+            <button mat-stroked-button type="button" (click)="ws.close('aml')">Close case</button>
+          } @else {
+            <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
+              <mat-icon>open_in_new</mat-icon>
+              Open case
+            </button>
+          }
         </div>
       </article>
     </div>
