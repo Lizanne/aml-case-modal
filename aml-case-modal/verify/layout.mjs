@@ -1,4 +1,14 @@
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+// The severity language comes from the fixture, never from a literal here -
+// the ranking is not the intuitive one and a hardcoded list is one more place
+// it can be written down wrong.
+const FIXTURE = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../src/app/core/mock-case.json', import.meta.url)), 'utf8'),
+);
+const SEVERITY_ORDER = FIXTURE.severityRanking.order;
 
 /**
  * Layout-mode regression suite.
@@ -514,17 +524,15 @@ const st = await page.evaluate(() => {
     const c = getComputedStyle(e);
     return { size: c.fontSize, line: c.lineHeight, weight: c.fontWeight, colour: c.color };
   };
-  // The fixture ships ONE commentary, so the separator between rows cannot be
-  // observed as-is. Clone the row to give it a sibling, read the rule off the
-  // first one, then put the list back exactly as it was.
-  const clone = row.cloneNode(true);
-  row.parentElement.appendChild(clone);
+  // Three real rows now, so the separator is observable without a stand-in.
+  const all = [...document.querySelectorAll('.starred__row')];
   const sep = {
+    count: all.length,
     width: getComputedStyle(row).borderBottomWidth,
     colour: getComputedStyle(row).borderBottomColor,
-    lastHasNone: getComputedStyle(clone).borderBottomWidth === '0px',
+    allButLastRuled: all.slice(0, -1).every((r) => getComputedStyle(r).borderBottomWidth === '1px'),
+    lastHasNone: getComputedStyle(all[all.length - 1]).borderBottomWidth === '0px',
   };
-  clone.remove();
   return {
     pad: cs.padding,
     bodyPad: getComputedStyle(body).paddingLeft + '/' + getComputedStyle(body).paddingRight,
@@ -565,9 +573,17 @@ check('starred: timestamp and commentary are 14px/20px muted',
   `${st.at.size} ${st.at.colour} / ${st.text.size} ${st.text.colour}`);
 check('starred: pill, author and stamp share one line', st.headOneLine);
 check('starred: the commentary sits below them', st.textBelowHead);
+check('starred: three commentaries, as designed', st.sep.count === 3, String(st.sep.count));
 check('starred: a 1px rule separates rows, and the last has none',
-  st.sep.width === '1px' && st.sep.colour === ST_LINE && st.sep.lastHasNone,
-  `${st.sep.width} ${st.sep.colour} lastNone=${st.sep.lastHasNone}`);
+  st.sep.width === '1px' && st.sep.colour === ST_LINE &&
+    st.sep.allButLastRuled && st.sep.lastHasNone,
+  `${st.sep.width} ${st.sep.colour} ruled=${st.sep.allButLastRuled} lastNone=${st.sep.lastHasNone}`);
+// The tags are severity pills, so a new entry cannot quietly land on a tone
+// that is not part of the severity language.
+const tags = await page.$$eval('.starred__row ui-pill', (els) =>
+  els.map((e) => e.getAttribute('data-sev')));
+check('starred: every tag is a real severity',
+  tags.length === 3 && tags.every((t) => SEVERITY_ORDER.includes(t)), tags.join(','));
 
 // Timeline row, per Figma node 22224:18961: two stacked lines on the left,
 // the actor right-aligned on the second of them.

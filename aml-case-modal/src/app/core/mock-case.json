@@ -318,6 +318,18 @@
       "tag": "AML",
       "text": "Player previously provided SoF documentation for property income.",
       "who": "M. Torres"
+    },
+    {
+      "at": "2026-02-03T14:12:00Z",
+      "tag": "EDD",
+      "text": "Address verified against utility bill; earlier mismatch was a formatting issue on the payment provider side.",
+      "who": "A. Kowalski"
+    },
+    {
+      "at": "2026-08-11T10:31:00Z",
+      "tag": "AML",
+      "text": "Case 4821 created (EDD). Reason: unusual deposit pattern flagged during profile review.",
+      "who": "System"
     }
   ],
   "attachmentErrorsExample": [
