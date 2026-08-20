@@ -68,7 +68,7 @@ export type PillTone =
         color: var(--color-foreground-on-info);
       }
       :host([data-tone='success']) {
-        background: var(--success-bg);
+        background: var(--success-bg-subtle);
         color: var(--success);
       }
       :host([data-tone='warn']) {

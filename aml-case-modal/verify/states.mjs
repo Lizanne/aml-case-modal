@@ -105,7 +105,7 @@ const CHECKS = {
           el.querySelectorAll('a').length === 0 &&
           !!el.querySelector('mat-icon') &&
           // Assert the tokens reach the element, not which hex they hold.
-          cs.backgroundColor === token('--success-bg') &&
+          cs.backgroundColor === token('--success-bg-subtle') &&
           cs.color === token('--success')
         );
       });

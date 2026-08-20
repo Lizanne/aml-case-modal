@@ -72,16 +72,10 @@
   /* State colours. */
   --success: #14532D;
   --foreground-success: #15803D;
-  --success-bg: #F0FDF4;
-  /**
-   * Success tint for filling a whole card rather than a chip.
-   *
-   * It exists because the earlier --success-bg dropped the muted tokens inside
-   * an outcome card below AA. The current palette no longer has that problem -
-   * --ink-3 meta text is 7.38:1 on --success-bg and 7.04:1 here - so this is
-   * now a tone choice rather than a contrast fix, and either would pass.
-   */
-  --success-bg-subtle: #DCFCE7;
+  /* One success tint. --success-bg and --success-bg-subtle had drifted to the
+     same value, which made the pair a naming decision with no design behind it
+     - two names for one colour is just somewhere for them to diverge again. */
+  --success-bg-subtle: #F0FDF4;
   --danger: #B91C1C;
   --danger-bg: #FEF2F2;
   /* Hover/pressed pair for destructive controls: one step deeper in the same

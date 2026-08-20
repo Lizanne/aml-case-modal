@@ -73,7 +73,7 @@ import { AttachmentListComponent } from './attachment-list.component';
       /**
        * The decision card (state 07). Background, border colour and border
        * width only - every text colour inside is inherited unchanged, which is
-       * exactly what the paler tint is chosen to allow. On --success-bg the
+       * exactly what the paler tint is chosen to allow. On the flat tint the
        * meta line and the button label would both sit at 4.25:1, under AA.
        *
        * The previous inset left-edge accent is dropped: the target is one

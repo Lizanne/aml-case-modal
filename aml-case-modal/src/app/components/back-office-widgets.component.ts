@@ -44,7 +44,16 @@ import { PillComponent } from './ui-pill.component';
             <span class="widget__avatar" aria-hidden="true">LF</span>
             Locked by you
           </span>
-          <button mat-stroked-button type="button">Unlock</button>
+          <!--
+            One owner for the lock control. While the panel is open its header
+            IS the lock control, so the widget's copy goes: two Unlock buttons
+            on screen for the same lock is an invitation to wonder whether they
+            do the same thing. The status pill stays, so the widget still tells
+            you where the lock is.
+          -->
+          @if (!ws.isOpen('sg')) {
+            <button mat-stroked-button type="button">Unlock</button>
+          }
           <!-- Static label, per frame 09. A panel is closed by its own X, not
                by the widget changing what it says. -->
           <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
@@ -70,12 +79,21 @@ import { PillComponent } from './ui-pill.component';
             <span class="widget__avatar" aria-hidden="true">LF</span>
             {{ lockLine() }}
           </span>
-          @if (!store.isResolved() && store.lockState() !== 'locked-to-me') {
-            <button mat-stroked-button type="button" (click)="store.lock()" [disabled]="lockBlocked()">
-              Lock case
-            </button>
-          } @else if (!store.isResolved()) {
-            <button mat-stroked-button type="button" (click)="store.requestUnlock()">Unlock</button>
+          @if (!ws.isOpen('aml') && !store.isResolved()) {
+            @if (store.lockState() !== 'locked-to-me') {
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="store.lock()"
+                [disabled]="lockBlocked()"
+              >
+                Lock case
+              </button>
+            } @else {
+              <button mat-stroked-button type="button" (click)="store.requestUnlock()">
+                Unlock
+              </button>
+            }
           }
           <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
             <mat-icon>open_in_new</mat-icon>

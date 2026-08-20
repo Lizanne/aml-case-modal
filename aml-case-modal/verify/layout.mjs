@@ -489,6 +489,58 @@ check('09 narrow footer has no rule, so no padding above one',
   `${narrowCard.footBorder} / ${narrowCard.footPadTop}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+console.log('\nEvery time-ordered list runs newest first');
+const descending = (times) => times.every((v, i) => i === 0 || times[i - 1] >= v);
+const openTab = async (label) => {
+  // In the segmented layout the info panel has to be selected first.
+  const seg = page.locator('mat-button-toggle:has-text("Player info")');
+  if (await seg.count()) {
+    await seg.click();
+    await page.waitForTimeout(350);
+  }
+  const tab = page.locator(`player-info-panel .mat-mdc-tab:has-text("${label}")`);
+  if (!(await tab.count())) return null;
+  await tab.click();
+  await page.waitForTimeout(400);
+  return true;
+};
+for (const state of ['00a', '01', '03', '07', '10', '11', '09']) {
+  await page.setViewportSize({ width: state === '09' ? 1500 : 1440, height: 1040 });
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('aml-case-modal', { timeout: 15000 });
+  await page.waitForTimeout(600);
+
+  const triggers = await page.$$eval('trigger-strip .cell__at', (els) =>
+    els.map((e) => Date.parse(e.getAttribute('datetime'))));
+  check(`${state}: trigger strip newest first`, triggers.length > 0 && descending(triggers),
+    `${triggers.length} rows`);
+
+  for (const [label, sel] of [
+    ['Past AML cases', '.past__date'],
+    ['Timeline', '.timeline__at'],
+    ['Starred', '.starred__at'],
+  ]) {
+    const opened = await openTab(label);
+    if (!opened) continue;
+    const times = await page.$$eval(sel, (els) =>
+      els.map((e) => Date.parse(e.getAttribute('datetime'))));
+    if (!times.length) continue;
+    check(`${state}: ${label} newest first`, descending(times), `${times.length} rows`);
+  }
+}
+await page.setViewportSize({ width: 1440, height: 1040 });
+
+// The one deliberate exception.
+await page.goto(`${BASE}/?state=07`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('outcome-card', { timeout: 15000 });
+await page.waitForTimeout(600);
+const stream = await page.$$eval('workflow-panel .stream outcome-card .card__meta', (els) =>
+  els.map((e) => e.textContent.trim()),
+);
+check('the workflow stream stays oldest first', stream.length > 1 &&
+  stream.every((_, i) => i === 0 || stream[i - 1] <= stream[i]),
+  stream.join(' | '));
+
 console.log('\nThe panel and the widget row are one width');
 for (const width of [1440, 1200, 1024, 390]) {
   await page.setViewportSize({ width, height: 1000 });

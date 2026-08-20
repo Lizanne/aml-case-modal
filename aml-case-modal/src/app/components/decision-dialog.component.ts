@@ -58,7 +58,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         margin: 4px 0 16px;
         padding: 16px;
         border-radius: 10px;
-        background: var(--success-bg);
+        background: var(--success-bg-subtle);
         color: var(--success);
         font-size: 14px;
         line-height: 20px;

@@ -234,6 +234,62 @@ const clickable = await page.evaluate(() => {
 check('the reflowing modal still receives pointer events', clickable);
 await settle(400);
 
+console.log('\nAn open panel owns its own lock control');
+const lockView = () =>
+  page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.widget')];
+    const labels = (i) =>
+      [...cards[i].querySelectorAll('.widget__foot button')].map((b) =>
+        b.textContent.replace(/\s+/g, ' ').trim(),
+      );
+    const hasLockBtn = (list) => list.some((l) => /Unlock|Lock case/.test(l));
+    return {
+      sgOpen: !!document.querySelector('sg-alert-modal'),
+      amlOpen: !!document.querySelector('aml-case-modal'),
+      sgHasLock: hasLockBtn(labels(0)),
+      amlHasLock: hasLockBtn(labels(1)),
+      sgPill: !!cards[0].querySelector('.widget__lock'),
+      amlPill: !!cards[1].querySelector('.widget__lock'),
+      panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
+    };
+  });
+
+await fresh();
+const bothClosed = await lockView();
+check('both closed: each widget keeps its lock control',
+  bothClosed.sgHasLock && bothClosed.amlHasLock, JSON.stringify(bothClosed));
+
+await page.locator('back-office-widgets button:has-text("Open case")').click();
+await settle(500);
+const amlUp = await lockView();
+// Per case, independently: opening the AML panel must not touch the SG widget.
+check('AML open: its widget drops the lock control, SG keeps its own',
+  !amlUp.amlHasLock && amlUp.sgHasLock, JSON.stringify(amlUp));
+check('the status pill stays on both', amlUp.sgPill && amlUp.amlPill);
+check('the panel header is the lock control', amlUp.panelLock !== null, String(amlUp.panelLock));
+
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
+await settle(500);
+const bothUp = await lockView();
+check('both open: neither widget carries a lock control',
+  !bothUp.sgHasLock && !bothUp.amlHasLock, JSON.stringify(bothUp));
+
+// State change on the panel reaches the widget with no reload.
+const before = await page.evaluate(() =>
+  document.querySelectorAll('.widget')[1].querySelector('.widget__lock').textContent.trim());
+await page.locator('aml-case-modal .head__lock button').click();
+await settle(400);
+const after = await page.evaluate(() =>
+  document.querySelectorAll('.widget')[1].querySelector('.widget__lock').textContent.trim());
+check('a lock change on the panel shows on the widget at once', before !== after,
+  `${before} -> ${after}`);
+
+await page.locator('aml-case-modal button[aria-label="Close case"]').click();
+await settle(500);
+const amlGone = await lockView();
+check('closing the panel gives the lock control back', amlGone.amlHasLock,
+  JSON.stringify(amlGone));
+
 console.log('\nThe panels live inside the chrome, never over it');
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();

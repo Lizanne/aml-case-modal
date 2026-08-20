@@ -140,7 +140,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               No status column: a past case is resolved by definition.
             -->
             <div class="past" role="group" aria-label="Past AML cases">
-              @for (past of store.pastCases(); track past.caseId) {
+              @for (past of store.sortedPastCases(); track past.caseId) {
                 <button
                   class="past__row"
                   type="button"
@@ -208,7 +208,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               not an action.
             -->
             <ol class="timeline">
-              @for (entry of store.timeline(); track $index) {
+              @for (entry of store.sortedTimeline(); track $index) {
                 <li class="timeline__item">
                   <time class="timeline__at" [attr.datetime]="entry.at">
                     {{ entry.at | stamp }}

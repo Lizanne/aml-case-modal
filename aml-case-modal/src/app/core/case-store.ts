@@ -84,6 +84,17 @@ function mapAttachment(raw: { name: string; type: string; sizeKb: number }): Att
  * The single in-memory store. Every component reads from here; every mutation
  * goes through a command on here, so the business rules live in one file.
  */
+/**
+ * Newest first, on the parsed timestamp.
+ *
+ * Date.parse rather than a string compare: the fixture is all-UTC today, but a
+ * string compare mis-sorts the moment an entry carries an offset like +01:00,
+ * and array order mis-sorts the moment the fixture is edited.
+ */
+function newestFirst(a: { at: string }, b: { at: string }): number {
+  return Date.parse(b.at) - Date.parse(a.at);
+}
+
 @Injectable({ providedIn: 'root' })
 export class CaseStore {
   // ---------------------------------------------------------------- reference data
@@ -240,8 +251,21 @@ export class CaseStore {
    * the moment the fixture is edited.
    */
   readonly sortedStarred = computed<StarredCommentary[]>(() =>
-    [...this.starred()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+    [...this.starred()].sort(newestFirst),
   );
+
+  /**
+   * Past cases and the timeline, newest first.
+   *
+   * Every time-ordered list in the product reads the same way round. The one
+   * deliberate exception is the workflow stream, which is a narrative ending
+   * in the decision and is left in the order it happened - see stream().
+   */
+  readonly sortedPastCases = computed<PastCase[]>(() =>
+    [...this.pastCases()].sort((a, b) => Date.parse(b.dateCreated) - Date.parse(a.dateCreated)),
+  );
+
+  readonly sortedTimeline = computed<TimelineEntry[]>(() => [...this.timeline()].sort(newestFirst));
 
   /** Rule 5. A draft may only be saved with a note, an explicit lock choice, and a synced snapshot. */
   readonly draftValid = computed(() => {
