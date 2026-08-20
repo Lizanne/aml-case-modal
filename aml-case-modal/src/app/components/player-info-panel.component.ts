@@ -181,14 +181,20 @@ const TAB_LABEL: Record<InfoTab, string> = {
           }
 
           @case ('starred') {
-            <ul class="rows">
+            <!--
+              Figma node 22224:18922. A full-bleed row list, not cards: severity
+              pill, author, right-aligned timestamp on the first line, the
+              commentary itself on the second.
+            -->
+            <ul class="starred">
               @for (star of store.starred(); track star.at) {
-                <li class="row row--stacked">
-                  <div class="row__head">
+                <li class="starred__row">
+                  <div class="starred__head">
                     <ui-pill [severity]="star.tag">{{ star.tag }}</ui-pill>
-                    <span class="row__meta">{{ star.who }} · {{ star.at | stamp }}</span>
+                    <span class="starred__who">{{ star.who }}</span>
+                    <time class="starred__at" [attr.datetime]="star.at">{{ star.at | stamp }}</time>
                   </div>
-                  <p class="row__text">{{ star.text }}</p>
+                  <p class="starred__text">{{ star.text }}</p>
                 </li>
               }
             </ul>
@@ -390,39 +396,56 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-weight: 600;
         color: var(--ink-2);
       }
-      .rows {
+      /**
+       * Figma node 22224:18922.
+       *
+       * Rows, not cards: 12px 20px with a rule between them, running the full
+       * width of the panel. The head is pill, author, then the timestamp
+       * pushed hard right by margin-left: auto - not a spacer column, so a
+       * long author name takes the room it needs before the stamp gives way.
+       */
+      .starred {
         list-style: none;
         margin: 0;
         padding: 0;
-        display: grid;
+      }
+      .starred__row {
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .starred__row:last-of-type {
+        border-bottom: 0;
+      }
+      .starred__head {
+        display: flex;
+        align-items: center;
         gap: 8px;
       }
-      .row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
+      .starred__who {
+        min-width: 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        font-weight: 600;
+        color: var(--ink);
+        text-transform: capitalize;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .row--stacked {
-        display: block;
-      }
-      .row__head {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .row__meta {
+      .starred__at {
+        flex: none;
+        margin-left: auto;
+        font-size: 14px;
+        line-height: 20px;
         color: var(--ink-3);
-        font-size: 12px;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
       }
-      .row__text {
-        margin: 8px 0 0;
-        line-height: 1.5;
+      .starred__text {
+        margin: 6px 0 0;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--ink-3);
       }
       /* Past AML cases: 90px ID / severity pill / right-aligned date. */
       .past {
@@ -560,7 +583,7 @@ export class PlayerInfoPanelComponent implements AfterViewInit {
    */
   readonly isFlushTab = computed(() => {
     const tab = this.store.infoTab();
-    return tab === 'past-cases' || tab === 'timeline';
+    return tab === 'past-cases' || tab === 'timeline' || tab === 'starred';
   });
 
   label(tab: InfoTab): string {

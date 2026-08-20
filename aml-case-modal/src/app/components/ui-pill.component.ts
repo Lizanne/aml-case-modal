@@ -59,7 +59,7 @@ export type PillTone =
         letter-spacing: 0.01em;
         white-space: nowrap;
         background: var(--page);
-        color: var(--ink-2);
+        color: var(--ink);
       }
 
       /* ---- tones. Colours are unchanged from the blocks these replaced. ---- */

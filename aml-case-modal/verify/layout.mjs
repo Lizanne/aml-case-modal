@@ -461,7 +461,9 @@ const edgesIn = () =>
       at('snapshot stub', '.info__body > .placeholder', l);
       at('past row', '.past__id', l);
       at('timeline row', '.timeline__at', l);
-      at('starred row', '.rows .row', l);
+      // First child again, not the author - the pill precedes it, so measuring
+      // the name reports the pill's width on a correctly aligned row.
+      at('starred row', '.starred__head > *', l);
     }
     return out;
   });
@@ -491,6 +493,81 @@ await page.waitForTimeout(400);
 await page.click('.past__row');
 await page.waitForTimeout(450);
 assertEdges('Past AML cases with the stub open', await edgesIn());
+
+// Starred row, per Figma node 22224:18922: pill, author and a right-aligned
+// timestamp on the first line, the commentary on the second.
+await page.click('player-info-panel .mat-mdc-tab:has-text("Starred")');
+await page.waitForTimeout(450);
+const ST_INK = await tokenRgb('--ink');
+const ST_INK_3 = await tokenRgb('--ink-3');
+const ST_LINE = await tokenRgb('--line');
+const st = await page.evaluate(() => {
+  const row = document.querySelector('.starred__row');
+  const body = document.querySelector('.info__body');
+  const R = (e) => e.getBoundingClientRect();
+  const pill = row.querySelector('ui-pill');
+  const who = row.querySelector('.starred__who');
+  const at = row.querySelector('.starred__at');
+  const text = row.querySelector('.starred__text');
+  const cs = getComputedStyle(row);
+  const type = (e) => {
+    const c = getComputedStyle(e);
+    return { size: c.fontSize, line: c.lineHeight, weight: c.fontWeight, colour: c.color };
+  };
+  // The fixture ships ONE commentary, so the separator between rows cannot be
+  // observed as-is. Clone the row to give it a sibling, read the rule off the
+  // first one, then put the list back exactly as it was.
+  const clone = row.cloneNode(true);
+  row.parentElement.appendChild(clone);
+  const sep = {
+    width: getComputedStyle(row).borderBottomWidth,
+    colour: getComputedStyle(row).borderBottomColor,
+    lastHasNone: getComputedStyle(clone).borderBottomWidth === '0px',
+  };
+  clone.remove();
+  return {
+    pad: cs.padding,
+    bodyPad: getComputedStyle(body).paddingLeft + '/' + getComputedStyle(body).paddingRight,
+    spansPanel:
+      Math.round(R(row).left - R(body).left) === 0 &&
+      Math.round(R(body).right - R(row).right) === 0,
+    pillLeft: Math.round(R(pill).left - R(row).left),
+    pillToWho: Math.round(R(who).left - R(pill).right),
+    atRight: Math.round(R(row).right - R(at).right),
+    textLeft: Math.round(R(text).left - R(row).left),
+    textRight: Math.round(R(row).right - R(text).right),
+    headOneLine: Math.abs(Math.round(R(who).top) - Math.round(R(at).top)) <= 1,
+    textBelowHead: R(text).top >= R(who).bottom - 1,
+    who: type(who), at: type(at), text: type(text),
+    sep,
+    // No card chrome: rows, not tiles.
+    radius: cs.borderRadius,
+    outerBorders: [cs.borderTopWidth, cs.borderLeftWidth, cs.borderRightWidth].join(','),
+  };
+});
+check('starred: 12px 20px rows, no card chrome',
+  st.pad === '12px 20px' && st.radius === '0px' && st.outerBorders === '0px,0px,0px',
+  `${st.pad} radius ${st.radius} borders ${st.outerBorders}`);
+check('starred: body is flush, rows span the panel',
+  st.bodyPad === '0px/0px' && st.spansPanel, `${st.bodyPad} spans=${st.spansPanel}`);
+check('starred: pill on the 20px gutter, author 8px after it',
+  st.pillLeft === 20 && st.pillToWho === 8, `${st.pillLeft} / ${st.pillToWho}`);
+check('starred: timestamp ends 20px from the right edge', st.atRight === 20, String(st.atRight));
+check('starred: the commentary spans the full gutter',
+  st.textLeft === 20 && st.textRight === 20, `${st.textLeft} / ${st.textRight}`);
+check('starred: author is 14px/20px semibold full ink',
+  st.who.size === '14px' && st.who.line === '20px' && st.who.weight === '600' &&
+    st.who.colour === ST_INK,
+  `${st.who.size}/${st.who.line} w${st.who.weight} ${st.who.colour}`);
+check('starred: timestamp and commentary are 14px/20px muted',
+  st.at.size === '14px' && st.at.colour === ST_INK_3 &&
+    st.text.size === '14px' && st.text.line === '20px' && st.text.colour === ST_INK_3,
+  `${st.at.size} ${st.at.colour} / ${st.text.size} ${st.text.colour}`);
+check('starred: pill, author and stamp share one line', st.headOneLine);
+check('starred: the commentary sits below them', st.textBelowHead);
+check('starred: a 1px rule separates rows, and the last has none',
+  st.sep.width === '1px' && st.sep.colour === ST_LINE && st.sep.lastHasNone,
+  `${st.sep.width} ${st.sep.colour} lastNone=${st.sep.lastHasNone}`);
 
 // Timeline row, per Figma node 22224:18961: two stacked lines on the left,
 // the actor right-aligned on the second of them.
