@@ -134,11 +134,17 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
        * the full row and the select fills it.
        */
       @media (max-width: 719.98px) {
+        /* 279px of harness on an 844px phone was a third of the viewport, and
+           it is not product. The explanatory hint goes; the switcher and its
+           buttons stay. */
+        .dev__hint {
+          display: none;
+        }
         .dev {
           align-items: stretch;
           flex-direction: column;
-          gap: 10px;
-          padding: 12px;
+          gap: 8px;
+          padding: 8px 12px;
         }
         .dev__field {
           flex-direction: column;

@@ -96,15 +96,20 @@ const solo = await page.evaluate(() => {
   return {
     rightInset: Math.round(stage.right - modal.right),
     leftInset: Math.round(modal.left - stage.left),
+    width: Math.round(modal.width),
+    stageWidth: Math.round(stage.width),
     rowLeftDelta: Math.round(modal.left - row.left),
     rowRightDelta: Math.round(modal.right - row.right),
   };
 });
-check('flush to both edges of the stage', solo.rightInset === 0 && solo.leftInset === 0,
-  `${solo.leftInset} / ${solo.rightInset}`);
-check('and therefore flush with the widget row above it',
-  solo.rowLeftDelta === 0 && solo.rowRightDelta === 0,
-  `${solo.rowLeftDelta} / ${solo.rowRightDelta}`);
+// Capped at 1080 and docked right: the RIGHT edge stays on the stage's, the
+// left pulls in once the stage is wider than the cap.
+check('flush to the right edge of the stage', solo.rightInset === 0, `${solo.rightInset}`);
+check('and flush with the widget row on that side', solo.rowRightDelta === 0,
+  `${solo.rowRightDelta}`);
+check('capped at 1080 on a wider stage, filling a narrower one',
+  solo.width === Math.min(solo.stageWidth, 1080),
+  `${solo.width} of ${solo.stageWidth}`);
 
 console.log('\nSecond open halves the incumbent; closing restores it');
 await fresh();
@@ -517,9 +522,9 @@ await settle(500);
 // Full width means the stage's width, not a number: the cap is gone.
 const stageWidth = await page.evaluate(() =>
   Math.round(document.querySelector('.stage').getBoundingClientRect().width));
-check('the leaver is gone and the survivor fills the stage',
-  (await sg().count()) === 0 && (await widthOf(aml())) === stageWidth,
-  `${await widthOf(aml())} vs ${stageWidth}`);
+check('the leaver is gone and the survivor takes the solo width',
+  (await sg().count()) === 0 && (await widthOf(aml())) === Math.min(stageWidth, 1080),
+  `${await widthOf(aml())} vs min(${stageWidth}, 1080)`);
 
 console.log('\nReduced motion makes it instant');
 const rm = await browser.newPage({ viewport: { width: 1500, height: 1000 } });

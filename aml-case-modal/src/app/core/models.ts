@@ -86,6 +86,8 @@ export const NARROW_BREAKPOINT_PX = 720;
 
 /** Gutter between two docked modals. */
 export const MODAL_GAP_PX = 16;
+/** A single open panel stops here; two still split the whole row. */
+export const SOLO_MAX_PX = 1080;
 
 /**
  * Below this stage width there is no room for two modals side by side, so

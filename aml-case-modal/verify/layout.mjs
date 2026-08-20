@@ -216,7 +216,7 @@ const BANNERS = [
   ['10', 'player-info-panel .warn-note'],
   ['10', 'workflow-panel .resync'],
   ['05', 'severity-dialog .warn-note'],
-  ['06', 'decision-dialog .met'],
+  ['06', 'decision-dialog .notice'],
   ['00b', 'confirm-unlock-dialog .danger-note'],
 ];
 await page.setViewportSize({ width: 1440, height: 1000 });
@@ -580,8 +580,9 @@ await page.waitForTimeout(500);
 // Untouched: nothing to lose, so nothing to warn about.
 await page.click('workflow-panel .footer button:has-text("Submit decision")');
 await page.waitForTimeout(500);
-check('an untouched draft raises no warning',
-  (await page.locator('.draft-warning').count()) === 0);
+check('an untouched draft leaves the green notice in place',
+  (await page.locator('.notice--warn').count()) === 0 &&
+    (await page.locator('.notice--ok').count()) === 1);
 await page.click('dialog-shell .panel__foot button:has-text("Cancel")');
 await page.waitForTimeout(400);
 
@@ -602,10 +603,15 @@ check('Save and Submit are enabled at the same time', gates.save && gates.submit
 await page.click('workflow-panel .footer button:has-text("Submit decision")');
 await page.waitForTimeout(500);
 const warning = await page.evaluate(() =>
-  document.querySelector('.draft-warning')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
-check('a dirty draft is named in the warning',
-  warning !== null && /You have an unsaved .+ draft\. Submitting will discard it\./.test(warning),
+  document.querySelector('.notice--warn')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
+// One notice, one mood: the amber line REPLACES the green and carries the
+// resolve consequence itself, so the dialog never states it twice.
+check('a dirty draft is named, and the warning still says it resolves',
+  warning !== null &&
+    /Submitting will resolve the case and discard your unsaved .+ draft\./.test(warning),
   String(warning));
+check('and it is the only notice on screen',
+  (await page.locator('dialog-shell .notice').count()) === 1);
 await page.click('dialog-shell .panel__foot button:has-text("Cancel")');
 await page.waitForTimeout(500);
 const kept = await page.evaluate(() => ({
@@ -721,14 +727,20 @@ for (const width of [1440, 1200, 1024, 390]) {
     return {
       left: Math.round(panel.left - row.left),
       right: Math.round(panel.right - row.right),
+      rowWidth: Math.round(row.width),
+      panelWidth: Math.round(panel.width),
       overflowsViewport: panel.right > window.innerWidth + 0.5 || panel.left < -0.5,
       hScroll:
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
-  // To the pixel, because they are the same box - not two numbers that agree.
-  check(`${width}px: panel and widget row share both edges`,
-    edges.left === 0 && edges.right === 0, `${edges.left} / ${edges.right}`);
+  // A solo panel stops at 1080 and docks right, so the RIGHT edges stay
+  // together while the left pulls in on a wide row. Below 1080 of row it
+  // fills, and both edges meet again.
+  check(`${width}px: right edges align`, edges.right === 0, `${edges.right}`);
+  check(`${width}px: capped at 1080, or filling a narrower row`,
+    edges.panelWidth === Math.min(edges.rowWidth, 1080),
+    `panel ${edges.panelWidth} of row ${edges.rowWidth}`);
   check(`${width}px: nothing exceeds the viewport`,
     !edges.overflowsViewport && edges.hScroll === 0, `hScroll=${edges.hScroll}`);
 }

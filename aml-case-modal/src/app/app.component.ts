@@ -257,9 +257,35 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       }
 
       @media (max-width: 719.98px) {
+        /**
+         * The panel was rendering 0px tall.
+         *
+         * .page is a fixed-height flex column with overflow: hidden, sized to
+         * what the chrome leaves. That works on a desktop where the widget row
+         * is one short row. Stacked on a phone the row is ~488px - taller than
+         * the whole page box - so .stage, being flex: 1 with min-height: 0,
+         * got nothing and the panel collapsed to 2px with its stream at 42px.
+         *
+         * So on mobile the page itself scrolls: the app chrome stays pinned
+         * (document scroll is still locked), the widget row can scroll away,
+         * and the panel keeps a height it can actually work in. Its stream
+         * still scrolls internally between the pinned chip bar and footer.
+         */
         .page {
           padding-left: 16px;
           padding-right: 16px;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        /* A BOUNDED height, not a minimum: given only a minimum the stage
+           grew to fit the whole stream, the page scrolled and the panel's own
+           scroller never engaged. Measured from the viewport less the app
+           chrome - the dev harness and the widget row are not in the sum
+           because they scroll away above it. */
+        .stage {
+          flex: none;
+          height: calc(100vh - var(--top-bar-h) - var(--player-bar-h) - 36px);
+          min-height: 420px;
         }
         .page__dev {
           padding: 16px;

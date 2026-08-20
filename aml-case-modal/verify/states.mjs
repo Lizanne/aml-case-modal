@@ -75,8 +75,8 @@ const CHECKS = {
   }),
   '06': async (p) => ({
     'decision dialog open': (await p.locator('decision-dialog').count()) === 1,
-    'requirements-met note is one plain line': await (async () => {
-      const met = p.locator('decision-dialog .met');
+    'one notice, one plain line': await (async () => {
+      const met = p.locator('decision-dialog .notice');
       if ((await met.count()) !== 1) return false;
       return met.evaluate((el) => {
         const token = (n) => {

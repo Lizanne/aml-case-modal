@@ -18,25 +18,24 @@ import { DialogShellComponent } from './dialog-shell.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog-shell heading="Submit decision" initialFocus="textarea" (dismiss)="close()">
-      <!-- One line. The action names were a stacked list restating the chip bar
-           the agent just came from; the sentence is the whole message. -->
-      <p class="met">
-        <mat-icon fontSet="material-icons-outlined" aria-hidden="true">check_circle</mat-icon>
-        <span>All required actions are recorded. Submitting will resolve the case.</span>
-      </p>
-
       <!--
-        Only when the draft has something in it. Submitting clears the draft,
-        so the agent is told what they are about to lose and what it was -
-        naming the action, because "a draft" is not enough to decide by.
-        Cancel leaves the form exactly as it was.
+        ONE notice, never two. The green line and the amber warning say the
+        same thing about resolving; stacking them made the dialog restate its
+        own consequence in two moods at once. When there is a draft to lose,
+        the amber line carries the finality itself.
       -->
       @if (store.draftDirty()) {
-        <p class="draft-warning" role="alert">
+        <p class="notice notice--warn" role="alert">
           <mat-icon fontSet="material-icons-outlined" aria-hidden="true">warning_amber</mat-icon>
           <span>
-            You have an unsaved {{ store.draftLabel() }} draft. Submitting will discard it.
+            Submitting will resolve the case and discard your unsaved
+            {{ store.draftLabel() }} draft.
           </span>
+        </p>
+      } @else {
+        <p class="notice notice--ok">
+          <mat-icon fontSet="material-icons-outlined" aria-hidden="true">check_circle</mat-icon>
+          <span>All required actions are recorded. Submitting will resolve the case.</span>
         </p>
       }
 
@@ -65,26 +64,6 @@ import { DialogShellComponent } from './dialog-shell.component';
   styles: [
     `
       /* Plain weight throughout - nothing here is a link or a control. */
-      .met {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        font-weight: 400;
-        margin: 4px 0 16px;
-        padding: 16px;
-        border-radius: 10px;
-        background: var(--success-bg-subtle);
-        color: var(--success);
-        font-size: 14px;
-        line-height: 20px;
-      }
-      .met mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        flex: none;
-      }
       .field {
         display: grid;
         gap: 8px;
@@ -111,26 +90,35 @@ import { DialogShellComponent } from './dialog-shell.component';
         outline-offset: -1px;
         border-color: var(--primary);
       }
-      /* Same shape as the other notices: 16px box, 20px outlined icon, icon
-         and text top-aligned so a second line does not float the icon. */
-      .draft-warning {
+      /**
+       * One notice, two tones. Same box either way - 16px, a 20px outlined
+       * icon, icon and text top-aligned so a second line does not float the
+       * icon - so swapping mood never moves the dialog's layout.
+       */
+      .notice {
         display: flex;
         align-items: flex-start;
         gap: 8px;
         margin: 0 0 16px;
         padding: 16px;
         border-radius: 8px;
-        background: var(--warn-bg);
-        color: var(--warn);
         font-size: 14px;
         line-height: 20px;
       }
-      .draft-warning mat-icon {
+      .notice mat-icon {
         flex: none;
         font-size: 20px;
         width: 20px;
         height: 20px;
         line-height: 20px;
+      }
+      .notice--ok {
+        background: var(--success-bg-subtle);
+        color: var(--success);
+      }
+      .notice--warn {
+        background: var(--warn-bg);
+        color: var(--warn);
       }
       .consequence {
         margin: 16px 0 0px;

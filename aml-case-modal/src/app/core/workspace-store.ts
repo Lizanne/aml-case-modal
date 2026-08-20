@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-import { MODAL_GAP_PX, STACK_AUTO_MINIMISE_PX } from './models';
+import { MODAL_GAP_PX, SOLO_MAX_PX, STACK_AUTO_MINIMISE_PX } from './models';
 
 export type ModalId = 'sg' | 'aml';
 
@@ -99,15 +99,21 @@ export class WorkspaceStore {
    * The width a panel is actually GIVEN, as CSS relative to the stage.
    *
    * Deliberately not the pixel number above. The stage is the same box the
-   * widget row fills, so a panel expressed as a percentage of it shares the
-   * widget row's edges by construction - there is no second measurement that
-   * could round differently or lag a resize by a frame.
+   * widget row fills, so a panel expressed relative to it tracks the row by
+   * construction - there is no second measurement that could round differently
+   * or lag a resize by a frame.
+   *
+   * A solo panel stops at SOLO_MAX_PX and the stage docks it right, so its
+   * RIGHT edge stays on the row's right edge while the left pulls in. Two
+   * panels still split the whole row.
    *
    * modalWidth stays, but only to decide the 720px layout rule. It sizes
    * nothing.
    */
   readonly panelCss = computed(() =>
-    this.visibleCount() === 2 ? `calc(50% - ${MODAL_GAP_PX / 2}px)` : '100%',
+    this.visibleCount() === 2
+      ? `calc(50% - ${MODAL_GAP_PX / 2}px)`
+      : `min(100%, ${SOLO_MAX_PX}px)`,
   );
 
   /** True when the stage is too tight to show two modals side by side. */
