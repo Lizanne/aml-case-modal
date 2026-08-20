@@ -1,7 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { CaseStore } from '../core/case-store';
 import { WorkspaceStore } from '../core/workspace-store';
 import { PillComponent } from './ui-pill.component';
 
@@ -20,11 +27,11 @@ import { PillComponent } from './ui-pill.component';
   imports: [MatIconModule, MatTooltipModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[style.width.px]': 'ws.modalWidth()',
+    '[style.width]': 'ws.panelCss()',
   },
   template: `
-    <div class="sg">
-      <div class="sg__head">
+    <div class="sg" [class.sg--narrow]="store.layoutNarrow()">
+      <div class="sg__head" data-panel-header tabindex="-1">
         <h2 class="sg__title">Resolve &amp; archive active alert</h2>
         <!-- SG-alert material stays in the primary blue family, never severity. -->
         <ui-pill tone="info">SG alert</ui-pill>
@@ -66,7 +73,6 @@ import { PillComponent } from './ui-pill.component';
         display: block;
         max-width: 100vw;
         min-width: 0;
-        transition: width 300ms ease-out;
       }
       .sg {
         display: flex;
@@ -90,11 +96,17 @@ import { PillComponent } from './ui-pill.component';
         padding: 16px 20px;
         border-bottom: 1px solid var(--line);
       }
+      /* Same size as the AML panel's head__title, at both widths: two panels
+         side by side with different heading sizes read as two ranks, which
+         they are not. Kept in step by the same 720px rule that drives the AML
+         header, not by a coincidence of numbers. */
       .sg__title {
         margin: 0;
-        font-size: 16px;
+        font-size: 20px;
+        line-height: 30px;
         font-weight: 600;
         color: var(--ink);
+        letter-spacing: -0.01em;
       }
       .sg__btn {
         display: inline-flex;
@@ -163,6 +175,11 @@ import { PillComponent } from './ui-pill.component';
         flex: 1 1 auto;
         background: #eef0f3;
       }
+      .sg--narrow .sg__title {
+        font-size: 16px;
+        line-height: 24px;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         :host {
           transition: none;
@@ -171,7 +188,33 @@ import { PillComponent } from './ui-pill.component';
     `,
   ],
 })
-export class SgAlertModalComponent {
+export class SgAlertModalComponent implements AfterViewInit {
   readonly ws = inject(WorkspaceStore);
+  /** Only for layoutNarrow - the SG panel takes the same width-driven rule. */
+  readonly store = inject(CaseStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
   readonly rows = [1, 2, 3, 4, 5, 6];
+
+  ngAfterViewInit(): void {
+    focusPanelHeader(this.host, this.ws, 'sg');
+  }
+}
+
+/**
+ * Move focus to a panel's header when THAT panel is the one just opened.
+ *
+ * Guarded on pendingFocus rather than firing for every panel that renders:
+ * a dev scenario seeds panels without anyone opening them, and a reflow
+ * rebuilds the AML panel outright - focusing on either would move the caret
+ * out from under the agent.
+ */
+export function focusPanelHeader(
+  host: ElementRef<HTMLElement>,
+  ws: WorkspaceStore,
+  id: 'sg' | 'aml',
+): void {
+  if (ws.pendingFocus() !== id) return;
+  ws.pendingFocus.set(null);
+  const header = host.nativeElement.querySelector<HTMLElement>('[data-panel-header]');
+  header?.focus({ preventScroll: true });
 }

@@ -489,12 +489,120 @@ check('09 narrow footer has no rule, so no padding above one',
   `${narrowCard.footBorder} / ${narrowCard.footPadTop}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+console.log('\nThe panel and the widget row are one width');
+for (const width of [1440, 1200, 1024, 390]) {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('aml-case-modal .modal', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const edges = await page.evaluate(() => {
+    const row = document.querySelector('back-office-widgets .widgets').getBoundingClientRect();
+    const panel = document.querySelector('aml-case-modal .modal').getBoundingClientRect();
+    return {
+      left: Math.round(panel.left - row.left),
+      right: Math.round(panel.right - row.right),
+      overflowsViewport: panel.right > window.innerWidth + 0.5 || panel.left < -0.5,
+      hScroll:
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  // To the pixel, because they are the same box - not two numbers that agree.
+  check(`${width}px: panel and widget row share both edges`,
+    edges.left === 0 && edges.right === 0, `${edges.left} / ${edges.right}`);
+  check(`${width}px: nothing exceeds the viewport`,
+    !edges.overflowsViewport && edges.hScroll === 0, `hScroll=${edges.hScroll}`);
+}
+await page.setViewportSize({ width: 1440, height: 1040 });
+
+console.log('\nThe expanded trigger strip scrolls inside itself');
+await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('trigger-strip .strip__list', { timeout: 15000 });
+await page.waitForTimeout(600);
+const strip = await page.evaluate(() => {
+  const list = document.querySelector('trigger-strip .strip__list');
+  const modal = document.querySelector('aml-case-modal .modal');
+  const rows = document.querySelectorAll('trigger-strip .trigger').length;
+  const rowH = document.querySelector('trigger-strip .cell').getBoundingClientRect().height;
+  return {
+    rows,
+    listH: Math.round(list.getBoundingClientRect().height),
+    cap: Math.round(rowH * 10),
+    scrolls: list.scrollHeight > list.clientHeight + 1,
+    // The strip must never be what makes the panel taller than its stage.
+    panelWithinStage:
+      modal.getBoundingClientRect().bottom <=
+      document.querySelector('.stage').getBoundingClientRect().bottom + 1,
+  };
+});
+check('more rows than fit', strip.rows > 10, `${strip.rows}`);
+check('the list is capped at ten rows', Math.abs(strip.listH - strip.cap) <= 1,
+  `${strip.listH} vs ${strip.cap}`);
+check('and scrolls rather than growing', strip.scrolls);
+check('the panel is not pushed past its stage', strip.panelWithinStage);
+
+console.log('\nBoth panel titles are the same size');
+// In state 09 BOTH panels are under the 720px rule, so both titles are at the
+// narrow step. That they match is the requirement; the wide step is checked
+// below, on a panel that is actually wide.
+for (const [width, expected] of [[1500, '16px'], [700, '16px']]) {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('sg-alert-modal .sg__title', { timeout: 15000 });
+  await page.waitForTimeout(700);
+  const titles = await page.evaluate(() => {
+    const sg = document.querySelector('sg-alert-modal .sg__title');
+    const aml = document.querySelector('case-header .head__title');
+    const read = (e) => (e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null);
+    return { sg: read(sg), aml: read(aml) };
+  });
+  check(`${width}px: sg__title matches head__title`,
+    titles.sg !== null && titles.sg === titles.aml, `${titles.sg} vs ${titles.aml}`);
+  if (titles.aml) {
+    check(`${width}px: and both are at the ${expected} step`,
+      titles.aml.startsWith(expected), titles.aml);
+  }
+}
+
+// Solo and wide: the SG title must take the 20px step, the same one the AML
+// header takes, rather than being stuck at a single size.
+await page.setViewportSize({ width: 1500, height: 1000 });
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('back-office-widgets', { timeout: 15000 });
+await page.waitForTimeout(600);
+const soloAml = await page.evaluate(() => {
+  const e = document.querySelector('case-header .head__title');
+  return e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null;
+});
+for (const label of ['Close case', 'Close alert']) {
+  const btn = page.locator(`back-office-widgets button:has-text("${label}")`);
+  if (await btn.count()) {
+    await btn.click();
+    await page.waitForTimeout(400);
+  }
+}
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
+await page.waitForTimeout(600);
+const soloSg = await page.evaluate(() => {
+  const e = document.querySelector('sg-alert-modal .sg__title');
+  return e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null;
+});
+check('solo and wide: both titles take the 20px step',
+  soloAml === '20px/30px' && soloSg === '20px/30px', `aml ${soloAml} / sg ${soloSg}`);
+await page.setViewportSize({ width: 1440, height: 1040 });
+
 console.log('\nWidgets share the row, truncate, then stack');
-for (const width of [1500, 1100, 900, 720, 600, 390]) {
+for (const width of [1440, 1200, 1024, 768, 390]) {
   await page.setViewportSize({ width, height: 1040 });
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('back-office-widgets .widget', { timeout: 15000 });
   await page.waitForTimeout(450);
+  // Force the longest real lock string before measuring.
+  await page.evaluate(() => {
+    document.querySelectorAll('.widget__lock').forEach((el) => {
+      el.lastChild.textContent = ' Locked by Anna Smith · 1mo';
+    });
+  });
+  await page.waitForTimeout(150);
   const w = await page.evaluate(() => {
     const row = document.querySelector('back-office-widgets .widgets');
     const cards = [...document.querySelectorAll('back-office-widgets .widget')];
@@ -511,6 +619,31 @@ for (const width of [1500, 1100, 900, 720, 600, 390]) {
       bodyLines: cards.map((c) =>
         Math.round(c.querySelector('.widget__body').getBoundingClientRect().height / 20),
       ),
+      rowScrolls: row.scrollWidth > row.clientWidth + 1,
+      // Every pair of leaf parts, tested against each other. The longest real
+      // content is forced in below so this runs against the worst case.
+      overlaps: (() => {
+        const out = [];
+        for (const card of cards) {
+          const parts = [
+            ...card.querySelectorAll(
+              '.widget__title, ui-pill, .widget__body, .widget__lock, .widget__foot button',
+            ),
+          ];
+          for (let i = 0; i < parts.length; i++) {
+            for (let j = i + 1; j < parts.length; j++) {
+              if (parts[i].contains(parts[j]) || parts[j].contains(parts[i])) continue;
+              const a = parts[i].getBoundingClientRect();
+              const b = parts[j].getBoundingClientRect();
+              if (a.left < b.right - 0.5 && b.left < a.right - 0.5 &&
+                  a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) {
+                out.push(`${parts[i].className || parts[i].tagName}|${parts[j].className || parts[j].tagName}`);
+              }
+            }
+          }
+        }
+        return [...new Set(out)];
+      })(),
       // Buttons neither clip their own label nor escape their card.
       clipped: buttons.filter(
         (btn) =>
@@ -524,6 +657,10 @@ for (const width of [1500, 1100, 900, 720, 600, 390]) {
   check(`${width}px: secondary text stays one line`, w.bodyLines.every((n) => n === 1),
     w.bodyLines.join(','));
   check(`${width}px: no button clips or overflows its card`, w.clipped === 0, `${w.clipped}`);
+  // Text on top of a button is a hard fail, not a styling nit.
+  check(`${width}px: nothing inside a widget overlaps anything else`,
+    w.overlaps.length === 0, w.overlaps.join('; '));
+  check(`${width}px: the widget row wraps, it never scrolls sideways`, !w.rowScrolls);
   // Side by side while they fit, stacked once they do not.
   check(`${width}px: ${width > 719 ? 'side by side' : 'stacked'}`,
     w.stacked === (width <= 719), `stacked=${w.stacked}`);

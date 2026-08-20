@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-import { MODAL_GAP_PX, MODAL_MAX_PX, STACK_AUTO_MINIMISE_PX } from './models';
+import { MODAL_GAP_PX, STACK_AUTO_MINIMISE_PX } from './models';
 
 export type ModalId = 'sg' | 'aml';
 
@@ -43,6 +43,16 @@ export class WorkspaceStore {
   /** Measured width of the stage the modals live in. */
   readonly stageWidth = signal(1400);
 
+  /**
+   * The panel that was just opened by an agent, so it can take focus.
+   *
+   * Set by open()/restore() only, never by seed(): a dev scenario that lands
+   * with a panel already up has not "opened" anything, and stealing focus
+   * there would put the keyboard user past the skip link before they have
+   * pressed a key.
+   */
+  readonly pendingFocus = signal<ModalId | null>(null);
+
   /** Set briefly when a bar is auto-minimised, so it can pulse once. */
   readonly pulsingBar = signal<ModalId | null>(null);
   private pulseTimer?: ReturnType<typeof setTimeout>;
@@ -82,8 +92,23 @@ export class WorkspaceStore {
     if (this.visibleCount() === 2) {
       return Math.max(0, Math.floor((stage - MODAL_GAP_PX) / 2));
     }
-    return Math.min(MODAL_MAX_PX, stage);
+    return stage;
   });
+
+  /**
+   * The width a panel is actually GIVEN, as CSS relative to the stage.
+   *
+   * Deliberately not the pixel number above. The stage is the same box the
+   * widget row fills, so a panel expressed as a percentage of it shares the
+   * widget row's edges by construction - there is no second measurement that
+   * could round differently or lag a resize by a frame.
+   *
+   * modalWidth stays, but only to decide the 720px layout rule. It sizes
+   * nothing.
+   */
+  readonly panelCss = computed(() =>
+    this.visibleCount() === 2 ? `calc(50% - ${MODAL_GAP_PX / 2}px)` : '100%',
+  );
 
   /** True when the stage is too tight to show two modals side by side. */
   readonly tooTightForTwo = computed(() => this.stageWidth() < STACK_AUTO_MINIMISE_PX);
@@ -117,6 +142,7 @@ export class WorkspaceStore {
     // makes it the newest again, so it docks right.
     this._order.update((order) => [...order.filter((x) => x !== id), id]);
     this.set(id, { open: true, minimised: false });
+    this.pendingFocus.set(id);
   }
 
   close(id: ModalId): void {
@@ -141,6 +167,7 @@ export class WorkspaceStore {
     }
 
     this.set(id, { open: true, minimised: false });
+    this.pendingFocus.set(id);
   }
 
   toggleMinimise(id: ModalId): void {
@@ -160,6 +187,7 @@ export class WorkspaceStore {
     this._sg.set({ ...CLOSED });
     this._aml.set({ ...CLOSED });
     this._order.set([]);
+    this.pendingFocus.set(null);
     this.pulsingBar.set(null);
     clearTimeout(this.pulseTimer);
   }

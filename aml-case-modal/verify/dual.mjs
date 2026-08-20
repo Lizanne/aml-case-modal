@@ -80,17 +80,29 @@ check('the DOM order is the dock order', await page.evaluate(() =>
   [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase())
     .join() === 'aml-case-modal,sg-alert-modal'));
 
-console.log('\nA solo panel docks right, not centre');
+console.log('\nA solo panel fills the stage, flush to both edges');
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
+// It used to stop at a 1000px cap and dock right, leaving slack on the left.
+// The panel now takes the stage's whole width, which is what makes its edges
+// the SAME edges as the widget row above it.
 const solo = await page.evaluate(() => {
   const stage = document.querySelector('.stage').getBoundingClientRect();
   const modal = document.querySelector('aml-case-modal').getBoundingClientRect();
-  return { rightInset: Math.round(stage.right - modal.right), leftGap: Math.round(modal.left - stage.left) };
+  const row = document.querySelector('back-office-widgets .widgets').getBoundingClientRect();
+  return {
+    rightInset: Math.round(stage.right - modal.right),
+    leftInset: Math.round(modal.left - stage.left),
+    rowLeftDelta: Math.round(modal.left - row.left),
+    rowRightDelta: Math.round(modal.right - row.right),
+  };
 });
-check('flush to the right edge of the stage', solo.rightInset === 0, `${solo.rightInset}px`);
-check('and the room it does not use is on the left', solo.leftGap > 0, `${solo.leftGap}px`);
+check('flush to both edges of the stage', solo.rightInset === 0 && solo.leftInset === 0,
+  `${solo.leftInset} / ${solo.rightInset}`);
+check('and therefore flush with the widget row above it',
+  solo.rowLeftDelta === 0 && solo.rowRightDelta === 0,
+  `${solo.rowLeftDelta} / ${solo.rowRightDelta}`);
 
 console.log('\nSecond open halves the incumbent; closing restores it');
 await fresh();
@@ -302,6 +314,69 @@ await settle(500);
 check('the lock lifts when the last panel closes', await page.evaluate(() =>
   !document.documentElement.classList.contains('panel-open')));
 
+console.log('\nChoreography: transform only, reflow instant, focus, Escape');
+await fresh();
+await page.locator('back-office-widgets button:has-text("Open case")').click();
+await settle(500);
+// Focus goes to the opened panel's header, not to the document.
+const focused = await page.evaluate(() => {
+  const a = document.activeElement;
+  return {
+    isHeader: !!a && a.hasAttribute('data-panel-header'),
+    inPanel: !!a && !!a.closest('aml-case-modal'),
+  };
+});
+check('focus lands on the opened panel header', focused.isHeader && focused.inPanel,
+  JSON.stringify(focused));
+
+// The incumbent must be in its compressed layout on the FIRST frames of the
+// newcomer's slide, not easing into it: the slide covers the reflow.
+await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
+await page.waitForTimeout(50);
+const during = await page.evaluate(() => {
+  const aml = document.querySelector('aml-case-modal');
+  const sg = document.querySelector('sg-alert-modal');
+  const m = new DOMMatrixReadOnly(getComputedStyle(sg).transform === 'none' ? '' : getComputedStyle(sg).transform);
+  return {
+    widthTransition: getComputedStyle(aml).transitionDuration,
+    segmented: document.querySelectorAll('mat-button-toggle-group').length === 1,
+    amlWidth: Math.round(aml.getBoundingClientRect().width),
+    stage: Math.round(document.querySelector('.stage').getBoundingClientRect().width),
+    newcomerStillSliding: m.m41 > 0,
+  };
+});
+check('no width animation on either panel', during.widthTransition === '0s', during.widthTransition);
+check('the incumbent is already compressed while the newcomer slides',
+  during.segmented && during.newcomerStillSliding &&
+    during.amlWidth < during.stage * 0.6,
+  JSON.stringify(during));
+await settle(500);
+
+// Escape closes the most recently opened panel - the one on the right.
+const beforeEsc = await page.evaluate(() =>
+  [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()));
+await page.keyboard.press('Escape');
+await settle(500);
+const afterEsc = await page.evaluate(() =>
+  [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()));
+check('Escape closes the newest, not the oldest',
+  beforeEsc.length === 2 && afterEsc.length === 1 && afterEsc[0] === beforeEsc[0],
+  `${beforeEsc.join()} -> ${afterEsc.join()}`);
+await page.keyboard.press('Escape');
+await settle(500);
+check('and then the last one', (await page.evaluate(() =>
+  document.querySelectorAll('.stage > *').length)) === 0);
+
+// A dialog owns Escape while it is up.
+await page.goto(`${BASE}/?state=05`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('dialog-shell', { timeout: 15000 });
+await settle(600);
+await page.evaluate(() => document.querySelector('side-nav .nav__item')?.focus());
+await page.keyboard.press('Escape');
+await settle(400);
+check('Escape outside a dialog does not close the panel under it',
+  (await page.locator('aml-case-modal').count()) === 1);
+
 console.log('\nDrawer motion: in from the right, out to the right');
 const tx = (sel) =>
   page.evaluate((s) => {
@@ -349,8 +424,12 @@ check('the leaving panel is out of flow and moving right',
 check('the survivor is already widening', exit.survivor.width > 672,
   `${exit.survivor.width}`);
 await settle(500);
-check('the leaver is gone and the survivor is full width',
-  (await sg().count()) === 0 && (await widthOf(aml())) === 1000);
+// Full width means the stage's width, not a number: the cap is gone.
+const stageWidth = await page.evaluate(() =>
+  Math.round(document.querySelector('.stage').getBoundingClientRect().width));
+check('the leaver is gone and the survivor fills the stage',
+  (await sg().count()) === 0 && (await widthOf(aml())) === stageWidth,
+  `${await widthOf(aml())} vs ${stageWidth}`);
 
 console.log('\nReduced motion makes it instant');
 const rm = await browser.newPage({ viewport: { width: 1500, height: 1000 } });

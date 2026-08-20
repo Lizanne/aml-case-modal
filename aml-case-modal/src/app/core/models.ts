@@ -57,7 +57,6 @@ export const TRIGGER_EXPANDED_ROWS = 10;
 export const NARROW_BREAKPOINT_PX = 720;
 
 /** Widest a single modal gets, per the layout brief (1000x820, resizable). */
-export const MODAL_MAX_PX = 1000;
 
 /** Gutter between two docked modals. */
 export const MODAL_GAP_PX = 16;

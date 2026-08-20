@@ -46,6 +46,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[style.--dock-h.px]': 'dockHeight()',
+    '(document:keydown.escape)': 'onEscape()',
   },
   /**
    * The drawer convention: a panel arrives from the right edge and leaves the
@@ -237,6 +238,16 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * width rule to keep in step, and nothing needs !important to beat the
        * inline width the workspace sets.
        */
+      /* Below 1200 the content area is tight enough that 20px of gutter is
+         worth 8px of panel. Widgets and panel both live in .page, so they take
+         this change together and stay flush with each other. */
+      @media (max-width: 1199.98px) {
+        .page {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+      }
+
       /* No room for a 256px nav beside a panel much below this, and the panel
          is the point of the page. */
       @media (max-width: 1023.98px) {
@@ -322,4 +333,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   private readonly onMotionChange = (event: MediaQueryListEvent): void =>
     this.zone.run(() => this.reducedMotion.set(event.matches));
+
+  /**
+   * Escape closes the most recently opened panel - the last one in the dock
+   * order, which is the one on the right.
+   *
+   * A dialog owns Escape while it is up, and it stops the event at its own
+   * host. This is a document listener, so it would still fire for a keypress
+   * OUTSIDE the dialog and take the panel out from under it. Hence the guard:
+   * if a dialog is on screen, Escape is not ours.
+   */
+  onEscape(): void {
+    if (document.querySelector('dialog-shell')) return;
+    const order = this.ws.visibleOrder();
+    const newest = order[order.length - 1];
+    if (newest) this.ws.close(newest);
+  }
 }

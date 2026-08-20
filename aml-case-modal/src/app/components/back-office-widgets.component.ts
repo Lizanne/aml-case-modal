@@ -105,10 +105,20 @@ import { PillComponent } from './ui-pill.component';
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
       }
-      /* One row: icon, the text column, then the actions hard right.
-         min-width: 0 so a widget may be narrower than its own content -
-         without it a grid item floors at min-content and the pair stops
-         sharing the row long before the stacking point. */
+      /**
+       * One flex row, everything in flow: icon, identity block, then the
+       * actions. Nothing is positioned, nothing has a negative margin.
+       *
+       * The shrink order is the whole design. Only the identity block may
+       * give way; the lock status and the buttons are flex-shrink: 0, so text
+       * can never be squeezed into them. Inside the identity block the meta
+       * line goes first and the count badge second, both by ellipsis.
+       *
+       * A pill declares flex: none for itself, which is right in a chip bar
+       * and wrong here - unshrinkable AND nowrap means it overflows its
+       * parent and lands on top of the lock status rather than truncating.
+       * That was the overlap.
+       */
       .widget {
         display: flex;
         align-items: center;
@@ -118,6 +128,9 @@ import { PillComponent } from './ui-pill.component';
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--panel);
+        /* The wrap decision belongs to the WIDGET's width, not the window's:
+           two widgets sharing a wide viewport are each narrow. */
+        container-type: inline-size;
       }
       mat-icon.widget__icon {
         flex: none;
@@ -128,7 +141,7 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink-2);
       }
       .widget__text {
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
       }
       .widget__head {
@@ -138,6 +151,7 @@ import { PillComponent } from './ui-pill.component';
         min-width: 0;
       }
       .widget__title {
+        flex: 0 1 auto;
         min-width: 0;
         margin: 0;
         font-size: 14px;
@@ -148,9 +162,16 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      /* The secondary line is what gives way first: one line, ellipsised. The
-         buttons are the widget's whole purpose, so they must never be the
-         thing that wraps or clips to make room for a sentence. */
+      /* Second to give way. Overrides the pill's own flex: none. */
+      .widget__head ui-pill {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        line-height: 22px;
+      }
+      /* First to give way. */
       .widget__body {
         margin: 2px 0 0;
         min-width: 0;
@@ -165,7 +186,7 @@ import { PillComponent } from './ui-pill.component';
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        flex: none;
+        flex: 0 0 auto;
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
@@ -176,6 +197,7 @@ import { PillComponent } from './ui-pill.component';
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex: none;
         width: 20px;
         height: 20px;
         border-radius: 999px;
@@ -184,38 +206,37 @@ import { PillComponent } from './ui-pill.component';
         font-size: 10px;
         letter-spacing: 0;
       }
-      /* flex: none on the buttons: a Material button that shrinks crushes its
-         own label and icon rather than ellipsising cleanly. They keep their
-         size and the row wraps instead - and below the stacking width there is
-         a full column each, so it never comes to that. */
+      /* Never shrinks, never wraps mid-label. A Material button that shrinks
+         crushes its own label and icon rather than ellipsising. */
       .widget__foot {
         display: flex;
         align-items: center;
         gap: 8px;
-        flex: none;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
         justify-content: flex-end;
       }
       .widget__foot button {
         flex: none;
-        max-width: 100%;
+        white-space: nowrap;
       }
 
-      /* Mobile: one card per row, full width inside the page's 16px gutter, and
-         the buttons share that width rather than huddling at the left. */
-      /* Not enough room for text and actions on one line: the actions drop
-         under the text, still right-aligned, before anything truncates away
-         to nothing. */
-      @media (max-width: 1279.98px) {
+      /**
+       * Two rows once the widget itself is too narrow for one: identity on
+       * top, actions beneath and right-aligned. A container query, not a
+       * media query - at 1440 each of two side-by-side widgets is ~560px wide
+       * and needs this, while one widget alone at 900px does not.
+       */
+      @container (max-width: 680px) {
         .widget {
-          align-items: flex-start;
           flex-wrap: wrap;
+          align-items: flex-start;
         }
         .widget__text {
-          flex: 1 1 100%;
+          flex: 1 1 auto;
         }
         .widget__foot {
           flex: 1 1 100%;
+          flex-wrap: wrap;
         }
       }
 

@@ -21,7 +21,14 @@ import { PillComponent } from './ui-pill.component';
   imports: [MatButtonModule, MatIconModule, MatTooltipModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="head" [class.head--narrow]="store.layoutNarrow()">
+    <!-- tabindex -1: not in the tab order, but a place focus can be SENT when
+         the panel opens. -->
+    <div
+      class="head"
+      data-panel-header
+      tabindex="-1"
+      [class.head--narrow]="store.layoutNarrow()"
+    >
       <div class="head__main">
         <div class="head__titles">
           <!-- Pills sit directly beside the title, not flushed to the far
@@ -93,6 +100,7 @@ import { PillComponent } from './ui-pill.component';
       }
       .head {
         background: var(--panel);
+        outline: none;
         border-bottom: 1px solid var(--line);
       }
       .head__main {

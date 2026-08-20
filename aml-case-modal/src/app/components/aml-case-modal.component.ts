@@ -1,7 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+} from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { CaseStore } from '../core/case-store';
+import { focusPanelHeader } from './sg-alert-modal.component';
 import { NARROW_BREAKPOINT_PX } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { CaseHeaderComponent } from './case-header.component';
@@ -38,7 +47,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[style.width.px]': 'ws.modalWidth()',
+    '[style.width]': 'ws.panelCss()',
   },
   template: `
     <div class="modal" [class.modal--narrow]="isNarrow()">
@@ -106,7 +115,6 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         max-width: 100vw;
         /* The reflow. Width is animated, never opacity or pointer-events, so
            the modal stays fully interactive throughout. */
-        transition: width 300ms ease-out;
       }
       .modal {
         position: relative;
@@ -219,7 +227,13 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
     `,
   ],
 })
-export class AmlCaseModalComponent {
+export class AmlCaseModalComponent implements AfterViewInit {
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
+
+  ngAfterViewInit(): void {
+    focusPanelHeader(this.hostEl, this.ws, 'aml');
+  }
+
   readonly store = inject(CaseStore);
   readonly ws = inject(WorkspaceStore);
 
