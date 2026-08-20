@@ -544,7 +544,10 @@ const st = await page.evaluate(() => {
     atRight: Math.round(R(row).right - R(at).right),
     textLeft: Math.round(R(text).left - R(row).left),
     textRight: Math.round(R(row).right - R(text).right),
-    headOneLine: Math.abs(Math.round(R(who).top) - Math.round(R(at).top)) <= 1,
+    // Centres, not tops: the stamp's line box is 16px against the author's
+    // 20px, so matching tops would only ever be true by accident.
+    headOneLine:
+      Math.abs((R(who).top + R(who).height / 2) - (R(at).top + R(at).height / 2)) <= 1,
     textBelowHead: R(text).top >= R(who).bottom - 1,
     who: type(who), at: type(at), text: type(text),
     sep,
@@ -567,10 +570,19 @@ check('starred: author is 14px/20px semibold full ink',
   st.who.size === '14px' && st.who.line === '20px' && st.who.weight === '600' &&
     st.who.colour === ST_INK,
   `${st.who.size}/${st.who.line} w${st.who.weight} ${st.who.colour}`);
-check('starred: timestamp and commentary are 14px/20px muted',
-  st.at.size === '14px' && st.at.colour === ST_INK_3 &&
-    st.text.size === '14px' && st.text.line === '20px' && st.text.colour === ST_INK_3,
-  `${st.at.size} ${st.at.colour} / ${st.text.size} ${st.text.colour}`);
+check('starred: timestamp is 12px/16px muted',
+  st.at.size === '12px' && st.at.line === '16px' && st.at.colour === ST_INK_3,
+  `${st.at.size}/${st.at.line} ${st.at.colour}`);
+check('starred: commentary is 14px/20px muted',
+  st.text.size === '14px' && st.text.line === '20px' && st.text.colour === ST_INK_3,
+  `${st.text.size}/${st.text.line} ${st.text.colour}`);
+// Sorted on the parsed timestamp, so an entry with an offset cannot slip in
+// out of order the way a string compare would allow.
+const starOrder = await page.$$eval('.starred__at', (els) =>
+  els.map((e) => Date.parse(e.getAttribute('datetime'))));
+check('starred: newest first',
+  starOrder.length === 3 && starOrder.every((v, i) => i === 0 || starOrder[i - 1] >= v),
+  starOrder.join(' > '));
 check('starred: pill, author and stamp share one line', st.headOneLine);
 check('starred: the commentary sits below them', st.textBelowHead);
 check('starred: three commentaries, as designed', st.sep.count === 3, String(st.sep.count));

@@ -187,7 +187,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
               commentary itself on the second.
             -->
             <ul class="starred">
-              @for (star of store.starred(); track star.at) {
+              @for (star of store.sortedStarred(); track star.at) {
                 <li class="starred__row">
                   <div class="starred__head">
                     <ui-pill [severity]="star.tag">{{ star.tag }}</ui-pill>
@@ -435,8 +435,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
       .starred__at {
         flex: none;
         margin-left: auto;
-        font-size: 14px;
-        line-height: 20px;
+        font-size: 12px;
+        line-height: 16px;
         color: var(--ink-3);
         white-space: nowrap;
         font-variant-numeric: tabular-nums;

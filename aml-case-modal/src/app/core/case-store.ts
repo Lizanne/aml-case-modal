@@ -231,6 +231,18 @@ export class CaseStore {
     return [...byTime.filter((t) => t.isNew), ...byTime.filter((t) => !t.isNew)];
   });
 
+  /**
+   * Starred commentaries, newest first.
+   *
+   * Date.parse, not a string compare and not array order - the same reasoning
+   * as sortedTriggers. The fixture is all-UTC today, but a string compare
+   * mis-sorts the moment an entry carries an offset, and array order mis-sorts
+   * the moment the fixture is edited.
+   */
+  readonly sortedStarred = computed<StarredCommentary[]>(() =>
+    [...this.starred()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+  );
+
   /** Rule 5. A draft may only be saved with a note, an explicit lock choice, and a synced snapshot. */
   readonly draftValid = computed(() => {
     const d = this.draft();
