@@ -128,7 +128,7 @@ await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
 check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
 check('the widget follows too',
-  (await page.locator('back-office-widgets ui-pill[data-sev]').innerText()).trim() === 'EDD');
+  (await page.locator('back-office-widgets .w__sev[data-sev]').innerText()).trim() === 'EDD');
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
 check('the timeline entry names the direction', await (async () => {

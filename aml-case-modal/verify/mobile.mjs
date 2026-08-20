@@ -239,7 +239,7 @@ for (const width of MOBILE) {
 
   console.log('\nWidgets and the dev panel share the gutter');
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('back-office-widgets .widget', { timeout: 15000 });
+  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
   await page.waitForTimeout(450);
   const chrome = await page.evaluate((vw) => {
     const box = (s) => {
@@ -249,7 +249,7 @@ for (const width of MOBILE) {
       return { l: Math.round(b.left), r: Math.round(vw - b.right), w: Math.round(b.width) };
     };
     return {
-      widgets: [...document.querySelectorAll('back-office-widgets .widget')].map((el) => {
+      widgets: [...document.querySelectorAll('back-office-widgets .w')].map((el) => {
         const b = el.getBoundingClientRect();
         return { l: Math.round(b.left), r: Math.round(vw - b.right) };
       }),

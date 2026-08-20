@@ -1,116 +1,136 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
-import { lockStatusLine } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
-import { PillComponent } from './ui-pill.component';
 
 /**
- * The back office surface behind the modals. Each widget opens its own modal
- * and only its own: nothing here ever opens both, so two modals on screen is
+ * The back office surface behind the panels. Each widget opens its own panel
+ * and only its own: nothing here ever opens both, so two panels on screen is
  * always something the agent did in two deliberate steps.
  *
- * The AML widget additionally requires the case to be locked to this agent -
- * you take the lock from the widget, then open the case. (Once open the modal
- * stays open through an unlock or a severity change, which is why frames 00a
- * and 00b exist.)
+ * STYLING IS ONE-TO-ONE WITH FIGMA, not with the rest of this app:
+ *   desktop  22263:21255
+ *   mobile   22263:20943
+ *
+ * Which is why the badges and buttons here are written out rather than reusing
+ * ui-pill and mat-button. The design's count badge carries a border, its
+ * severity badge carries a dot, and its buttons are 32px with a 4px radius -
+ * none of which the shared components do. Copying the design into local markup
+ * is honest about that; bending the shared components to match would have
+ * changed every pill and button in the prototype to serve two widgets.
+ *
+ * The lock rule from the previous pass still holds: while a panel is open its
+ * header owns the lock, so the widget's lock control goes and the primary
+ * becomes Close.
  */
 @Component({
   selector: 'back-office-widgets',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, PillComponent],
+  imports: [MatIconModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="widgets">
-      <!--
-        Frame 09's two widget states, which are the ONLY way onto the stage.
-        Icon, title and count on the first line, the secondary detail under it,
-        and the actions hard right: lock state, Unlock, then the primary that
-        opens the panel.
-      -->
-      <article class="widget">
-        <mat-icon class="widget__icon" fontSet="material-icons-outlined">shield</mat-icon>
-        <div class="widget__text">
-          <div class="widget__head">
-            <h2 class="widget__title">SG Alerts</h2>
-            <ui-pill tone="info">41 triggers hit</ui-pill>
+      <!-- ------------------------------------------------------- SG alerts -->
+      <article class="w">
+        <span class="w__type w__type--sg">
+          <mat-icon fontSet="material-icons-outlined">shield</mat-icon>
+        </span>
+
+        <div class="w__inner">
+          <div class="w__content">
+            <div class="w__titles">
+              <h2 class="w__name">SG Alerts</h2>
+              <span class="w__count">41 triggers hit</span>
+            </div>
+            <p class="w__meta">12 snoozed · Last trigger 1mo ago</p>
           </div>
-          <p class="widget__body">12 snoozed · Last trigger 1mo ago</p>
-        </div>
-        <div class="widget__foot">
-          <span class="widget__lock">
-            <span class="widget__avatar" aria-hidden="true">LF</span>
-            {{ sgLockLine }}
+
+          <!--
+            One chip, one place in the DOM. Desktop puts it in the actions
+            group, mobile under the meta line - which is the same position in
+            both once .w__inner turns from a row into a column, so it does not
+            need rendering twice. The design shows NO chip while unlocked, so
+            its absence is the unlocked signal rather than an "Unassigned"
+            label.
+          -->
+          <span class="w__chip w__chip--mine">
+            <span class="w__avatar" aria-hidden="true">LF</span>
+            Locked to you
           </span>
-          <!--
-            One owner for the lock control. While the panel is open its header
-            IS the lock control, so the widget's copy goes: two Unlock buttons
-            on screen for the same lock is an invitation to wonder whether they
-            do the same thing. The status pill stays, so the widget still tells
-            you where the lock is.
-          -->
-          @if (!ws.isOpen('sg')) {
-            <button mat-stroked-button type="button">Unlock</button>
-          }
-          <!--
-            One slot, swapped by panel state - never both at once. Open while
-            the panel is up would be an action with nothing to do, and it is
-            the same button that has to take you back out.
-          -->
-          @if (ws.isOpen('sg')) {
-            <button mat-stroked-button type="button" (click)="ws.close('sg')">Close alert</button>
-          } @else {
-            <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
-              <mat-icon>check</mat-icon>
-              Resolve and archive
-            </button>
-          }
+
+          <div class="w__actions">
+            @if (!ws.isOpen('sg')) {
+              <button class="w__btn w__btn--compact" type="button">Unlock</button>
+            }
+            @if (ws.isOpen('sg')) {
+              <button class="w__btn" type="button" (click)="ws.close('sg')">Close alert</button>
+            } @else {
+              <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
+                <mat-icon aria-hidden="true">done</mat-icon>
+                Resolve and archive
+              </button>
+            }
+          </div>
         </div>
       </article>
 
-      <article class="widget">
-        <mat-icon class="widget__icon" fontSet="material-icons-outlined">work_outline</mat-icon>
-        <div class="widget__text">
-          <div class="widget__head">
-            <h2 class="widget__title">AML Case</h2>
-            <ui-pill [severity]="store.severity()">{{ store.severity() }}</ui-pill>
+      <!-- -------------------------------------------------------- AML case -->
+      <article class="w">
+        <span class="w__type" [attr.data-sev]="store.severity()">
+          <mat-icon fontSet="material-icons-outlined">business_center</mat-icon>
+        </span>
+
+        <div class="w__inner">
+          <div class="w__content">
+            <div class="w__titles">
+              <h2 class="w__name">AML Case</h2>
+              <span class="w__sev" [attr.data-sev]="store.severity()">
+                <span class="w__dot" aria-hidden="true"></span>
+                {{ store.severity() }}
+              </span>
+            </div>
+            <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
           </div>
-          <p class="widget__body">
-            #AML-1042 · {{ store.isResolved() ? 'Resolved' : 'In progress' }} · Opened 12d ago
-          </p>
-        </div>
-        <div class="widget__foot">
-          <span class="widget__lock">
-            <span class="widget__avatar" aria-hidden="true">LF</span>
-            {{ lockLine() }}
-          </span>
-          @if (!ws.isOpen('aml') && !store.isResolved()) {
-            @if (store.lockState() !== 'locked-to-me') {
-              <button
-                mat-stroked-button
-                type="button"
-                (click)="store.lock()"
-                [disabled]="lockBlocked()"
-              >
-                Lock case
-              </button>
-            } @else {
-              <button mat-stroked-button type="button" (click)="store.requestUnlock()">
-                Unlock
+
+          @if (lockChip(); as chip) {
+            <span class="w__chip" [class.w__chip--mine]="chip.mine">
+              <span class="w__avatar" aria-hidden="true">{{ chip.initials }}</span>
+              {{ chip.label }}
+            </span>
+          }
+
+          <div class="w__actions">
+            @if (!ws.isOpen('aml') && !store.isResolved()) {
+              @switch (store.lockState()) {
+                @case ('locked-to-me') {
+                  <button class="w__btn w__btn--compact" type="button" (click)="store.requestUnlock()">
+                    Unlock
+                  </button>
+                }
+                @case ('locked-to-other') {
+                  <button class="w__btn w__btn--danger" type="button" (click)="store.requestUnlock()">
+                    <mat-icon aria-hidden="true">lock</mat-icon>
+                    Force unlock
+                  </button>
+                }
+                @default {
+                  <button class="w__btn w__btn--compact" type="button" (click)="store.lock()">
+                    Lock
+                  </button>
+                }
+              }
+            }
+            @if (ws.isOpen('aml')) {
+              <button class="w__btn" type="button" (click)="ws.close('aml')">Close case</button>
+            } @else if (canOpen()) {
+              <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
+                <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                Open case
               </button>
             }
-          }
-          @if (ws.isOpen('aml')) {
-            <button mat-stroked-button type="button" (click)="ws.close('aml')">Close case</button>
-          } @else {
-            <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
-              <mat-icon>open_in_new</mat-icon>
-              Open case
-            </button>
-          }
+          </div>
         </div>
       </article>
     </div>
@@ -120,61 +140,83 @@ import { PillComponent } from './ui-pill.component';
       :host {
         display: block;
       }
-      /* min(260px, 100%) rather than a bare 260px: an auto-fit track whose
-         floor is wider than the container overflows it instead of collapsing
-         to one column, which is exactly what a 260px minimum does on a phone
-         narrower than that. */
+      /* auto-fit with a min() floor: a track whose floor is wider than the
+         container overflows it rather than collapsing to one column. */
       .widgets {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
       }
-      /**
-       * One flex row, everything in flow: icon, identity block, then the
-       * actions. Nothing is positioned, nothing has a negative margin.
-       *
-       * The shrink order is the whole design. Only the identity block may
-       * give way; the lock status and the buttons are flex-shrink: 0, so text
-       * can never be squeezed into them. Inside the identity block the meta
-       * line goes first and the count badge second, both by ellipsis.
-       *
-       * A pill declares flex: none for itself, which is right in a chip bar
-       * and wrong here - unshrinkable AND nowrap means it overflows its
-       * parent and lands on top of the lock status rather than truncating.
-       * That was the overlap.
-       */
-      .widget {
+
+      /* ---- card: 22263:21085 ------------------------------------------- */
+      .w {
         display: flex;
         align-items: center;
         gap: 12px;
         min-width: 0;
-        padding: 12px 16px;
+        padding: 12px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--panel);
-        /* The wrap decision belongs to the WIDGET's width, not the window's:
-           two widgets sharing a wide viewport are each narrow. */
+        /* The wrap point belongs to the WIDGET's width, not the window's: two
+           widgets sharing a wide viewport are each narrow. */
         container-type: inline-size;
       }
-      mat-icon.widget__icon {
+
+      /* ---- type icon: 32px, 8px radius, tinted by state ----------------- */
+      .w__type {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         flex: none;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        color: var(--ink-2);
+        align-self: flex-start;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--page);
       }
-      .widget__text {
+      .w__type--sg {
+        background: #e6f1fb;
+      }
+      .w__type[data-sev='AML'] {
+        background: var(--sev-aml-bg);
+      }
+      .w__type[data-sev='EDD'] {
+        background: var(--sev-edd-bg);
+      }
+      .w__type[data-sev='COMPLIANCE'] {
+        background: var(--sev-compliance-bg);
+      }
+      .w__type mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        color: var(--ink);
+      }
+
+      /* ---- inner: content then actions ---------------------------------- */
+      .w__inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         flex: 1 1 auto;
         min-width: 0;
       }
-      .widget__head {
+      .w__content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .w__titles {
         display: flex;
         align-items: center;
         gap: 8px;
         min-width: 0;
       }
-      .widget__title {
+      .w__name {
         flex: 0 1 auto;
         min-width: 0;
         margin: 0;
@@ -186,18 +228,65 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      /* Second to give way. Overrides the pill's own flex: none. */
-      .widget__head ui-pill {
+
+      /* ---- count badge: 22263:21125 ------------------------------------- */
+      .w__count {
         flex: 0 1 auto;
         min-width: 0;
+        padding: 2px 8px;
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        background: var(--page);
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--ink);
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: block;
-        line-height: 22px;
       }
-      /* First to give way. */
-      .widget__body {
-        margin: 2px 0 0;
+
+      /* ---- severity badge: dot + label, 22263:21188 --------------------- */
+      .w__sev {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 1 auto;
+        min-width: 0;
+        padding: 2px 6px;
+        border: 1px solid transparent;
+        border-radius: 100px;
+        font-size: 12px;
+        line-height: 16px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .w__dot {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .w__sev[data-sev='AML'] {
+        background: var(--sev-aml-bg);
+        border-color: #fecaca;
+        color: var(--sev-aml);
+      }
+      .w__sev[data-sev='EDD'] {
+        background: var(--sev-edd-bg);
+        border-color: #fee685;
+        color: var(--sev-edd);
+      }
+      .w__sev[data-sev='COMPLIANCE'] {
+        background: #f2edff;
+        border-color: #e2e0ff;
+        color: var(--sev-compliance);
+      }
+
+      /* ---- meta line: first to truncate --------------------------------- */
+      .w__meta {
+        margin: 0;
         min-width: 0;
         font-size: 12px;
         line-height: 16px;
@@ -206,70 +295,164 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .widget__lock {
+
+      /* ---- lock chip: 22263:21143 --------------------------------------- */
+      .w__chip {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        flex: 0 0 auto;
+        justify-content: center;
+        gap: 4px;
+        flex: none;
+        align-self: flex-start;
+        height: 32px;
+        max-width: 220px;
+        padding: 4px 8px 4px 4px;
+        border-radius: 99px;
+        background: var(--page);
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
-        color: var(--foreground-success);
+        color: var(--ink-3);
         white-space: nowrap;
       }
-      .widget__avatar {
+      .w__chip--mine {
+        background: var(--success-bg-subtle);
+        color: var(--success);
+      }
+      .w__avatar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 999px;
-        background: var(--success-bg-subtle);
-        color: var(--success);
-        font-size: 10px;
+        width: 24px;
+        height: 24px;
+        border-radius: 9999px;
+        background: #71717a;
+        color: #fff;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
         letter-spacing: 0;
       }
-      /* Never shrinks, never wraps mid-label. A Material button that shrinks
-         crushes its own label and icon rather than ellipsising. */
-      .widget__foot {
+      .w__chip--mine .w__avatar {
+        background: var(--foreground-success);
+      }
+
+      /* ---- buttons: 32px, 4px radius ------------------------------------ */
+      .w__actions {
         display: flex;
         align-items: center;
         gap: 8px;
-        flex: 0 0 auto;
-        justify-content: flex-end;
-      }
-      .widget__foot button {
         flex: none;
+      }
+      .w__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex: none;
+        height: 32px;
+        padding: 0 16px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 4px;
+        background: var(--panel);
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        color: var(--ink);
         white-space: nowrap;
+        cursor: pointer;
+      }
+      .w__btn:hover {
+        background: var(--page);
+      }
+      /* Lock / Unlock are the compact variant in the design: 13px on 12px of
+         padding rather than 14px on 16px. */
+      .w__btn--compact {
+        padding: 0 12px;
+        font-size: 13px;
+        line-height: 16px;
+      }
+      .w__btn--primary {
+        border-color: transparent;
+        background: var(--primary);
+        color: #fff;
+      }
+      .w__btn--primary:hover {
+        background: var(--primary-ink);
+      }
+      .w__btn--danger {
+        color: var(--danger);
+      }
+      .w__btn mat-icon {
+        flex: none;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
 
       /**
-       * Two rows once the widget itself is too narrow for one: identity on
-       * top, actions beneath and right-aligned. A container query, not a
-       * media query - at 1440 each of two side-by-side widgets is ~560px wide
-       * and needs this, while one widget alone at 900px does not.
+       * Narrow: the mobile node, 22263:20943.
+       *
+       * The threshold is the desktop node's own card width, 640px, expressed
+       * as a container width: a size container measures its CONTENT box, so
+       * 640 outer minus 24px of padding and 2px of border is 614. Writing 640
+       * here put a 646px card into the mobile layout. Below it
+       * the desktop row cannot hold the design's own content - icon, chip,
+       * Unlock and the primary come to about 552px, leaving the identity block
+       * a dozen pixels - so this is where the design stops applying, measured
+       * rather than picked.
+       *
+       * It has to be a CONTAINER query, and it is the one already in this
+       * file rather than a new breakpoint: between 720px and roughly 1130px of
+       * viewport the two widgets share a row at under 640px each, which no
+       * viewport query can see because the viewport is wide while the widget
+       * is not.
+       *
+       * Content and actions become two rows, the lock chip moves under the meta
+       * line inside the content column, and the chip steps down to 24px with a
+       * 20px avatar. Driven by the widget's own width rather than the
+       * viewport's, so two widgets sharing a 1440px screen get it too - which
+       * is the case a viewport query cannot see.
        */
-      @container (max-width: 680px) {
-        .widget {
-          flex-wrap: wrap;
+      @container (max-width: 613.98px) {
+        .w {
           align-items: flex-start;
         }
-        .widget__text {
-          flex: 1 1 auto;
+        .w__inner {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
         }
-        .widget__foot {
-          flex: 1 1 100%;
+        .w__content {
+          min-width: 140px;
+        }
+        .w__actions {
           flex-wrap: wrap;
+        }
+        .w__chip {
+          height: 24px;
+          gap: 6px;
+          padding: 0 8px 0 4px;
+        }
+        .w__avatar {
+          width: 20px;
+          height: 20px;
+        }
+        /* Mobile node draws the buttons at 8px, desktop at 4px - see the note
+           in the commit. Each node governs its own width. */
+        .w__btn {
+          border-radius: 8px;
         }
       }
 
+      /* Below the panel's own reflow point the two widgets stop sharing a row.
+         Same breakpoint as the segmented layout and the 16px gutters. */
       @media (max-width: 719.98px) {
         .widgets {
           grid-template-columns: minmax(0, 1fr);
-        }
-        .widget__foot button {
-          flex: 1 1 auto;
         }
       }
     `,
@@ -279,25 +462,41 @@ export class BackOfficeWidgetsComponent {
   readonly ws = inject(WorkspaceStore);
   readonly store = inject(CaseStore);
 
-  /** Rule 3, at the door: you hold the lock or you do not get in. */
-  readonly canOpenAml = computed(
-    () => this.store.lockState() === 'locked-to-me' || this.store.isResolved(),
-  );
+  /** "Open" / "In progress" / "Resolved", per the design's meta line. */
+  readonly stage = computed(() => {
+    if (this.store.isResolved()) return 'Resolved';
+    return this.store.stream().length > 0 ? 'In progress' : 'Open';
+  });
 
-  readonly lockBlocked = computed(() => this.store.lockState() === 'locked-to-other');
+  /**
+   * The lock chip, or null when there is no holder.
+   *
+   * Null rather than an "Unassigned" label: the design shows no chip at all in
+   * the unlocked state, and the Lock button is the signal instead.
+   */
+  readonly lockChip = computed<{ label: string; initials: string; mine: boolean } | null>(() => {
+    if (this.store.isResolved()) return null;
+    switch (this.store.lockState()) {
+      case 'locked-to-me':
+        return { label: 'Locked to you', initials: 'LF', mine: true };
+      case 'locked-to-other': {
+        const name = this.store.lockOwner()?.name ?? 'another agent';
+        return { label: `Locked to ${name}`, initials: initialsOf(name), mine: false };
+      }
+      default:
+        return null;
+    }
+  });
 
-  /** The SG alert's own lock. Static in this prototype, but worded once. */
-  readonly sgLockLine = lockStatusLine('locked-to-me', null);
+  /** Rule 3: the case must be locked to you before it can be opened. */
+  readonly canOpen = computed(() => this.store.lockState() === 'locked-to-me');
+}
 
-  readonly lockLine = computed(() =>
-    lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
-      resolved: this.store.isResolved(),
-    }),
-  );
-
-  readonly openBlockedReason = computed(() =>
-    this.store.lockState() === 'locked-to-other'
-      ? `${this.store.lockOwner()?.name ?? 'Another agent'} holds this case. Open it from their lock or force unlock inside.`
-      : 'Lock the case before opening it.',
-  );
+function initialsOf(name: string): string {
+  return name
+    .split(/[\s.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }

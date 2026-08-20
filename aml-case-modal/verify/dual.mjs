@@ -237,12 +237,14 @@ await settle(400);
 console.log('\nAn open panel owns its own lock control');
 const lockView = () =>
   page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.widget')];
+    const cards = [...document.querySelectorAll('.w')];
     const labels = (i) =>
-      [...cards[i].querySelectorAll('.widget__foot button')].map((b) =>
+      [...cards[i].querySelectorAll('.w__actions button')].map((b) =>
         b.textContent.replace(/\s+/g, ' ').trim(),
       );
-    const hasLockBtn = (list) => list.some((l) => /Unlock|Lock case/.test(l));
+    // Lock, Unlock and Force unlock are all lock controls; the widget shows
+    // whichever the current state calls for.
+    const hasLockBtn = (list) => list.some((l) => /^(Lock|Unlock|Force unlock)$/.test(l));
     const hasOpen = (list) => list.some((l) => /Open case|Resolve and archive/.test(l));
     const hasClose = (list) => list.some((l) => /^Close /.test(l));
     return {
@@ -250,8 +252,8 @@ const lockView = () =>
       amlOpen: !!document.querySelector('aml-case-modal'),
       sgHasLock: hasLockBtn(labels(0)),
       amlHasLock: hasLockBtn(labels(1)),
-      sgPill: !!cards[0].querySelector('.widget__lock'),
-      amlPill: !!cards[1].querySelector('.widget__lock'),
+      sgPill: !!cards[0].querySelector('.w__chip'),
+      amlPill: !!cards[1].querySelector('.w__chip'),
       sgActions: { open: hasOpen(labels(0)), close: hasClose(labels(0)) },
       amlActions: { open: hasOpen(labels(1)), close: hasClose(labels(1)) },
       panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
@@ -293,12 +295,14 @@ check('both open: both widgets read Close only',
   JSON.stringify([bothUp.sgActions, bothUp.amlActions]));
 
 // State change on the panel reaches the widget with no reload.
-const before = await page.evaluate(() =>
-  document.querySelectorAll('.widget')[1].querySelector('.widget__lock').textContent.trim());
+const chipText = () =>
+  page.evaluate(() =>
+    document.querySelectorAll('.w')[1].querySelector('.w__chip')?.textContent.trim() ?? '(no chip)',
+  );
+const before = await chipText();
 await page.locator('aml-case-modal .head__lock button').click();
 await settle(400);
-const after = await page.evaluate(() =>
-  document.querySelectorAll('.widget')[1].querySelector('.widget__lock').textContent.trim());
+const after = await chipText();
 check('a lock change on the panel shows on the widget at once', before !== after,
   `${before} -> ${after}`);
 
@@ -307,8 +311,16 @@ await settle(500);
 const amlGone = await lockView();
 check('closing the panel gives the lock control back', amlGone.amlHasLock,
   JSON.stringify(amlGone));
-check('and the open action with it', amlGone.amlActions.open && !amlGone.amlActions.close,
-  JSON.stringify(amlGone.amlActions));
+// Rule 3: the open action comes back only once the case is locked to you
+// again, which the panel unlock a moment ago undid. Closing gives back the
+// lock control; locking gives back the way in.
+check('but not the open action, because the case is no longer locked to you',
+  !amlGone.amlActions.open && !amlGone.amlActions.close, JSON.stringify(amlGone.amlActions));
+await page.locator('.w:nth-of-type(2) .w__btn').first().click();
+await settle(400);
+const relocked = await lockView();
+check('locking it again restores the open action', relocked.amlActions.open,
+  JSON.stringify(relocked.amlActions));
 
 console.log('\nThe panels live inside the chrome, never over it');
 await fresh();

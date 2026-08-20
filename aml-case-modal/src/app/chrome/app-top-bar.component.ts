@@ -135,6 +135,27 @@ import { MatIconModule } from '@angular/material/icon';
           display: none;
         }
       }
+
+      /* At 320 the brand, the region picker and two icon buttons come to more
+         than the bar is wide. The region picker is the one piece that is
+         neither identity nor an action, so it is what goes. Same breakpoint as
+         the panel reflow and the 16px gutters. */
+      @media (max-width: 719.98px) {
+        .bar {
+          gap: 4px;
+        }
+        .bar__region {
+          display: none;
+        }
+        .bar__brand {
+          flex: 0 1 auto;
+          min-width: 0;
+          margin-right: auto;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
     `,
   ],
 })

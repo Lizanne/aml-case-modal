@@ -498,7 +498,7 @@ for (const state of ['00a', '00b', '01', '07', '09']) {
   const copy = await page.evaluate(() => {
     const text = document.body.innerText;
     return {
-      widgetLocks: [...document.querySelectorAll('.widget__lock')].map((e) =>
+      widgetLocks: [...document.querySelectorAll('.w__chip')].map((e) =>
         e.textContent.replace(/\s+/g, ' ').trim(),
       ),
       band: document.querySelector('case-header .head__lock-text')?.textContent.trim() ?? null,
@@ -688,18 +688,18 @@ console.log('\nWidgets share the row, truncate, then stack');
 for (const width of [1440, 1200, 1024, 768, 390]) {
   await page.setViewportSize({ width, height: 1040 });
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('back-office-widgets .widget', { timeout: 15000 });
+  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
   await page.waitForTimeout(450);
   // Force the longest real lock string before measuring.
   await page.evaluate(() => {
-    document.querySelectorAll('.widget__lock').forEach((el) => {
+    document.querySelectorAll('.w__chip').forEach((el) => {
       el.lastChild.textContent = ' Locked by Anna Smith · 1mo';
     });
   });
   await page.waitForTimeout(150);
   const w = await page.evaluate(() => {
     const row = document.querySelector('back-office-widgets .widgets');
-    const cards = [...document.querySelectorAll('back-office-widgets .widget')];
+    const cards = [...document.querySelectorAll('back-office-widgets .w')];
     const rr = row.getBoundingClientRect();
     const buttons = cards.flatMap((c) => [...c.querySelectorAll('button')]);
     return {
@@ -711,7 +711,7 @@ for (const width of [1440, 1200, 1024, 768, 390]) {
         Math.round(cards[1].getBoundingClientRect().top),
       // The secondary line is held to one line whatever happens.
       bodyLines: cards.map((c) =>
-        Math.round(c.querySelector('.widget__body').getBoundingClientRect().height / 20),
+        Math.round(c.querySelector('.w__meta').getBoundingClientRect().height / 20),
       ),
       rowScrolls: row.scrollWidth > row.clientWidth + 1,
       // Every pair of leaf parts, tested against each other. The longest real
@@ -721,7 +721,7 @@ for (const width of [1440, 1200, 1024, 768, 390]) {
         for (const card of cards) {
           const parts = [
             ...card.querySelectorAll(
-              '.widget__title, ui-pill, .widget__body, .widget__lock, .widget__foot button',
+              '.w__name, ui-pill, .w__meta, .w__chip, .w__actions button',
             ),
           ];
           for (let i = 0; i < parts.length; i++) {
@@ -743,7 +743,7 @@ for (const width of [1440, 1200, 1024, 768, 390]) {
         (btn) =>
           btn.scrollWidth > btn.clientWidth + 1 ||
           btn.getBoundingClientRect().right >
-            btn.closest('.widget').getBoundingClientRect().right + 0.5,
+            btn.closest('.w').getBoundingClientRect().right + 0.5,
       ).length,
     };
   });
@@ -1003,8 +1003,12 @@ for (const state of ['01', '09', '10']) {
     pills.every((p) => p.tone !== 'primary'),
     pills.filter((p) => p.tone === 'primary').map((p) => p.text).join(', '));
   const info = pills.filter((p) => p.tone === 'info');
-  check(`${state}: the blue pills carry the info tone`, info.length > 0,
-    pills.map((p) => `${p.text}:${p.tone}`).join(' '));
+  // The widget count badge is no longer a ui-pill - the Figma widget spec
+  // gives it its own border and neutral fill - so a state may legitimately
+  // have no info pill on screen at all.
+  check(`${state}: any info pill uses the info tokens`,
+    info.every((p) => p.bg === INFO_BG && p.fg === INFO_FG),
+    info.map((p) => `${p.text} ${p.bg}/${p.fg}`).join('; '));
   check(`${state}: info pills use the info tokens`,
     info.every((p) => p.bg === INFO_BG && p.fg === INFO_FG),
     info.map((p) => `${p.text} ${p.bg}/${p.fg}`).join('; '));
@@ -1022,11 +1026,21 @@ const named = await page.evaluate(() => {
     return el ? el.getAttribute('data-tone') : null;
   };
   return {
-    sgWidget: read('back-office-widgets .widget:first-of-type ui-pill'),
+    sgWidget: read('back-office-widgets .w:first-of-type ui-pill'),
     count: read('trigger-strip .strip__bar ui-pill'),
   };
 });
-check('the SG widget count pill is info', named.sgWidget === 'info', String(named.sgWidget));
+// The widget's count badge is now the Figma badge, not a ui-pill: neutral
+// fill, 1px border, --ink text. Asserted against the design, not the tone.
+const widgetCount = await page.evaluate(() => {
+  const el = document.querySelector('back-office-widgets .w__count');
+  if (!el) return null;
+  const cs = getComputedStyle(el);
+  return { bg: cs.backgroundColor, fg: cs.color, border: cs.borderTopWidth, radius: cs.borderRadius };
+});
+check('the widget count badge is the design badge, not a tone pill',
+  widgetCount !== null && widgetCount.border === '1px' && widgetCount.radius === '100px',
+  JSON.stringify(widgetCount));
 // The count goes amber on an unresynced arrival; state 10 is exactly that.
 check('the trigger count is warn while an arrival is unresynced',
   named.count === 'warn', String(named.count));
