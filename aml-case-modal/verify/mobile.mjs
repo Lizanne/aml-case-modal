@@ -364,14 +364,21 @@ console.log('\nDesktop is untouched');
       hostPosition: getComputedStyle(host).position,
       radius: cs.borderRadius,
       width: Math.round(p.width),
-      // Centred inside the modal, not stuck to an edge.
-      centred: Math.abs((p.left - m.left) - (m.right - p.right)) <= 2,
+      // Centred in the viewport, not stuck to an edge.
+      centredInViewport: Math.abs(p.left - (window.innerWidth - p.right)) <= 2,
+      leftGap: Math.round(p.left),
+      rightGap: Math.round(window.innerWidth - p.right),
       footDir: footCs.flexDirection,
       headPad: getComputedStyle(document.querySelector('dialog-shell .panel__head')).padding,
     };
   });
-  check('dialog is still absolutely positioned in the modal', d.hostPosition === 'absolute', d.hostPosition);
-  check('still a floating box, centred', d.centred);
+  // Fixed at EVERY width now: a dialog scoped to the modal left the widgets,
+  // the player bar and the nav outside its scrim and still clickable, which is
+  // not what aria-modal claims. What changes on mobile is the shape, not the
+  // anchor - box on desktop, sheet on a phone.
+  check('dialog is anchored to the viewport', d.hostPosition === 'fixed', d.hostPosition);
+  check('still a floating box, centred in the viewport', d.centredInViewport,
+    `${d.leftGap} / ${d.rightGap}`);
   check('still rounded on all four corners', d.radius === '14px', d.radius);
   check('still 520px wide', d.width === 520, `${d.width}`);
   check('actions still sit in a row', d.footDir === 'row', d.footDir);

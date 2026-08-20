@@ -45,14 +45,12 @@ import { PillComponent } from './ui-pill.component';
             Locked by you
           </span>
           <button mat-stroked-button type="button">Unlock</button>
-          @if (ws.isOpen('sg')) {
-            <button mat-stroked-button type="button" (click)="ws.close('sg')">Close alert</button>
-          } @else {
-            <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
-              <mat-icon>check</mat-icon>
-              Resolve and archive
-            </button>
-          }
+          <!-- Static label, per frame 09. A panel is closed by its own X, not
+               by the widget changing what it says. -->
+          <button mat-flat-button color="primary" type="button" (click)="ws.open('sg')">
+            <mat-icon>check</mat-icon>
+            Resolve and archive
+          </button>
         </div>
       </article>
 
@@ -79,14 +77,10 @@ import { PillComponent } from './ui-pill.component';
           } @else if (!store.isResolved()) {
             <button mat-stroked-button type="button" (click)="store.requestUnlock()">Unlock</button>
           }
-          @if (ws.isOpen('aml')) {
-            <button mat-stroked-button type="button" (click)="ws.close('aml')">Close case</button>
-          } @else {
-            <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
-              <mat-icon>open_in_new</mat-icon>
-              Open case
-            </button>
-          }
+          <button mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
+            <mat-icon>open_in_new</mat-icon>
+            Open case
+          </button>
         </div>
       </article>
     </div>

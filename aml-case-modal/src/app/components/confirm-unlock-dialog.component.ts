@@ -19,7 +19,7 @@ import { DialogShellComponent } from './dialog-shell.component';
   imports: [MatButtonModule, MatIconModule, DialogShellComponent, StampPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog-shell heading="Force unlock this case?" (dismiss)="close()">
+    <dialog-shell heading="Force unlock this case?" initialFocus=".panel__foot button" (dismiss)="close()">
       <p class="lead">
         <strong>{{ owner() }}</strong> has held this case since
         {{ store.lockedSince() | stamp }}.

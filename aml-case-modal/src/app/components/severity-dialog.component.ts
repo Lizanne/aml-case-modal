@@ -23,7 +23,7 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
   imports: [MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog-shell heading="Adjust severity" (dismiss)="close()">
+    <dialog-shell heading="Adjust severity" initialFocus="mat-radio-button input" (dismiss)="close()">
       <div class="pair">
         <ui-pill [severity]="store.severity()">
           {{ label(store.severity()) }}

@@ -100,6 +100,10 @@ import { PillComponent } from './ui-pill.component';
          side by side with different heading sizes read as two ranks, which
          they are not. Kept in step by the same 720px rule that drives the AML
          header, not by a coincidence of numbers. */
+      .sg__head:focus-visible {
+        outline: none;
+        box-shadow: inset 0 3px 0 0 var(--primary);
+      }
       .sg__title {
         margin: 0;
         font-size: 20px;

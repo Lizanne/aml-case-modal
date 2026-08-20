@@ -127,6 +127,14 @@ export class WorkspaceStore {
    * the second while the first was up.
    */
   open(id: ModalId): void {
+    // The widget label is static now, so this can be pressed while its panel
+    // is already up. Re-ordering then would slide the panel to the other side
+    // for no reason; take focus to it instead.
+    if (this.state(id).open && !this.state(id).minimised) {
+      this.pendingFocus.set(id);
+      return;
+    }
+
     const otherId: ModalId = id === 'sg' ? 'aml' : 'sg';
     const other = this.state(otherId);
 

@@ -100,8 +100,14 @@ import { PillComponent } from './ui-pill.component';
       }
       .head {
         background: var(--panel);
+        /* Focus lands here when the panel opens, and a ring on a whole header
+           is noise - but it must not be silently removed either, so the
+           replacement is an inset ring on the panel edge. */
         outline: none;
         border-bottom: 1px solid var(--line);
+      }
+      .head:focus-visible {
+        box-shadow: inset 0 3px 0 0 var(--primary);
       }
       .head__main {
         display: flex;

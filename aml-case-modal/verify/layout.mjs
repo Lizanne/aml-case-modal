@@ -573,8 +573,8 @@ const soloAml = await page.evaluate(() => {
   const e = document.querySelector('case-header .head__title');
   return e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null;
 });
-for (const label of ['Close case', 'Close alert']) {
-  const btn = page.locator(`back-office-widgets button:has-text("${label}")`);
+for (const [host, label] of [['aml-case-modal', 'Close case'], ['sg-alert-modal', 'Close alert']]) {
+  const btn = page.locator(`${host} button[aria-label="${label}"]`);
   if (await btn.count()) {
     await btn.click();
     await page.waitForTimeout(400);

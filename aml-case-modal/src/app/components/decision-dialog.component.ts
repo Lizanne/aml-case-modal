@@ -17,7 +17,7 @@ import { DialogShellComponent } from './dialog-shell.component';
   imports: [MatButtonModule, MatIconModule, DialogShellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog-shell heading="Submit decision" (dismiss)="close()">
+    <dialog-shell heading="Submit decision" initialFocus="textarea" (dismiss)="close()">
       <!-- One line. The action names were a stacked list restating the chip bar
            the agent just came from; the sentence is the whole message. -->
       <p class="met">

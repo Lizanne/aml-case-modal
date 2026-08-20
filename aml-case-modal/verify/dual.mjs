@@ -37,12 +37,14 @@ const settle = (ms = 500) => page.waitForTimeout(ms);
 async function fresh(state = '01') {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'networkidle' });
   await settle();
+  // Closed from the panel's own X: the widget primary is a static "open" label
+  // now and never closes anything.
   if ((await aml().count()) === 1) {
-    await page.locator('back-office-widgets button:has-text("Close case")').click();
+    await page.locator('aml-case-modal button[aria-label="Close case"]').click();
     await settle();
   }
   if ((await sg().count()) === 1) {
-    await page.locator('back-office-widgets button:has-text("Close alert")').click();
+    await page.locator('sg-alert-modal button[aria-label="Close alert"]').click();
     await settle();
   }
 }

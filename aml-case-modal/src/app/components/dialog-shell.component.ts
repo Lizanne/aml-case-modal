@@ -1,11 +1,14 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnDestroy,
   Output,
+  inject,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -34,14 +37,17 @@ let dialogSeq = 0;
     '(keydown.escape)': 'onEscape($event)',
   },
   template: `
-    <div class="scrim" (click)="dismiss.emit()"></div>
+    <!-- Inert. A scrim that dismisses is a way to lose a half-written note to
+         a stray click; Cancel, Close and Escape are the ways out. -->
+    <div class="scrim"></div>
     <div
       class="panel"
       role="dialog"
       aria-modal="true"
       [attr.aria-labelledby]="headingId"
+      tabindex="-1"
       cdkTrapFocus
-      [cdkTrapFocusAutoCapture]="true"
+      [cdkTrapFocusAutoCapture]="false"
     >
       <div class="panel__head">
         <h2 class="panel__title" [id]="headingId">{{ heading }}</h2>
@@ -59,10 +65,18 @@ let dialogSeq = 0;
   `,
   styles: [
     `
+      /**
+       * Fixed to the VIEWPORT, not to the panel it belongs to.
+       *
+       * A dialog scoped to .modal left the widgets, the player bar and the nav
+       * outside its scrim and still clickable - which is not what aria-modal
+       * claims. Fixed positioning puts the scrim over the whole composition,
+       * so what the screen says matches what the focus trap enforces.
+       */
       :host {
-        position: absolute;
+        position: fixed;
         inset: 0;
-        z-index: 20;
+        z-index: 60;
         display: grid;
         place-items: center;
         padding: 24px;
@@ -74,6 +88,7 @@ let dialogSeq = 0;
       }
       .panel {
         position: relative;
+        outline: none;
         width: min(520px, 100%);
         max-height: 100%;
         display: flex;
@@ -149,8 +164,6 @@ let dialogSeq = 0;
        */
       @media (max-width: 719.98px) {
         :host {
-          position: fixed;
-          inset: 0;
           padding: 0;
           place-items: end stretch;
         }
@@ -197,14 +210,36 @@ let dialogSeq = 0;
     `,
   ],
 })
-export class DialogShellComponent implements OnDestroy {
+export class DialogShellComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) heading = '';
+  /**
+   * CSS selector for the control that should hold focus on open.
+   *
+   * Without it CDK's auto-capture takes the first tabbable, which is the Close
+   * button - landing the user on the way OUT of a dialog they have just been
+   * given. Each dialog names its own starting point instead: the field you are
+   * there to fill, or Cancel when the confirmed action is destructive.
+   */
+  @Input() initialFocus?: string;
   @Output() dismiss = new EventEmitter<void>();
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly headingId = `dialog-heading-${++dialogSeq}`;
 
   /** Where focus was before the dialog opened, so it can be handed back. */
   private readonly opener = document.activeElement as HTMLElement | null;
+
+  ngAfterViewInit(): void {
+    const target = this.initialFocus
+      ? this.host.nativeElement.querySelector<HTMLElement>(this.initialFocus)
+      : null;
+    // Falls back to the panel itself rather than to the Close button, so focus
+    // is inside the trap even when a named target is missing.
+    (target ?? this.host.nativeElement.querySelector<HTMLElement>('.panel'))?.focus({
+      preventScroll: true,
+    });
+  }
 
   onEscape(event: Event): void {
     event.stopPropagation();

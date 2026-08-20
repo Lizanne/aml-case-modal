@@ -232,9 +232,48 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/**
+ * One focus ring, everywhere, no exceptions.
+ *
+ * The bare `*` rule is not enough on its own: Angular Material resets
+ * `outline: none` inside its own component styles, at a specificity a
+ * universal selector cannot reach, so every mat-button, mat-tab and
+ * button-toggle came up with no ring at all under keyboard focus. That is the
+ * usual place these go missing and it is invisible unless you tab the whole
+ * page and read the computed style, which is what found it here.
+ *
+ * !important is deliberate and narrow: it applies ONLY to :focus-visible, so
+ * it cannot paint a ring on a mouse click, and it exists to override a reset
+ * rather than to win a design argument.
+ */
 *:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+.mat-mdc-button-base:focus-visible,
+.mat-button-toggle-button:focus-visible,
+.mdc-tab:focus-visible,
+.mat-mdc-tab:focus-visible,
+.mat-mdc-menu-item:focus-visible,
+.mdc-radio__native-control:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px;
+}
+
+/* A radio's real control is a hidden input; put the ring on the visible
+   button so the user sees what the browser focused. */
+.mat-mdc-radio-button:has(.mdc-radio__native-control:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: 8px;
 }
 
 /* --------------------------------------------------------------------------

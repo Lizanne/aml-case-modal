@@ -209,6 +209,178 @@ for (const [state, sel] of [
   check(`${sel}: no visible "required" marker on labels`, r.noVisibleMarker);
 }
 
+console.log('\nEvery tab stop paints a visible focus ring');
+/**
+ * Walked, not sampled. Material resets outline: none inside its own component
+ * styles at a specificity a universal selector cannot reach, so mat-buttons,
+ * tabs and button-toggles came up with no ring at all - invisible unless you
+ * tab the whole page and read the computed style, which is what this does.
+ */
+const ringOf = () =>
+  page.evaluate(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body) return null;
+    const cs = getComputedStyle(a);
+    const rect = a.getBoundingClientRect();
+    const caret = a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text');
+    const radio = a.closest('.mat-mdc-radio-button');
+    return {
+      key: `${a.tagName}.${typeof a.className === 'string' ? a.className.split(' ')[0] : ''}`,
+      label: (a.getAttribute('aria-label') || a.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 24),
+      visible: rect.width > 0 && rect.height > 0,
+      ringed:
+        (parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== 'none') ||
+        cs.boxShadow !== 'none' ||
+        caret ||
+        !!(radio && getComputedStyle(radio).outlineStyle !== 'none'),
+    };
+  });
+for (const state of ['01', '02', '05', '06', '09']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('aml-case-modal, dialog-shell', { timeout: 15000 });
+  await page.waitForTimeout(700);
+  const seen = new Map();
+  for (let i = 0; i < 60; i++) {
+    await page.keyboard.press('Tab');
+    const r = await ringOf();
+    if (r && !seen.has(r.key + r.label)) seen.set(r.key + r.label, r);
+  }
+  const stops = [...seen.values()].filter((r) => r.visible);
+  const missing = stops.filter((r) => !r.ringed);
+  check(`${state}: ${stops.length} tab stops, all with a focus ring`,
+    stops.length > 0 && missing.length === 0,
+    missing.map((m) => `${m.key} "${m.label}"`).join(', '));
+}
+
+console.log('\nDialogs: full-viewport scrim, inert, focus placed and trapped');
+for (const [state, wantTag, wantLabel] of [
+  ['06', 'TEXTAREA', null],
+  ['05', 'INPUT', null],
+  ['00b', 'BUTTON', 'Cancel'],
+]) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('dialog-shell .panel', { timeout: 15000 });
+  await page.waitForTimeout(700);
+  const d = await page.evaluate(() => {
+    const host = document.querySelector('dialog-shell');
+    const scrim = host.querySelector('.scrim').getBoundingClientRect();
+    const a = document.activeElement;
+    return {
+      position: getComputedStyle(host).position,
+      coversViewport:
+        Math.round(scrim.width) === window.innerWidth &&
+        Math.round(scrim.height) === window.innerHeight,
+      activeTag: a.tagName,
+      activeLabel: (a.textContent || '').replace(/\s+/g, ' ').trim(),
+      inDialog: !!a.closest('dialog-shell'),
+    };
+  });
+  check(`${state}: the scrim covers the whole viewport, not just the panel`,
+    d.position === 'fixed' && d.coversViewport, `${d.position} ${d.coversViewport}`);
+  check(`${state}: initial focus is the field, not the close button`,
+    d.inDialog && d.activeTag === wantTag &&
+      (wantLabel === null || d.activeLabel === wantLabel),
+    `${d.activeTag} "${d.activeLabel}"`);
+
+  // Clicking the scrim must not throw away a half-written note.
+  await page.mouse.click(12, 12);
+  await page.waitForTimeout(300);
+  check(`${state}: clicking the scrim does not dismiss`,
+    (await page.locator('dialog-shell').count()) === 1);
+
+  let escaped = false;
+  for (let i = 0; i < 25; i++) {
+    await page.keyboard.press('Tab');
+    if (!(await page.evaluate(() => !!document.activeElement.closest('dialog-shell')))) {
+      escaped = true;
+      break;
+    }
+  }
+  check(`${state}: focus cannot leave the dialog`, !escaped);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  check(`${state}: Escape closes it`, (await page.locator('dialog-shell').count()) === 0);
+}
+
+console.log('\nNon-interactive content stays out of the tab order');
+await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });
+await page.waitForTimeout(600);
+const offenders = await page.evaluate(() => {
+  const bad = [];
+  for (const sel of ['trigger-strip .trigger', 'trigger-strip .cell', 'ui-pill', '.timeline__item']) {
+    for (const el of document.querySelectorAll(sel)) {
+      const ti = el.getAttribute('tabindex');
+      if (el.matches('button, a, input, select, textarea') || (ti !== null && ti !== '-1')) bad.push(sel);
+    }
+  }
+  return [...new Set(bad)];
+});
+check('rows, cells and pills are content, not controls', offenders.length === 0,
+  offenders.join(', '));
+
+console.log('\nA full record-and-submit journey, keyboard only');
+// BUTTONS matched on their own label: the dev switcher's <select> contains
+// every state name, "02 - Record form open" among them, so a loose text match
+// lands there and Enter does nothing.
+const tabToButton = async (text, max = 80) => {
+  for (let i = 0; i < max; i++) {
+    await page.keyboard.press('Tab');
+    const hit = await page.evaluate((t) => {
+      const a = document.activeElement;
+      if (!a || a.tagName !== 'BUTTON') return false;
+      const label = (a.getAttribute('aria-label') || a.textContent || '').replace(/\s+/g, ' ').trim();
+      return label === t || label.endsWith(t);
+    }, text);
+    if (hit) return true;
+  }
+  return false;
+};
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('action-placeholder button', { timeout: 15000 });
+await page.waitForTimeout(700);
+check('Tab reaches Record', await tabToButton('Record'));
+await page.keyboard.press('Enter');
+await page.waitForTimeout(600);
+check('Enter opens the form', (await page.locator('record-form form').count()) === 1);
+let onTextarea = false;
+for (let i = 0; i < 30 && !onTextarea; i++) {
+  onTextarea = await page.evaluate(() => document.activeElement.tagName === 'TEXTAREA');
+  if (!onTextarea) await page.keyboard.press('Tab');
+}
+check('Tab reaches the note', onTextarea);
+await page.keyboard.type('Recorded entirely from the keyboard.');
+let inRadios = false;
+for (let i = 0; i < 25 && !inRadios; i++) {
+  inRadios = await page.evaluate(() => !!document.activeElement.closest('mat-radio-group'));
+  if (!inRadios) await page.keyboard.press('Tab');
+}
+check('Tab reaches the lock choice', inRadios);
+await page.keyboard.press('ArrowDown');
+await page.waitForTimeout(250);
+check('arrow keys select within the radio group', await page.evaluate(() =>
+  document.querySelectorAll('record-form .mat-mdc-radio-checked').length === 1));
+check('Tab reaches Save', await tabToButton('Save outcome', 20));
+await page.keyboard.press('Enter');
+await page.waitForTimeout(700);
+check('Enter saves the outcome', (await page.locator('record-form form').count()) === 0);
+
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.footer button', { timeout: 15000 });
+await page.waitForTimeout(700);
+check('Tab reaches Submit decision', await tabToButton('Submit decision'));
+await page.keyboard.press('Enter');
+await page.waitForTimeout(700);
+check('the decision dialog opens on the caret', await page.evaluate(() =>
+  document.querySelector('decision-dialog') !== null && document.activeElement.tagName === 'TEXTAREA'));
+await page.keyboard.type('Approved from the keyboard.');
+check('Tab reaches the confirm', await tabToButton('Submit and resolve', 20));
+await page.keyboard.press('Enter');
+await page.waitForTimeout(800);
+check('the case resolves without a mouse',
+  (await page.locator('decision-dialog').count()) === 0 &&
+    (await page.locator('case-header ui-pill[data-tone="success"]').count()) === 1);
+
 console.log(`\npage errors: ${consoleErrors.length}`);
 consoleErrors.slice(0, 3).forEach((e) => console.log(`  ! ${e.slice(0, 160)}`));
 
