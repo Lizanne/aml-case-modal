@@ -443,6 +443,52 @@ for (const state of ['01', '07', '11']) {
   check(`${state}: labels stay vertically centred`, t.labelCentred);
 }
 
+console.log('\nOutcome cards are 16px all round');
+await page.setViewportSize({ width: 1440, height: 1040 });
+for (const state of ['03', '07']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('outcome-card .card', { timeout: 15000 });
+  await page.waitForTimeout(450);
+  const cards = await page.$$eval('outcome-card .card', (els) =>
+    els.map((c) => {
+      const cs = getComputedStyle(c);
+      const foot = c.querySelector('.card__foot');
+      return {
+        variant: c.className.replace('card', '').trim() || 'default',
+        pad: `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`,
+        footPadTop: foot ? getComputedStyle(foot).paddingTop : null,
+      };
+    }),
+  );
+  check(`${state}: every card is 16px on all four sides`,
+    cards.length > 0 && cards.every((c) => c.pad === '16px 16px 16px 16px'),
+    cards.map((c) => `${c.variant}:${c.pad}`).join(' | '));
+  check(`${state}: the footer clears its rule by 16px`,
+    cards.every((c) => c.footPadTop === null || c.footPadTop === '16px'),
+    cards.map((c) => c.footPadTop).join(','));
+}
+// The narrow card keeps 16px too, but its footer has no rule to clear - the
+// padding there would be a gap above nothing, and margin already provides it.
+await page.setViewportSize({ width: 1500, height: 1040 });
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('outcome-card .card--narrow', { timeout: 15000 });
+await page.waitForTimeout(700);
+const narrowCard = await page.evaluate(() => {
+  const c = document.querySelector('outcome-card .card--narrow');
+  const cs = getComputedStyle(c);
+  const foot = c.querySelector('.card__foot');
+  return {
+    pad: `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`,
+    footBorder: foot ? getComputedStyle(foot).borderTopWidth : null,
+    footPadTop: foot ? getComputedStyle(foot).paddingTop : null,
+  };
+});
+check('09 narrow card is 16px too', narrowCard.pad === '16px 16px 16px 16px', narrowCard.pad);
+check('09 narrow footer has no rule, so no padding above one',
+  narrowCard.footBorder === '0px' && narrowCard.footPadTop === '0px',
+  `${narrowCard.footBorder} / ${narrowCard.footPadTop}`);
+await page.setViewportSize({ width: 1440, height: 1040 });
+
 console.log('\nWidgets share the row, truncate, then stack');
 for (const width of [1500, 1100, 900, 720, 600, 390]) {
   await page.setViewportSize({ width, height: 1040 });

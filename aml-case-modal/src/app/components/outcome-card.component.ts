@@ -68,7 +68,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--panel);
-        padding: 16px 18px;
+        padding: 16px;
       }
       /**
        * The decision card (state 07). Background, border colour and border
@@ -132,7 +132,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         min-width: 0;
         gap: 12px;
         margin-top: 16px;
-        padding-top: 12px;
+        padding-top: 16px;
         border-top: 1px solid var(--line);
       }
       .card__actions {
