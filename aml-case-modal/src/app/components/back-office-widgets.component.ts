@@ -44,21 +44,17 @@ import { WorkspaceStore } from '../core/workspace-store';
               <h2 class="w__name">SG Alerts</h2>
               <span class="w__count">41 triggers hit</span>
             </div>
-            <p class="w__meta">12 snoozed · Last trigger 1mo ago</p>
+            <div class="w__meta-group">
+              <p class="w__meta">12 snoozed · Last trigger 1mo ago</p>
+              <!-- Lock status: an inline icon and a line of text, under the
+                   meta, in the content column. No pill, no avatar. Absent
+                   entirely when there is no holder. -->
+              <span class="w__lock w__lock--mine">
+                <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
+                Locked to you
+              </span>
+            </div>
           </div>
-
-          <!--
-            One chip, one place in the DOM. Desktop puts it in the actions
-            group, mobile under the meta line - which is the same position in
-            both once .w__inner turns from a row into a column, so it does not
-            need rendering twice. The design shows NO chip while unlocked, so
-            its absence is the unlocked signal rather than an "Unassigned"
-            label.
-          -->
-          <span class="w__chip w__chip--mine">
-            <span class="w__avatar" aria-hidden="true">LF</span>
-            Locked to you
-          </span>
 
           <div class="w__actions">
             @if (!ws.isOpen('sg')) {
@@ -91,15 +87,16 @@ import { WorkspaceStore } from '../core/workspace-store';
                 {{ store.severity() }}
               </span>
             </div>
-            <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
+            <div class="w__meta-group">
+              <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
+              @if (lockChip(); as chip) {
+                <span class="w__lock" [class.w__lock--mine]="chip.mine">
+                  <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
+                  {{ chip.label }}
+                </span>
+              }
+            </div>
           </div>
-
-          @if (lockChip(); as chip) {
-            <span class="w__chip" [class.w__chip--mine]="chip.mine">
-              <span class="w__avatar" aria-hidden="true">{{ chip.initials }}</span>
-              {{ chip.label }}
-            </span>
-          }
 
           <div class="w__actions">
             @if (!ws.isOpen('aml') && !store.isResolved()) {
@@ -217,7 +214,7 @@ import { WorkspaceStore } from '../core/workspace-store';
       .w__content {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
         flex: 1 1 140px;
         min-width: 140px;
       }
@@ -264,7 +261,6 @@ import { WorkspaceStore } from '../core/workspace-store';
         flex: 0 1 auto;
         min-width: 0;
         padding: 2px 6px;
-        border: 1px solid transparent;
         border-radius: 100px;
         font-size: 12px;
         line-height: 16px;
@@ -281,17 +277,14 @@ import { WorkspaceStore } from '../core/workspace-store';
       }
       .w__sev[data-sev='AML'] {
         background: var(--sev-aml-bg);
-        border-color: #fecaca;
         color: var(--sev-aml);
       }
       .w__sev[data-sev='EDD'] {
         background: var(--sev-edd-bg);
-        border-color: #fee685;
         color: var(--sev-edd);
       }
       .w__sev[data-sev='COMPLIANCE'] {
         background: #f2edff;
-        border-color: #e2e0ff;
         color: var(--sev-compliance);
       }
 
@@ -307,46 +300,36 @@ import { WorkspaceStore } from '../core/workspace-store';
         text-overflow: ellipsis;
       }
 
-      /* ---- lock chip: 22263:21143 --------------------------------------- */
-      .w__chip {
+      /* ---- lock status: 24101:8830 ---------------------------------- */
+      .w__meta-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+      .w__lock {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
         gap: 4px;
-        flex: none;
-        align-self: flex-start;
-        height: 32px;
+        min-width: 0;
         max-width: 220px;
-        padding: 4px 8px 4px 4px;
-        border-radius: 99px;
-        background: var(--page);
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
         color: var(--ink-3);
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      .w__chip--mine {
-        background: var(--success-bg-subtle);
-        color: var(--success);
+      .w__lock--mine {
+        color: var(--foreground-success);
       }
-      .w__avatar {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+      .w__lock mat-icon {
         flex: none;
-        width: 24px;
-        height: 24px;
-        border-radius: 9999px;
-        background: #71717a;
-        color: #fff;
-        font-size: 12px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
         line-height: 16px;
-        font-weight: 600;
-        letter-spacing: 0;
-      }
-      .w__chip--mine .w__avatar {
-        background: var(--foreground-success);
       }
 
       /* ---- buttons: 32px, 4px radius ------------------------------------ */
@@ -434,6 +417,14 @@ import { WorkspaceStore } from '../core/workspace-store';
        * rather than the viewport, so a narrow widget on a wide screen gets it
        * too.
        */
+      /**
+       * Narrow, per 24101:8775. The actions drop below the identity block.
+       *
+       * flex: none on the content column is the fix for the gap: in a COLUMN
+       * flex context "flex: 1 1 140px" grows on the VERTICAL axis, so the
+       * identity block stretched to fill the card and shoved the lock line and
+       * the buttons to the bottom. That was the empty band in the middle.
+       */
       @container (max-width: 419.98px) {
         .w {
           align-items: flex-start;
@@ -443,14 +434,8 @@ import { WorkspaceStore } from '../core/workspace-store';
           align-items: stretch;
           gap: 8px;
         }
-        .w__chip {
-          height: 24px;
-          gap: 6px;
-          padding: 0 8px 0 4px;
-        }
-        .w__avatar {
-          width: 20px;
-          height: 20px;
+        .w__content {
+          flex: none;
         }
       }
 

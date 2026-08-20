@@ -506,7 +506,7 @@ for (const width of [1600, 1440, 1200, 1024, 375, 320]) {
       const e = card.querySelector(s);
       return e ? e.getBoundingClientRect() : null;
     };
-    const parts = [...card.querySelectorAll('.w__name,.w__count,.w__sev,.w__meta,.w__chip,.w__btn')];
+    const parts = [...card.querySelectorAll('.w__name,.w__count,.w__sev,.w__meta,.w__lock,.w__btn')];
     let overlaps = 0;
     for (let i = 0; i < parts.length; i++) {
       for (let j = i + 1; j < parts.length; j++) {
@@ -517,13 +517,18 @@ for (const width of [1600, 1440, 1200, 1024, 375, 320]) {
             a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) overlaps++;
       }
     }
-    const chip = R('.w__chip');
+    const lock = R('.w__lock');
+    const meta = R('.w__meta');
+    const btn = R('.w__btn');
+    const lockCs = getComputedStyle(card.querySelector('.w__lock'));
     return {
       card: Math.round(card.getBoundingClientRect().width),
-      // The desktop node is one row: the chip sits level with the identity.
-      oneRow: Math.abs(chip.top - R('.w__name').top) < 12,
-      chipH: Math.round(chip.height),
-      avatar: Math.round(card.querySelector('.w__avatar').getBoundingClientRect().width),
+      lockBg: lockCs.backgroundColor,
+      lockFont: `${lockCs.fontSize}/${lockCs.lineHeight}`,
+      lockUnderMeta: lock.top >= meta.bottom - 1,
+      metaToLock: Math.round(lock.top - meta.bottom),
+      // Beside, not under: the actions share the identity's row.
+      actionsBeside: btn.left > lock.right,
       radius: getComputedStyle(card.querySelector('.w__btn')).borderRadius,
       overlaps,
       hScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -533,23 +538,17 @@ for (const width of [1600, 1440, 1200, 1024, 375, 320]) {
   check(`${width}px: widget buttons are 4px`, w.radius === '4px', w.radius);
   check(`${width}px: nothing overlaps`, w.overlaps === 0, `${w.overlaps}`);
   check(`${width}px: no horizontal scroll`, w.hScroll === 0, `${w.hScroll}`);
-  // Three bands, not two. Wrapping and the chip step are separate rules:
-  // the actions wrap as soon as the identity block would go under 140px,
-  // while the chip only steps down at the mobile card width. Between them
-  // sits a real intermediate - wrapped actions, desktop chip - and a binary
-  // desktop/mobile assertion called that a failure when it is the design.
-  // The chip step is a CONTAINER query, and a size container measures its
-  // content box: the card's 24px of padding and 2px of border come off
-  // before the 420px threshold is applied. Deriving it here rather than
-  // guessing a card width is what keeps this honest at the boundary.
-  const mobileChip = w.card - 26 <= 419.98;
-  check(`${width}px (${w.card}px card): chip is the ${mobileChip ? 'mobile' : 'desktop'} size`,
-    mobileChip ? w.chipH === 24 && w.avatar === 20 : w.chipH === 32 && w.avatar === 24,
-    `chip=${w.chipH} avatar=${w.avatar}`);
+  // The lock status is no longer a sized chip - it is an inline icon and a
+  // line of text inside the content column, identical at every width. What
+  // varies is only whether the actions sit beside the identity or under it.
+  check(`${width}px: lock status is inline, not a chip`,
+    w.lockBg === 'rgba(0, 0, 0, 0)' && w.lockFont === '12px/16px',
+    `${w.lockBg} ${w.lockFont}`);
+  check(`${width}px: it sits under the meta line`, w.lockUnderMeta,
+    `metaBottom->lockTop ${w.metaToLock}`);
   if (w.card >= 560) {
-    // Room for the desktop node as drawn: everything on one row.
-    check(`${width}px: desktop row, chip level with the identity`, w.oneRow,
-      `oneRow=${w.oneRow}`);
+    check(`${width}px: actions sit beside the identity`, w.actionsBeside,
+      `actionsBeside=${w.actionsBeside}`);
   }
 }
 await page.setViewportSize({ width: 1440, height: 1040 });
@@ -630,7 +629,7 @@ for (const state of ['00a', '00b', '01', '07', '09']) {
   const copy = await page.evaluate(() => {
     const text = document.body.innerText;
     return {
-      widgetLocks: [...document.querySelectorAll('.w__chip')].map((e) =>
+      widgetLocks: [...document.querySelectorAll('.w__lock')].map((e) =>
         e.textContent.replace(/\s+/g, ' ').trim(),
       ),
       band: document.querySelector('case-header .head__lock-text')?.textContent.trim() ?? null,
@@ -830,7 +829,7 @@ for (const width of [1440, 1200, 1024, 768, 390]) {
   await page.waitForTimeout(450);
   // Force the longest real lock string before measuring.
   await page.evaluate(() => {
-    document.querySelectorAll('.w__chip').forEach((el) => {
+    document.querySelectorAll('.w__lock').forEach((el) => {
       el.lastChild.textContent = ' Locked by Anna Smith · 1mo';
     });
   });
@@ -859,7 +858,7 @@ for (const width of [1440, 1200, 1024, 768, 390]) {
         for (const card of cards) {
           const parts = [
             ...card.querySelectorAll(
-              '.w__name, ui-pill, .w__meta, .w__chip, .w__actions button',
+              '.w__name, ui-pill, .w__meta, .w__lock, .w__actions button',
             ),
           ];
           for (let i = 0; i < parts.length; i++) {

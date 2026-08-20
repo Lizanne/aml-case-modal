@@ -257,8 +257,8 @@ const lockView = () =>
       amlOpen: !!document.querySelector('aml-case-modal'),
       sgHasLock: hasLockBtn(labels(0)),
       amlHasLock: hasLockBtn(labels(1)),
-      sgPill: !!cards[0].querySelector('.w__chip'),
-      amlPill: !!cards[1].querySelector('.w__chip'),
+      sgPill: !!cards[0].querySelector('.w__lock'),
+      amlPill: !!cards[1].querySelector('.w__lock'),
       sgActions: { open: hasOpen(labels(0)), close: hasClose(labels(0)) },
       amlActions: { open: hasOpen(labels(1)), close: hasClose(labels(1)) },
       panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
@@ -302,7 +302,7 @@ check('both open: both widgets read Close only',
 // State change on the panel reaches the widget with no reload.
 const chipText = () =>
   page.evaluate(() =>
-    document.querySelectorAll('.w')[1].querySelector('.w__chip')?.textContent.trim() ?? '(no chip)',
+    document.querySelectorAll('.w')[1].querySelector('.w__lock')?.textContent.trim() ?? '(no chip)',
   );
 const before = await chipText();
 await page.locator('aml-case-modal .head__lock button').click();
