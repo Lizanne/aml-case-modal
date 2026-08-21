@@ -163,7 +163,7 @@ check('the bar never covers the survivor\'s footer', await page.evaluate(() => {
   const b = bar.getBoundingClientRect();
   return f.bottom <= b.top + 1;
 }));
-await page.locator('minimised-bar button:has-text("Restore")').click();
+await page.locator('minimised-bar button[aria-label^="Restore"]').click();
 await settle();
 check('restoring re-splits the stage', (await sg().count()) === 1 && (await isSegmented()));
 check('the bar is gone', (await bars().count()) === 0);
@@ -198,7 +198,7 @@ console.log('\nMobile: one panel on the workspace, the other in its bar');
     }
   }
   for (let i = 0; i < 3 && (await mob.locator('minimised-bar').count()); i++) {
-    await mob.locator('minimised-bar button:has-text("Restore")').first().click();
+    await mob.locator('minimised-bar button[aria-label^="Restore"]').first().click();
     await mob.waitForTimeout(400);
     const c = mob.locator('sg-alert-modal button[aria-label="Close alert"], aml-case-modal button[aria-label="Close case"]');
     if (await c.count()) {
@@ -218,7 +218,7 @@ console.log('\nMobile: one panel on the workspace, the other in its bar');
   check('opening AML takes it over and sends SG to its bar',
     amlOnly.panels.join() === 'aml-case-modal' && amlOnly.bars === 1, JSON.stringify(amlOnly));
 
-  await mob.locator('minimised-bar button:has-text("Restore")').click();
+  await mob.locator('minimised-bar button[aria-label^="Restore"]').click();
   await mob.waitForTimeout(800);
   const swapped = await at();
   check('restoring SG swaps them back',

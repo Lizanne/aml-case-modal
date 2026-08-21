@@ -1296,7 +1296,9 @@ console.log('\nEvery close and minimise control is one size');
 // These lived in four components at three different button sizes and two icon
 // sizes. Nothing enforces one size but this: the rule is 32px square with a
 // 16px glyph, wherever the control appears.
-const CHROME_BTNS = '.head__close, .panel__close, .sg__btn, .bar__close';
+// .bar__close is deliberately outside this set: the minimised bar's close
+// carries a 44px touch target by design, asserted separately below.
+const CHROME_BTNS = '.head__close, .panel__close, .sg__btn';
 const chromeSizes = async (label) => {
   const rows = await page.$$eval(CHROME_BTNS, (els) =>
     els.map((e) => {
@@ -1356,9 +1358,27 @@ await page.click('button[aria-label="Minimise alert"]');
 await page.waitForTimeout(400);
 await page.click('button[aria-label="Minimise case"]');
 await page.waitForTimeout(400);
-await chromeSizes('09 minimised bars');
+// No panel chrome left once both are in their bars - the only controls on
+// screen are the bar's own, which have their own rule below.
 // A fixed square cannot stretch to the bar's height, so it has to centre
 // itself; a top- or bottom-hugging close button would read as misaligned.
+// Its own rule: a 44px hit area, a 16px glyph, and the 16px gutter it was
+// being clipped at.
+const barClose = await page.evaluate(() => {
+  const bar = document.querySelector('minimised-bar .bar');
+  const c = bar.querySelector('.bar__close');
+  const r = c.getBoundingClientRect();
+  const icon = c.querySelector('mat-icon').getBoundingClientRect();
+  return {
+    size: `${Math.round(r.width)}x${Math.round(r.height)}`,
+    icon: `${Math.round(icon.width)}x${Math.round(icon.height)}`,
+    gutter: Math.round(bar.getBoundingClientRect().right - r.right),
+  };
+});
+check('bar close has a 44px target and a 16px glyph',
+  barClose.size === '44x44' && barClose.icon === '16x16', JSON.stringify(barClose));
+check('and clears the right edge by 16px', Math.abs(barClose.gutter - 16) <= 1,
+  `${barClose.gutter}`);
 check('bar close is vertically centred', await page.evaluate(() => {
   const bars = [...document.querySelectorAll('minimised-bar .bar')];
   return bars.length > 0 && bars.every((b) => {

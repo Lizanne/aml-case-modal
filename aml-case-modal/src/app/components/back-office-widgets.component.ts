@@ -146,9 +146,12 @@ import { WorkspaceStore } from '../core/workspace-store';
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */
+      /* Top-aligned, per 24100:8194: the icon and the actions sit level with
+         the title row and the content flows down past them. Centring them
+         floated both against a card whose height is set by the text. */
       .w {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
         min-width: 0;
         padding: 12px;
@@ -166,7 +169,6 @@ import { WorkspaceStore } from '../core/workspace-store';
         align-items: center;
         justify-content: center;
         flex: none;
-        align-self: flex-start;
         width: 32px;
         height: 32px;
         border-radius: 8px;
@@ -206,7 +208,7 @@ import { WorkspaceStore } from '../core/workspace-store';
       .w__inner {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-start;
         gap: 8px;
         flex: 1 1 auto;
         min-width: 0;

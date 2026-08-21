@@ -20,14 +20,33 @@ import { PillComponent } from './ui-pill.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="bar" [class.bar--pulse]="pulsing()">
-      <button class="bar__restore" type="button" (click)="ws.restore(id)">
+      <!--
+        The bar IS the restore control: one button spanning everything but the
+        close, so a tap anywhere on it restores. The chevron is the visual cue
+        and carries no text of its own - a "Restore" link inside a button that
+        already restores was a second affordance for one action.
+      -->
+      <button
+        class="bar__restore"
+        type="button"
+        [attr.aria-label]="'Restore ' + panelName() + ' panel'"
+        (click)="ws.restore(id)"
+      >
         <ui-pill [severity]="severity()" tone="info">{{ tag() }}</ui-pill>
         <span class="bar__title">{{ title() }}</span>
-        <span class="bar__hint">Restore</span>
-        <mat-icon class="bar__icon">expand_less</mat-icon>
+        <mat-icon class="bar__icon" aria-hidden="true">expand_less</mat-icon>
       </button>
-      <button class="bar__close" type="button" [attr.aria-label]="'Close ' + title()" (click)="ws.close(id)">
-        <mat-icon>close</mat-icon>
+      <!-- Its own control, and its own hit area. stopPropagation is belt and
+           braces: they are siblings, not nested, so a click here cannot reach
+           the restore button - but nothing in the markup says so, and someone
+           will nest them one day. -->
+      <button
+        class="bar__close"
+        type="button"
+        [attr.aria-label]="'Close ' + panelName() + ' panel'"
+        (click)="$event.stopPropagation(); ws.close(id)"
+      >
+        <mat-icon aria-hidden="true">close</mat-icon>
       </button>
     </div>
   `,
@@ -72,12 +91,6 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .bar__hint {
-        flex: none;
-        font-size: 12px;
-        color: var(--primary);
-        font-weight: 600;
-      }
       .bar__icon {
         flex: none;
         color: var(--primary);
@@ -89,23 +102,28 @@ import { PillComponent } from './ui-pill.component';
          control. It used to be a full-height strip with a border-left divider;
          at a fixed size it cannot stretch, so it centres itself and the divider
          goes rather than hanging short of the bar edges. */
+      /* 44px of hit area, and the 16px gutter the design asks for - it was
+         clipped at 8px. The visual button stays 32px; the target is the
+         padding around it. */
       .bar__close {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex: none;
         align-self: center;
-        width: 32px;
-        height: 32px;
-        margin-right: 8px;
+        width: 44px;
+        height: 44px;
+        margin-right: 16px;
         border: 0;
         border-radius: 8px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;
       }
+      .bar__close:hover mat-icon {
+        color: var(--ink);
+      }
       .bar__close:hover {
-        background: var(--page);
         color: var(--ink);
       }
       .bar__close mat-icon {
@@ -154,6 +172,11 @@ export class MinimisedBarComponent {
   /** Severity colour only ever appears on the AML bar, and only for severity. */
   severity(): string | null {
     return this.id === 'aml' ? this.store.severity() : null;
+  }
+
+  /** What the panel is called in an accessible name: "SG alert" / "AML case". */
+  panelName(): string {
+    return this.id === 'sg' ? 'SG alert' : 'AML case';
   }
 
   title(): string {
