@@ -419,7 +419,10 @@ console.log('\nDesktop is untouched');
   check('still rounded on all four corners', d.radius === '14px', d.radius);
   check('still 520px wide', d.width === 520, `${d.width}`);
   check('actions still sit in a row', d.footDir === 'row', d.footDir);
-  check('still 18px 18px 12px 20px head padding', d.headPad === '18px 18px 12px 20px', d.headPad);
+  // 16px 20px, not the old 18px 18px 12px 20px: the dialog head now shares the
+  // 16/20 rhythm the panel footers and segments were moved to, so the check is
+  // that desktop still matches the SHEET's own head rather than a stale literal.
+  check('head padding is the shared 16px 20px', d.headPad === '16px 20px', d.headPad);
 
   await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });

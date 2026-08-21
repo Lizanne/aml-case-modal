@@ -176,24 +176,44 @@ import { PillComponent } from './ui-pill.component';
         border-radius: 8px;
         background: var(--page);
       }
+      /**
+       * Each variant sets BOTH halves of its pair, and the glyph inherits.
+       *
+       * The requested icon colours - 1E3A8A, 7F1D1D, 78350F - are already the
+       * foreground tokens that go with these exact backgrounds, so they go in
+       * by name: the tile is now the same fg/bg pairing as the severity pill
+       * beside it, and a token change moves both together. As three hex
+       * literals they would have been a second, silent definition of the
+       * severity palette living in one component.
+       *
+       * COMPLIANCE was not in the brief; it takes its own foreground token by
+       * the same rule, rather than being the only tile left on --ink.
+       */
       .w__type--sg {
         background: #e6f1fb;
+        color: var(--color-foreground-on-info);
       }
       .w__type[data-sev='AML'] {
         background: var(--sev-aml-bg);
+        color: var(--sev-aml);
       }
       .w__type[data-sev='EDD'] {
         background: var(--sev-edd-bg);
+        color: var(--sev-edd);
       }
       .w__type[data-sev='COMPLIANCE'] {
         background: var(--sev-compliance-bg);
+        color: var(--sev-compliance);
       }
       .w__type mat-icon {
         font-size: 16px;
         width: 16px;
         height: 16px;
         line-height: 16px;
-        color: var(--ink);
+        /* inherit, not a colour: the variant above owns it. Material sets its
+           own colour on .mat-icon, so leaving this out entirely is not the
+           same as inheriting. */
+        color: inherit;
       }
 
       /* ---- inner: content then actions ---------------------------------- */

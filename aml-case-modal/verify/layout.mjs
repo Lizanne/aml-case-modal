@@ -2039,6 +2039,40 @@ check('size carries no colour', sevPills.sm.bg === sevPills.md.bg && sevPills.sm
 check('size carries no shape', sevPills.sm.radius === sevPills.md.radius);
 check('both render the same severity', sevPills.sameSeverity);
 
+/**
+ * Widget type tile: the glyph takes the foreground token that belongs to its
+ * background, so the tile reads as one pair rather than a dark glyph on a tint.
+ * Compared to the TOKENS, not to hex literals - a literal here would be a third
+ * copy of the severity palette.
+ */
+console.log('\nWidget type icon takes its severity foreground');
+const tiles = await page.evaluate(() => {
+  const t = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const norm = (c) => {
+    const m = c.match(/\d+/g);
+    return '#' + m.slice(0, 3).map((n) => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+  };
+  const out = {};
+  const sg = document.querySelector('.w__type--sg');
+  out.SG = {
+    got: norm(getComputedStyle(sg.querySelector('mat-icon')).color),
+    want: t('--color-foreground-on-info').toUpperCase(),
+  };
+  const tile = document.querySelector('.w__type[data-sev]');
+  for (const [sev, token] of [['AML', '--sev-aml'], ['EDD', '--sev-edd'], ['COMPLIANCE', '--sev-compliance']]) {
+    tile.setAttribute('data-sev', sev);
+    out[sev] = {
+      got: norm(getComputedStyle(tile.querySelector('mat-icon')).color),
+      want: t(token).toUpperCase(),
+    };
+  }
+  tile.setAttribute('data-sev', 'AML');
+  return out;
+});
+for (const [sev, { got, want }] of Object.entries(tiles)) {
+  check(`${sev} glyph is its foreground token`, got === want, `${got} vs ${want}`);
+}
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 
