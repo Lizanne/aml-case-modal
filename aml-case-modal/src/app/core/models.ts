@@ -35,9 +35,18 @@ export function lockStatusLine(
     case 'locked-to-other':
       return `Locked to ${ownerName ?? 'another agent'}${since}`;
     default:
-      return 'Unassigned';
+      return 'Not locked';
   }
 }
+
+/**
+ * The lock vocabulary, in full. Exactly three states, everywhere:
+ * "Locked to you", "Locked to [name]", "Not locked".
+ *
+ * "Unassigned" was a fourth word for the third state, used only by the panel
+ * band, and it did not say what to do about it either.
+ */
+export const NOT_LOCKED_HINT = 'Not locked. Lock the case to record outcomes.';
 
 export type ActionTypeId =
   | 'open-source-searches'

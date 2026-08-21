@@ -624,6 +624,36 @@ const kept = await page.evaluate(() => ({
 check('Cancel returns the form intact', kept.note === 'Half-written note.' && kept.lock === 1,
   JSON.stringify(kept));
 
+console.log('\nThe three lock states are one shape');
+await page.setViewportSize({ width: 1800, height: 1000 });
+const lockShapes = [];
+for (const state of ['00a', '01', '00b']) {
+  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  lockShapes.push(
+    await page.evaluate(() => {
+      const aml = [...document.querySelectorAll('.w')][1];
+      const box = aml.getBoundingClientRect();
+      const btn = aml.querySelector('.w__btn');
+      return {
+        height: Math.round(box.height),
+        actionTop: btn ? Math.round(btn.getBoundingClientRect().top - box.top) : null,
+        status: aml.querySelector('.w__lock')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      };
+    }),
+  );
+}
+// The status line is PRESENT in all three - absent in one made that card a
+// line shorter and moved its actions with it.
+check('every lock state shows a status line', lockShapes.every((s) => s.status), 
+  lockShapes.map((s) => s.status).join(' | '));
+check('all three cards are the same height',
+  new Set(lockShapes.map((s) => s.height)).size === 1, lockShapes.map((s) => s.height).join(','));
+check('and the action row sits in the same place',
+  new Set(lockShapes.map((s) => s.actionTop)).size === 1, lockShapes.map((s) => s.actionTop).join(','));
+await page.setViewportSize({ width: 1440, height: 1040 });
+
 console.log('\nOne lock sentence on every surface');
 await page.setViewportSize({ width: 1500, height: 1040 });
 for (const state of ['00a', '00b', '01', '07', '09']) {
@@ -640,11 +670,13 @@ for (const state of ['00a', '00b', '01', '07', '09']) {
       dialog: document.querySelector('confirm-unlock-dialog .lead')?.textContent.trim() ?? null,
       // The two phrasings that had crept in.
       lockedBy: /Locked by/.test(text),
-      notLocked: /Not locked/.test(text),
+      unassigned: /Unassigned/.test(text),
     };
   });
   check(`${state}: nothing says "Locked by"`, !copy.lockedBy);
-  check(`${state}: nothing says "Not locked"`, !copy.notLocked);
+  // "Not locked" IS the third state now; "Unassigned" was the fourth word for
+  // it and is what must not appear.
+  check(`${state}: nothing says "Unassigned"`, !copy.unassigned);
   const lockish = [...copy.widgetLocks, copy.band, copy.dialog].filter(
     (t) => t && /Locked/.test(t),
   );
@@ -1439,7 +1471,9 @@ check('nothing below the band ever moves',
   bands.map(([n, b]) => `${n}:${b.stripTop}`).join(' '));
 
 check('unassigned offers a primary "Lock to me"',
-  byName['unassigned'].button === 'Lock to me' && byName['unassigned'].text === 'Unassigned');
+  byName['unassigned'].button === 'Lock to me' &&
+    byName['unassigned'].text === 'Not locked. Lock the case to record outcomes.',
+  byName['unassigned'].text);
 // Green is the only "you can act here" signal, so it must appear here and
 // NOWHERE else in this band.
 check('locked to you is the only green state', await (async () => {

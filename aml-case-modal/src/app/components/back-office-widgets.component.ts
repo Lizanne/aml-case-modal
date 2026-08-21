@@ -113,7 +113,9 @@ import { WorkspaceStore } from '../core/workspace-store';
                   </button>
                 }
                 @default {
-                  <button class="w__btn w__btn--compact" type="button" (click)="store.lock()">
+                  <!-- Primary, matching the panel's "Lock to me": taking the
+                       lock is the only thing you can do from here. -->
+                  <button class="w__btn w__btn--primary" type="button" (click)="store.lock()">
                     Lock
                   </button>
                 }
@@ -477,7 +479,11 @@ export class BackOfficeWidgetsComponent {
         return { label: `Locked to ${name}`, initials: initialsOf(name), mine: false };
       }
       default:
-        return null;
+        // Present, not absent. The Figma nodes draw no status while unlocked,
+        // but that made the card a line shorter in one of its three states and
+        // moved the actions with it. Same slot, muted, so the three states are
+        // the same shape.
+        return { label: 'Not locked', initials: '', mine: false };
     }
   });
 

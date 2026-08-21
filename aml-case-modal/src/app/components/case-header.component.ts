@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
-import { SEVERITY_LABEL, lockStatusLine } from '../core/models';
+import { NOT_LOCKED_HINT, SEVERITY_LABEL, lockStatusLine } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
 /**
@@ -69,7 +69,12 @@ import { PillComponent } from './ui-pill.component';
         </div>
       </div>
 
-      <div class="head__lock" [attr.data-lock]="store.lockState()">
+      <div
+        class="head__lock"
+        role="status"
+        [attr.data-lock]="store.lockState()"
+        [attr.aria-label]="'Lock status: ' + shortLockLine()"
+      >
         <mat-icon class="head__lock-icon">{{ lockIcon() }}</mat-icon>
         <p class="head__lock-text">{{ store.layoutNarrow() ? shortLockLine() : lockLine() }}</p>
 
@@ -275,6 +280,8 @@ export class CaseHeaderComponent {
    */
   readonly lockLine = computed(() => {
     if (this.store.isResolved()) return 'This case is resolved and read-only.';
+    // The only state that needs telling you what to do next.
+    if (this.store.lockState() === 'unlocked') return NOT_LOCKED_HINT;
     const since = this.store.lockedSince();
     return lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
       since: since ? new StampPipe().transform(since) : undefined,
