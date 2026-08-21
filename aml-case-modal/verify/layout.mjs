@@ -2073,6 +2073,55 @@ for (const [sev, { got, want }] of Object.entries(tiles)) {
   check(`${sev} glyph is its foreground token`, got === want, `${got} vs ${want}`);
 }
 
+/**
+ * Force unlock hover. Measured RENDERED, after a real hover, because Material
+ * paints hover as a translucent state layer over the background - so the
+ * declared background and the colour the eye gets are not the same claim.
+ */
+console.log('\nForce unlock hovers to the flat danger tint');
+await page.goto(`${BASE}/?state=00b`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+if (await page.locator('confirm-unlock-dialog').count()) {
+  await page.locator('confirm-unlock-dialog button:has-text("Cancel")').click();
+  await page.waitForTimeout(350);
+}
+const forceBtn = page.locator('case-header .head__lock .danger-button');
+check('the button is Force unlock', (await forceBtn.innerText()).trim() === 'Force unlock');
+await forceBtn.hover();
+await page.waitForTimeout(300);
+const unlockHover = await page.evaluate(() => {
+  const e = document.querySelector('case-header .head__lock .danger-button');
+  const cs = getComputedStyle(e);
+  const layer = e.querySelector('.mat-mdc-button-persistent-ripple');
+  const lcs = layer ? getComputedStyle(layer, '::before') : null;
+  const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map((n) => {
+      const v = +n / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const bg = cs.backgroundColor;
+  const fg = cs.color;
+  const L = [lum(bg), lum(fg)].sort((a, b) => b - a);
+  return {
+    bg, fg,
+    token: getComputedStyle(document.documentElement).getPropertyValue('--danger-bg-strong').trim(),
+    layerOpacity: lcs ? lcs.opacity : 'n/a',
+    contrast: +(((L[0] + 0.05) / (L[1] + 0.05)).toFixed(2)),
+  };
+});
+// Compared to the token, so the check moves with it rather than pinning a hex.
+const wantHover = (() => {
+  const h = unlockHover.token.replace('#', '');
+  return `rgb(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)})`;
+})();
+check('hover background is --danger-bg-strong', unlockHover.bg === wantHover,
+  `${unlockHover.bg} vs ${wantHover}`);
+check('the state layer adds nothing on top of it', unlockHover.layerOpacity === '0',
+  unlockHover.layerOpacity);
+check('label still clears AA on the tint', unlockHover.contrast >= 4.5, `${unlockHover.contrast}:1`);
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

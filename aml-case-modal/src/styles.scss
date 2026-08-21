@@ -285,6 +285,21 @@ summary:focus-visible,
 .danger-button.mat-mdc-outlined-button {
   --mdc-outlined-button-label-text-color: var(--danger);
   --mdc-outlined-button-outline-color: var(--danger);
+
+  /**
+   * Hover is the flat danger tint, #FEE2E2, which is --danger-bg-strong.
+   *
+   * The opacity line is the load-bearing one. Material paints hover as a state
+   * LAYER - a translucent overlay in the label colour, drawn over whatever
+   * background sits underneath - so a background alone would come out as
+   * #FEE2E2 tinted by a wash of --danger, not as #FEE2E2. Zeroing the layer and
+   * painting the background is what makes the rendered colour the exact token.
+   */
+  --mat-outlined-button-hover-state-layer-opacity: 0;
+
+  &:hover {
+    background-color: var(--danger-bg-strong);
+  }
 }
 
 .danger-button-filled.mat-mdc-unelevated-button {
