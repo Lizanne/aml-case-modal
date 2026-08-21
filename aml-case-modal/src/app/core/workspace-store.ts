@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 
 import { MODAL_GAP_PX, SOLO_MAX_PX, STACK_AUTO_MINIMISE_PX } from './models';
 
@@ -118,6 +118,30 @@ export class WorkspaceStore {
 
   /** True when the stage is too tight to show two modals side by side. */
   readonly tooTightForTwo = computed(() => this.stageWidth() < STACK_AUTO_MINIMISE_PX);
+
+  /**
+   * Below the dual-fit width there is only ever ONE panel on the stage.
+   *
+   * open() and restore() already refuse to put a second one up when the stage
+   * is too tight, but that is a decision taken at the moment of opening. It
+   * does not cover a stage that BECOMES too tight - a resize, a rotation, or a
+   * dev scenario seeded straight into the dual state on a phone - and that is
+   * how two 171px columns ended up side by side at 390px.
+   *
+   * So the rule is enforced continuously: whenever two are visible and the
+   * stage cannot hold them, the older one steps back to its bar. The newest
+   * arrival keeps the workspace, which is the same precedence open() uses.
+   */
+  private readonly enforceSingleOnNarrow = effect(
+    () => {
+      if (this.visibleCount() !== 2 || !this.tooTightForTwo()) return;
+      const oldest = this.visibleOrder()[0];
+      if (!oldest) return;
+      this.set(oldest, { open: true, minimised: true });
+      this.pulse(oldest);
+    },
+    { allowSignalWrites: true },
+  );
 
   state(id: ModalId): ModalState {
     return id === 'sg' ? this._sg() : this._aml();

@@ -44,6 +44,10 @@ const mode = async () => {
 // number, whatever produced it, and never latches.
 
 console.log('\nFrame 09 is not a one-way door');
+// Wide enough for two: below the dual-fit width the workspace now holds one
+// panel and sends the other to its bar, so a 1180px viewport would be testing
+// the single-panel rule rather than the reflow.
+await page.setViewportSize({ width: 1500, height: 1000 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
 check('seeded narrow, because two modals share the stage', (await mode()).narrow);
@@ -775,7 +779,10 @@ console.log('\nBoth panel titles are the same size');
 // In state 09 BOTH panels are under the 720px rule, so both titles are at the
 // narrow step. That they match is the requirement; the wide step is checked
 // below, on a panel that is actually wide.
-for (const [width, expected] of [[1500, '16px'], [700, '16px']]) {
+// 1500 only: below the dual-fit width the workspace holds ONE panel, so there
+// is no second title to compare it with. The narrow step is covered there
+// anyway - both panels are under 720px each - and the wide step below.
+for (const [width, expected] of [[1500, '16px']]) {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('sg-alert-modal .sg__title', { timeout: 15000 });
@@ -1337,7 +1344,10 @@ for (const state of ['01', '07', '10', '00b', '05', '06']) {
   await chromeSizes(state);
 }
 // 09 carries the SG modal's pair, and minimising both swaps them for bar
-// controls - the two places the sizes used to diverge most.
+// controls - the two places the sizes used to diverge most. Needs a stage wide
+// enough for two: at 1440 the stage is 1144, under the dual-fit width, so one
+// panel would already be in its bar and there would be no SG chrome to size.
+await page.setViewportSize({ width: 1500, height: 1040 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.sg__btn', { timeout: 15000 });
 await page.waitForTimeout(500);

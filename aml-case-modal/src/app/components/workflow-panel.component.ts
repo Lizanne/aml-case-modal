@@ -3,6 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  NgZone,
+  OnDestroy,
   ViewChild,
   computed,
   inject,
@@ -114,7 +116,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         <!-- Two controls, hard right. Why Submit is disabled lives on its
              tooltip; the required chips at the top of the panel carry the same
              state persistently. -->
-        <footer class="footer">
+        <footer class="footer" #footer>
           <button
             mat-stroked-button
             type="button"
@@ -212,7 +214,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         overflow-y: auto;
         overflow-x: hidden;
         min-height: 0;
-        padding: 18px 20px 24px;
+        padding: 20px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: 12px;
@@ -258,14 +260,75 @@ import { RequiredChipsComponent } from './required-chips.component';
         white-space: nowrap;
         flex: none;
       }
+
+      /**
+       * Stacked footer: full width, Submit first.
+       *
+       * column-reverse because Submit is LAST in the DOM, which is the right
+       * reading order for a footer and must not change to satisfy a layout -
+       * the same reason the dialog footer does it.
+       *
+       * The stream's bottom padding is the footer's own rendered height,
+       * published as --footer-h: a stacked footer is more than twice the
+       * height of a single row, and a fixed 20px left the last stream item
+       * tight against it.
+       */
+      @media (max-width: 719.98px) {
+        .footer {
+          flex-direction: column-reverse;
+          align-items: stretch;
+          gap: 8px;
+          padding: 16px;
+        }
+        .footer button,
+        .footer .footer__submit,
+        .footer .footer__submit > button {
+          width: 100%;
+          min-width: 0;
+        }
+        .footer .footer__submit {
+          display: block;
+        }
+        /* The footer is the panel's last flex child, not an overlay - it is
+           never OVER the stream, so height-derived padding would be dead space
+           rather than clearance, and 92px of it at the end of a ~105px scroll
+           area is worse than the problem. The footer's measured height drives
+           scroll-padding instead, which is what keeps a focused item clear of
+           it, and the visual bottom stays 20px. Verified: the last stream item
+           is not clipped with the footer stacked and the stream at its end. */
+        .stream {
+          padding: 20px;
+          scroll-padding-bottom: var(--footer-h, 0px);
+        }
+      }
     `,
   ],
 })
-export class WorkflowPanelComponent implements AfterViewInit {
+export class WorkflowPanelComponent implements AfterViewInit, OnDestroy {
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly zone = inject(NgZone);
+
   @ViewChild('stream') private streamEl?: ElementRef<HTMLElement>;
+  @ViewChild('footer') private footerEl?: ElementRef<HTMLElement>;
+  private footerObserver?: ResizeObserver;
 
   /** A reflow rebuilds this panel, so the scroll offset lives in the store. */
   ngAfterViewInit(): void {
+    // Publish the footer's height so the stream can clear it. Measured rather
+    // than assumed: the footer is one row on a desktop and two stacked
+    // full-width buttons on a phone, and the difference is what was leaving
+    // the last stream item tight against it.
+    const footer = this.footerEl?.nativeElement;
+    if (footer) {
+      this.footerObserver = new ResizeObserver((entries) => {
+        const h = entries[0]?.contentRect.height ?? 0;
+        this.zone.run(() =>
+          this.host.nativeElement.style.setProperty('--footer-h', `${Math.round(h)}px`),
+        );
+      });
+      this.footerObserver.observe(footer);
+    }
+
     const el = this.streamEl?.nativeElement;
     if (el) el.scrollTop = this.store.streamScroll();
   }
@@ -300,5 +363,9 @@ export class WorkflowPanelComponent implements AfterViewInit {
 
   asOutcome(item: StreamItem): OutcomeItem | null {
     return isOutcome(item) ? item : null;
+  }
+
+  ngOnDestroy(): void {
+    this.footerObserver?.disconnect();
   }
 }

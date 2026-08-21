@@ -265,7 +265,44 @@ for (const width of MOBILE) {
   check('dev select fits inside the dev panel',
     chrome.select !== null && chrome.select.w <= chrome.dev.w, `${chrome.select?.w} of ${chrome.dev?.w}`);
 
-  console.log('\nDialogs are viewport-anchored bottom sheets');
+  console.log('\nThe stacked footer: full width, Submit first');
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('workflow-panel .footer', { state: 'attached', timeout: 15000 });
+await page.waitForTimeout(700);
+const foot = await page.evaluate(() => {
+  const f = document.querySelector('workflow-panel .footer');
+  const s = document.querySelector('workflow-panel .stream');
+  const cs = getComputedStyle(f);
+  const btns = [...f.querySelectorAll('button')];
+  s.scrollTop = s.scrollHeight;
+  const last = s.lastElementChild.getBoundingClientRect();
+  return {
+    direction: cs.flexDirection,
+    padding: cs.padding,
+    gap: cs.rowGap,
+    // Submit is last in DOM and must render FIRST.
+    submitFirst: btns.length === 2 &&
+      /Submit/.test(btns[1].textContent) &&
+      btns[1].getBoundingClientRect().top < btns[0].getBoundingClientRect().top,
+    fullWidth: btns.every(
+      (b) => Math.round(b.getBoundingClientRect().width) === Math.round(f.clientWidth - 32),
+    ),
+    streamPad: getComputedStyle(s).padding,
+    scrollPad: getComputedStyle(s).scrollPaddingBottom,
+    lastClipped: last.bottom > s.getBoundingClientRect().bottom + 1,
+  };
+});
+check('footer stacks', foot.direction === 'column-reverse', foot.direction);
+check('Submit renders first', foot.submitFirst);
+check('both buttons full width', foot.fullWidth);
+check('16px gutters, 8px gap', foot.padding === '16px' && foot.gap === '8px',
+  `${foot.padding} / ${foot.gap}`);
+check('stream is 20px all round', foot.streamPad === '20px', foot.streamPad);
+// Derived from the footer's measured height, not a guess.
+check('scroll padding clears the footer', /^[1-9]\d*px$/.test(foot.scrollPad), foot.scrollPad);
+check('the last stream item is not clipped', !foot.lastClipped);
+
+console.log('\nDialogs are viewport-anchored bottom sheets');
   for (const state of ['05', '06', '00b']) {
     await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('dialog-shell .panel', { timeout: 15000 });

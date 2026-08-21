@@ -168,6 +168,64 @@ await settle();
 check('restoring re-splits the stage', (await sg().count()) === 1 && (await isSegmented()));
 check('the bar is gone', (await bars().count()) === 0);
 
+console.log('\nMobile: one panel on the workspace, the other in its bar');
+{
+  const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const at = () =>
+    mob.evaluate(() => ({
+      panels: [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()),
+      widths: [...document.querySelectorAll('.stage > *')].map((e) =>
+        Math.round(e.getBoundingClientRect().width),
+      ),
+      bars: document.querySelectorAll('minimised-bar').length,
+    }));
+  // Seeded straight into the dual state: the rule has to hold for a stage that
+  // ARRIVES too tight, not only one that is asked to open a second panel.
+  await mob.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+  await mob.waitForSelector('minimised-bar', { timeout: 15000 });
+  await mob.waitForTimeout(900);
+  const seeded = await at();
+  check('seeded 09 at 390 shows one panel, not two columns',
+    seeded.panels.length === 1 && seeded.bars === 1, JSON.stringify(seeded));
+  check('and it is full width', seeded.widths[0] === 390 - 32, `${seeded.widths[0]}`);
+
+  // Clear the stage, then walk the swap.
+  for (const [host, label] of [['aml-case-modal', 'Close case'], ['sg-alert-modal', 'Close alert']]) {
+    const btn = mob.locator(`${host} button[aria-label="${label}"]`);
+    if (await btn.count()) {
+      await btn.click();
+      await mob.waitForTimeout(400);
+    }
+  }
+  for (let i = 0; i < 3 && (await mob.locator('minimised-bar').count()); i++) {
+    await mob.locator('minimised-bar button:has-text("Restore")').first().click();
+    await mob.waitForTimeout(400);
+    const c = mob.locator('sg-alert-modal button[aria-label="Close alert"], aml-case-modal button[aria-label="Close case"]');
+    if (await c.count()) {
+      await c.first().click();
+      await mob.waitForTimeout(400);
+    }
+  }
+  await mob.locator('back-office-widgets button:has-text("Resolve and archive")').click();
+  await mob.waitForTimeout(600);
+  const sgOnly = await at();
+  check('opening SG gives it the workspace alone',
+    sgOnly.panels.join() === 'sg-alert-modal' && sgOnly.bars === 0, JSON.stringify(sgOnly));
+
+  await mob.locator('back-office-widgets button:has-text("Open case")').click();
+  await mob.waitForTimeout(800);
+  const amlOnly = await at();
+  check('opening AML takes it over and sends SG to its bar',
+    amlOnly.panels.join() === 'aml-case-modal' && amlOnly.bars === 1, JSON.stringify(amlOnly));
+
+  await mob.locator('minimised-bar button:has-text("Restore")').click();
+  await mob.waitForTimeout(800);
+  const swapped = await at();
+  check('restoring SG swaps them back',
+    swapped.panels.join() === 'sg-alert-modal' && swapped.bars === 1, JSON.stringify(swapped));
+  await mob.close();
+}
+
 console.log('\nBoth bars can stack');
 await page.locator('sg-alert-modal button[aria-label="Minimise alert"]').click();
 await settle(350);
