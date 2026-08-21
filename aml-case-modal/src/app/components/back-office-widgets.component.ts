@@ -207,23 +207,38 @@ import { WorkspaceStore } from '../core/workspace-store';
        * ordinary desktop there is) into the mobile layout, which is why the
        * desktop widgets did not look like the desktop node.
        */
+      /**
+       * nowrap, deliberately. Wrapping here is what dropped the action row onto
+       * a second line - a flex line takes an over-wide item to the next row
+       * INSTEAD of shrinking it, so the buttons left the corner the moment the
+       * card got tight, at 1200 and on every phone. The row is kept intact and
+       * the identity block absorbs the squeeze instead; the buttons wrap within
+       * their own row if they have to.
+       */
       .w__inner {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: flex-start;
         gap: 8px;
         flex: 1 1 auto;
         min-width: 0;
       }
+      /* min-width: 0, not 140px: a floor here is the same bug by another name -
+         it makes the row unshrinkable and forces the wrap the line above
+         prevents. The text truncates and wraps on its own. */
       .w__content {
         display: flex;
         flex-direction: column;
         gap: 4px;
-        flex: 1 1 140px;
-        min-width: 140px;
+        flex: 1 1 auto;
+        min-width: 0;
       }
+      /* The badge wraps under the name rather than shortening it. With the
+         actions holding the corner the identity block is the part that gives,
+         and "SG Aler..." is a worse trade than a badge on its own line. */
       .w__titles {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 8px;
         min-width: 0;
@@ -337,11 +352,28 @@ import { WorkspaceStore } from '../core/workspace-store';
       }
 
       /* ---- buttons: 32px, 4px radius ------------------------------------ */
+      /**
+       * Top right, in every state and at every width.
+       *
+       * align-self is the whole point: the identity block is two lines in one
+       * state and three in another, and a centred action row therefore sat at a
+       * different height in each - floating mid-card next to the taller block.
+       * Anchored to the top it lines up with the title row instead, and the
+       * padding is what puts it on the title's baseline zone.
+       *
+       * Wrapping INSIDE the action row, rather than letting the row itself wrap
+       * below the content, is what keeps that true when two buttons will not fit
+       * side by side: they stack in the corner, still starting at the title.
+       */
       .w__actions {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        justify-content: flex-end;
+        align-self: flex-start;
         gap: 8px;
-        flex: none;
+        flex: 0 1 auto;
+        margin-left: auto;
       }
       .w__btn {
         display: inline-flex;
@@ -422,24 +454,20 @@ import { WorkspaceStore } from '../core/workspace-store';
        * too.
        */
       /**
-       * Narrow, per 24101:8775. The actions drop below the identity block.
+       * Narrow.
        *
-       * flex: none on the content column is the fix for the gap: in a COLUMN
-       * flex context "flex: 1 1 140px" grows on the VERTICAL axis, so the
-       * identity block stretched to fill the card and shoved the lock line and
-       * the buttons to the bottom. That was the empty band in the middle.
+       * 24101:8775 drops the actions below the identity block here, and that is
+       * the one thing not carried over: dropped, they sit ~70px below the title
+       * on a three-line card and ~50px on a two-line one, which is the floating
+       * button in the other layout by another route. The row is kept, so the
+       * corner is the corner at every width; two buttons stack within it.
+       *
+       * Nothing here re-flows the row any more - that is the point. All this
+       * leaves is the top anchor, which the row rule already carries.
        */
       @container (max-width: 419.98px) {
         .w {
           align-items: flex-start;
-        }
-        .w__inner {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 8px;
-        }
-        .w__content {
-          flex: none;
         }
       }
 

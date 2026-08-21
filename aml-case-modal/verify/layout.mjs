@@ -1949,6 +1949,55 @@ check('rendered newest first', await page.evaluate(() => {
   return rest.every((t, i) => i === 0 || rest[i - 1] >= t);
 }));
 
+/**
+ * Widget actions hug the top right corner - in both layouts, in every state.
+ *
+ * The offset is measured against the TITLE, not against the card: an absolute
+ * "13px from the top" would still pass with the identity block a line taller
+ * and the buttons floating beside it, which is the bug this pins. The right
+ * gutter is compared between widths rather than to a literal, so the corner is
+ * the same corner everywhere.
+ */
+console.log('\nWidget actions hold the top right corner');
+const shots = [];
+for (const [mode, vw] of [['side', 1800], ['side', 1440], ['side', 1200], ['side', 1024], ['stack', 390]]) {
+  await page.setViewportSize({ width: vw, height: mode === 'stack' ? 900 : 1000 });
+  for (const st of ['01', '00a', '00b', '07']) {
+    await page.goto(`${BASE}/?state=${st}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(250);
+    const cards = await page.evaluate(() => [...document.querySelectorAll('.w')].map((w) => {
+      const box = w.getBoundingClientRect();
+      const nm = w.querySelector('.w__name');
+      const a = w.querySelector('.w__actions').getBoundingClientRect();
+      const c = w.querySelector('.w__content').getBoundingClientRect();
+      return {
+        // Against the title's own line box, so a taller identity block cannot
+        // drag the buttons down without failing here.
+        delta: Math.round(a.top - nm.getBoundingClientRect().top),
+        rightGap: Math.round(box.right - a.right),
+        overlap: Math.max(0, Math.round(c.right - a.left)),
+        clipped: Math.max(0, Math.round(a.right - box.right)),
+        nameCut: nm.scrollWidth - nm.clientWidth > 1,
+      };
+    }));
+    shots.push({ mode, vw, st, cards });
+  }
+}
+const flat = shots.flatMap((s) => s.cards);
+const off = (p) => shots.filter((s) => s.cards.some(p)).map((s) => `${s.mode} ${s.vw} ${s.st}`);
+check('button top sits on the title row', flat.every((c) => Math.abs(c.delta) <= 2),
+  off((c) => Math.abs(c.delta) > 2).join(', '));
+check('text never runs into the actions', flat.every((c) => c.overlap === 0),
+  off((c) => c.overlap > 0).join(', '));
+check('actions never clip the card edge', flat.every((c) => c.clipped === 0),
+  off((c) => c.clipped > 0).join(', '));
+check('the name is not shortened to make room', flat.every((c) => !c.nameCut),
+  off((c) => c.nameCut).join(', '));
+// One gutter, derived from the cards themselves rather than restated.
+const gaps = [...new Set(flat.map((c) => c.rightGap))];
+check('the same right gutter at every width and state', gaps.length === 1, gaps.join('/'));
+await page.setViewportSize({ width: 1440, height: 1000 });
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 
