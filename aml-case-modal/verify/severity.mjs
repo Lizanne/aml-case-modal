@@ -127,8 +127,9 @@ await page.locator('severity-dialog button:has-text("Save severity")').click();
 await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
 check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
+// The widget badge is ui-pill at size sm now, not a local .w__sev copy.
 check('the widget follows too',
-  (await page.locator('back-office-widgets .w__sev[data-sev]').innerText()).trim() === 'EDD');
+  (await page.locator('back-office-widgets .w__titles ui-pill[data-sev]').innerText()).trim() === 'EDD');
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
 check('the timeline entry names the direction', await (async () => {

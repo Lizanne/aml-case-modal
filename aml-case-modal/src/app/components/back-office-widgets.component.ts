@@ -4,6 +4,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { WorkspaceStore } from '../core/workspace-store';
+import { PillComponent } from './ui-pill.component';
 
 /**
  * The back office surface behind the panels. Each widget opens its own panel
@@ -14,12 +15,14 @@ import { WorkspaceStore } from '../core/workspace-store';
  *   desktop  22263:21255
  *   mobile   22263:20943
  *
- * Which is why the badges and buttons here are written out rather than reusing
- * ui-pill and mat-button. The design's count badge carries a border, its
- * severity badge carries a dot, and its buttons are 32px with a 4px radius -
- * none of which the shared components do. Copying the design into local markup
- * is honest about that; bending the shared components to match would have
- * changed every pill and button in the prototype to serve two widgets.
+ * Which is why the count badge and the buttons here are written out rather than
+ * reusing ui-pill and mat-button: the design's count badge carries a border and
+ * its buttons are 32px with a 4px radius, neither of which the shared
+ * components do.
+ *
+ * The severity badge is NOT one of those exceptions any more. It was local only
+ * because it was smaller than a pill; ui-pill has a size for that now, so it is
+ * the shared component at size sm and the dot is gone.
  *
  * The lock rule from the previous pass still holds: while a panel is open its
  * header owns the lock, so the widget's lock control goes and the primary
@@ -28,7 +31,7 @@ import { WorkspaceStore } from '../core/workspace-store';
 @Component({
   selector: 'back-office-widgets',
   standalone: true,
-  imports: [MatIconModule, MatTooltipModule],
+  imports: [MatIconModule, MatTooltipModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="widgets">
@@ -82,10 +85,7 @@ import { WorkspaceStore } from '../core/workspace-store';
           <div class="w__content">
             <div class="w__titles">
               <h2 class="w__name">AML Case</h2>
-              <span class="w__sev" [attr.data-sev]="store.severity()">
-                <span class="w__dot" aria-hidden="true"></span>
-                {{ store.severity() }}
-              </span>
+              <ui-pill size="sm" [severity]="store.severity()">{{ store.severity() }}</ui-pill>
             </div>
             <div class="w__meta-group">
               <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
@@ -272,40 +272,8 @@ import { WorkspaceStore } from '../core/workspace-store';
         text-overflow: ellipsis;
       }
 
-      /* ---- severity badge: dot + label, 22263:21188 --------------------- */
-      .w__sev {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        flex: 0 1 auto;
-        min-width: 0;
-        padding: 2px 6px;
-        border-radius: 100px;
-        font-size: 12px;
-        line-height: 16px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .w__dot {
-        flex: none;
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: currentColor;
-      }
-      .w__sev[data-sev='AML'] {
-        background: var(--sev-aml-bg);
-        color: var(--sev-aml);
-      }
-      .w__sev[data-sev='EDD'] {
-        background: var(--sev-edd-bg);
-        color: var(--sev-edd);
-      }
-      .w__sev[data-sev='COMPLIANCE'] {
-        background: #f2edff;
-        color: var(--sev-compliance);
-      }
+      /* The severity badge is ui-pill at size sm - no local copy, no dot, and
+         no third place where COMPLIANCE has its own hardcoded lilac. */
 
       /* ---- meta line: first to truncate --------------------------------- */
       .w__meta {

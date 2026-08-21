@@ -102,7 +102,7 @@ let dialogSeq = 0;
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 18px 18px 12px 20px;
+        padding: 16px 20px;
       }
       .panel__title {
         flex: 1;
@@ -138,7 +138,7 @@ let dialogSeq = 0;
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 0 20px 8px;
+        padding: 16px 20px;
       }
       .panel__foot {
         display: flex;

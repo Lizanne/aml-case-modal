@@ -1998,6 +1998,47 @@ const gaps = [...new Set(flat.map((c) => c.rightGap))];
 check('the same right gutter at every width and state', gaps.length === 1, gaps.join('/'));
 await page.setViewportSize({ width: 1440, height: 1000 });
 
+/**
+ * One pill component, two sizes. The md side of this is a "do not change"
+ * check: the panel header pill must still measure exactly what it did before
+ * the size prop existed.
+ */
+console.log('\nSeverity pill: one component, sizes sm and md');
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+const sevPills = await page.evaluate(() => {
+  const read = (e) => {
+    const c = getComputedStyle(e);
+    return {
+      tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
+      padL: c.paddingLeft, fs: c.fontSize, lh: c.lineHeight,
+      radius: c.borderRadius, bg: c.backgroundColor, fg: c.color,
+    };
+  };
+  const sm = document.querySelector('.w__titles ui-pill');
+  const md = document.querySelector('case-header ui-pill[data-sev]');
+  return {
+    sm: read(sm), md: read(md),
+    dots: document.querySelectorAll('.w__dot, .w__sev').length,
+    // Same component, so a severity swap must move both identically.
+    sameSeverity: sm.getAttribute('data-sev') === md.getAttribute('data-sev'),
+  };
+});
+check('the widget badge IS the shared pill', sevPills.sm.tag === 'UI-PILL', sevPills.sm.tag);
+check('no dot, and no local copy of the badge left', sevPills.dots === 0, String(sevPills.dots));
+check('sm is 20px tall', sevPills.sm.h === 20, `${sevPills.sm.h}px`);
+check('sm is 6px padding, 12px/16px type',
+  sevPills.sm.padL === '6px' && sevPills.sm.fs === '12px' && sevPills.sm.lh === '16px',
+  `${sevPills.sm.padL} ${sevPills.sm.fs}/${sevPills.sm.lh}`);
+check('md in the panel header is untouched: 24px, 8px, 14px/20px',
+  sevPills.md.h === 24 && sevPills.md.padL === '8px' && sevPills.md.fs === '14px' && sevPills.md.lh === '20px',
+  `${sevPills.md.h}px ${sevPills.md.padL} ${sevPills.md.fs}/${sevPills.md.lh}`);
+// Colour and shape come from the component, so they cannot vary by size.
+check('size carries no colour', sevPills.sm.bg === sevPills.md.bg && sevPills.sm.fg === sevPills.md.fg,
+  `${sevPills.sm.bg} vs ${sevPills.md.bg}`);
+check('size carries no shape', sevPills.sm.radius === sevPills.md.radius);
+check('both render the same severity', sevPills.sameSeverity);
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

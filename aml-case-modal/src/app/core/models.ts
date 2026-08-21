@@ -98,11 +98,21 @@ export const MODAL_GAP_PX = 16;
 /** A single open panel stops here; two still split the whole row. */
 export const SOLO_MAX_PX = 1080;
 
+/** The narrowest a docked modal may be before two of them stop being useful. */
+export const MIN_DUAL_PANEL_PX = 560;
+
 /**
- * Below this stage width there is no room for two modals side by side, so
+ * Below this STAGE width there is no room for two modals side by side, so
  * opening the second auto-minimises the first to its dock bar.
+ *
+ * Derived, not chosen. It was a flat 1200, picked when the stage was the whole
+ * page; the frame 09 composition then put a 256px nav beside it, which left the
+ * stage at 1144 on a 1440 desktop - so the dual layout auto-collapsed at the
+ * very width frame 09 is drawn at. Deriving it from the panel minimum means the
+ * nav, the gutters and the gap are all already accounted for: the stage is what
+ * is measured, and the stage is what the panels actually get.
  */
-export const STACK_AUTO_MINIMISE_PX = 1200;
+export const STACK_AUTO_MINIMISE_PX = MIN_DUAL_PANEL_PX * 2 + MODAL_GAP_PX;
 
 /** Reflow duration. Kept here so the CSS and any timing logic agree. */
 export const REFLOW_MS = 300;

@@ -13,14 +13,23 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
  * required-action chips, for instance - the CALLER supplies aria-label, because
  * only the caller knows what the pill is describing.
  *
- * Sizing and shape are uniform: 24px tall, 8px of horizontal padding,
- * 14px/20px type, fully rounded. Only the colours vary - there is no size or
- * shape variant, because every exception to that was a copy waiting to drift.
+ * Shape is uniform and size is a CLOSED set of two:
+ *   md  24px tall, 8px of horizontal padding, 14px/20px type - the default
+ *   sm  20px tall, 6px of horizontal padding, 12px/16px type
  *
- * Sizing detail: 24px tall, 8px of horizontal padding, 14px/20px type.
+ * Two named sizes is the opposite of the free-for-all this component replaced.
+ * The widget severity badge was a ninth local copy, kept out because it was
+ * smaller than the pill; as a size it is the same component, and a change to
+ * pill colour or radius now reaches it like everything else. Anything that
+ * wants a THIRD size wants a design decision, not another value here.
+ *
+ * Usage: sm in the widget title rows, md in the case panel header.
+ *
  * Vertical padding would fight the fixed height, so the height and
  * align-items do the centring instead.
  */
+export type PillSize = 'sm' | 'md';
+
 export type PillTone =
   | 'neutral'
   | 'info'
@@ -38,6 +47,7 @@ export type PillTone =
   host: {
     '[attr.data-tone]': 'severity ? null : tone',
     '[attr.data-sev]': 'severity',
+    '[attr.data-size]': 'size',
   },
   styles: [
     `
@@ -60,6 +70,15 @@ export type PillTone =
         white-space: nowrap;
         background: var(--page);
         color: var(--ink);
+      }
+
+      /* The small step. Size carries no colour and colour carries no size, so
+         sm composes with every tone and every severity without a matrix. */
+      :host([data-size='sm']) {
+        height: 20px;
+        padding: 0 6px;
+        font-size: 12px;
+        line-height: 16px;
       }
 
       /* ---- tones. Colours are unchanged from the blocks these replaced. ---- */
@@ -123,4 +142,6 @@ export class PillComponent {
   @Input() tone: PillTone = 'neutral';
   /** When set, the severity language applies and `tone` is ignored. */
   @Input() severity: string | null = null;
+  /** md unless asked otherwise, so every existing call site is unchanged. */
+  @Input() size: PillSize = 'md';
 }
