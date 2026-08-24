@@ -40,9 +40,9 @@ import { PillComponent } from './ui-pill.component';
           {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
         </span>
 
-        <ui-pill [severity]="event.from">{{ event.from }}</ui-pill>
+        <ui-pill size="sm" [severity]="event.from">{{ event.from }}</ui-pill>
         <mat-icon class="row__arrow">arrow_forward</mat-icon>
-        <ui-pill [severity]="event.to">{{ event.to }}</ui-pill>
+        <ui-pill size="sm" [severity]="event.to">{{ event.to }}</ui-pill>
 
         <span class="row__meta">{{ event.actor }} · {{ event.at | stamp }}</span>
       </div>
@@ -61,15 +61,21 @@ import { PillComponent } from './ui-pill.component';
          nowrap line of nowrap parts, so its min-content is its full width, and
          as a grid item that would size the whole stream. The reason ellipsises
          to absorb the difference. */
-      /* Two lines, no border and no fill: an event is an annotation between
-         outcome cards, and a box around it would give it their weight. */
+      /**
+       * A card: white, 12px radius, 16px of side padding - 22319:5225.
+       *
+       * Still NO border, which is what keeps it lighter than an outcome card.
+       * Those carry a border as well as a fill, so the event reads as a
+       * quieter sibling rather than as another entry of the same weight.
+       */
       .row {
         display: flex;
         flex-direction: column;
         min-width: 0;
-        gap: 2px;
-        padding: 4px 2px;
-        background: none;
+        gap: 4px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: var(--panel);
         border: 0;
         font-size: 14px;
         line-height: 20px;
@@ -109,16 +115,18 @@ import { PillComponent } from './ui-pill.component';
       .row__icon--escalation {
         color: var(--warn);
       }
+      /* 16px, matching the direction arrow. They are a pair on the same line
+         and were a step apart at 14 and 16. */
       .row__arrow {
         color: var(--ink-3);
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
       }
       .row__label {
         flex: none;
         font-weight: 600;
-        color: var(--ink-2);
+        color: var(--ink);
       }
       /**
        * The reason: its own line, full width, two lines then ellipsis.

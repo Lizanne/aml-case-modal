@@ -223,14 +223,24 @@ check('the lock lift IS in the Timeline', await (async () => {
   const rows = await page.locator('player-info-panel .timeline__what').allInnerTexts();
   return rows.some((t) => t.includes('lock lifted'));
 })());
-check('event rows are unboxed annotations, not cards', await page.evaluate(() => {
+/**
+ * Events carry a fill now (22319:5225) but still no border, and the point of
+ * the old rule survives: an event stays LIGHTER than an outcome card.
+ *
+ * Compared against the card itself rather than to literals - "lighter" is a
+ * relation between the two, and two hardcoded values would go on passing if
+ * the card changed underneath them.
+ */
+check('event rows are filled but unbordered, still lighter than a card', await page.evaluate(() => {
   const row = document.querySelector('event-row .row');
-  if (!row) return false;
-  const s = getComputedStyle(row);
-  const transparent = s.backgroundColor === 'rgba(0, 0, 0, 0)' || s.backgroundColor === 'transparent';
-  const noBorder = parseFloat(s.borderTopWidth) === 0 && parseFloat(s.borderLeftWidth) === 0;
-  const pad = parseFloat(s.paddingTop) === 4 && parseFloat(s.paddingBottom) === 4;
-  return transparent && noBorder && pad;
+  const card = document.querySelector('outcome-card .card:not(.card--decision)');
+  if (!row || !card) return false;
+  const r = getComputedStyle(row);
+  const c = getComputedStyle(card);
+  const filled = r.backgroundColor !== 'rgba(0, 0, 0, 0)' && r.backgroundColor !== 'transparent';
+  const noBorder = parseFloat(r.borderTopWidth) === 0 && parseFloat(r.borderLeftWidth) === 0;
+  // The card is the boxed one; that difference IS the hierarchy.
+  return filled && noBorder && parseFloat(c.borderTopWidth) > 0;
 }));
 check('an outcome card is still boxed and white', await page.evaluate(() => {
   const card = document.querySelector('outcome-card .card:not(.card--decision)');

@@ -88,9 +88,12 @@ check('the arrow points up',
 check('the escalation arrow is the warn tone',
   (await page.evaluate(() =>
     getComputedStyle(document.querySelector('event-row .row__icon')).color)) === WARN);
-check('the rest of the row stays secondary ink',
+// Primary ink, per 22319:5225 - the label is the row's heading now that the
+// row is a card, and --ink-2 made it read as secondary to its own reason line.
+// The arrow above keeps the warn tone; that is still the only coloured part.
+check('the label is primary ink',
   (await page.evaluate(() =>
-    getComputedStyle(document.querySelector('event-row .row__label')).color)) === (await token('--ink-2')));
+    getComputedStyle(document.querySelector('event-row .row__label')).color)) === (await token('--ink')));
 
 console.log('\nThe severity dialog: AML -> EDD with an Escalation badge');
 await go('01'); // pre-escalation, so current severity is AML
@@ -148,7 +151,11 @@ const evShape = async () => page.evaluate(() => {
   const cs = getComputedStyle(row);
   return {
     h: Math.round(row.getBoundingClientRect().height),
-    borderW: cs.borderTopWidth, bg: cs.backgroundColor,
+    borderW: cs.borderTopWidth, bg: cs.backgroundColor, radius: cs.borderRadius,
+    // The card's fill must be the panel token, not a second white.
+    panelToken: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+    pillSizes: [...e.querySelectorAll('ui-pill')].map((x) => x.getAttribute('data-size')),
+    iconSizes: [...e.querySelectorAll('mat-icon')].map((i) => getComputedStyle(i).width),
     // Right-aligned to the line, whole, and not clipped.
     metaFlushRight: Math.round(head.getBoundingClientRect().right - meta.getBoundingClientRect().right) === 0,
     metaClipped: meta.scrollWidth - meta.clientWidth > 1,
@@ -176,8 +183,15 @@ for (const [label, w] of [['1440', 1440], ['narrow panel', 900]]) {
   await setReason(LONG);
   await page.waitForTimeout(200);
   const long = await evShape();
-  check(`${label}: no border and no fill`,
-    short.borderW === '0px' && short.bg === 'rgba(0, 0, 0, 0)', `${short.borderW} ${short.bg}`);
+  // A filled card with NO border - the fill is what 22319:5225 adds, the
+  // absent border is what still keeps it lighter than an outcome card.
+  check(`${label}: filled card, 12px radius, no border`,
+    short.borderW === '0px' && short.radius === '12px' && short.bg !== 'rgba(0, 0, 0, 0)',
+    `${short.borderW} ${short.radius} ${short.bg}`);
+  check(`${label}: both severity pills are sm`,
+    short.pillSizes.length === 2 && short.pillSizes.every((s) => s === 'sm'), short.pillSizes.join(','));
+  check(`${label}: both arrows are 16px`,
+    short.iconSizes.length === 2 && short.iconSizes.every((s) => s === '16px'), short.iconSizes.join(','));
   check(`${label}: reason holds two lines`, short.reasonLines === 2 && long.reasonLines === 2,
     `${short.reasonLines} / ${long.reasonLines}`);
   check(`${label}: a long reason clamps`, long.reasonClamped);
