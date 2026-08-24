@@ -98,6 +98,14 @@ export const MODAL_GAP_PX = 16;
 /** A single open panel stops here; two still split the whole row. */
 export const SOLO_MAX_PX = 1080;
 
+/**
+ * The width a right-docked solo element takes: the panel when one is open, and
+ * the widget row when none is. ONE string, used by both, so their left and
+ * right edges are the same edges rather than two expressions that happen to
+ * agree today.
+ */
+export const SOLO_WIDTH_CSS = `min(100%, ${SOLO_MAX_PX}px)`;
+
 /** The narrowest a docked modal may be before two of them stop being useful. */
 export const MIN_DUAL_PANEL_PX = 560;
 

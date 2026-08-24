@@ -132,6 +132,17 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
         overflow: hidden;
       }
+      /* A view, not a floating card: square, flat, edge to edge. The slide-in
+         is untouched - it still arrives from the right, which is what makes it
+         read as a view being pushed on rather than a sheet appearing. */
+      @media (max-width: 719.98px) {
+        .modal {
+          border-radius: 0;
+          border-left: 0;
+          border-right: 0;
+          box-shadow: none;
+        }
+      }
       /* Full-bleed, two equal halves - the segmented control is the primary
          navigation in this mode, not a secondary toggle. */
       .segments {

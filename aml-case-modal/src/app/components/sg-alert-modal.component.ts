@@ -44,8 +44,10 @@ import { PillComponent } from './ui-pill.component';
         >
           <mat-icon>remove</mat-icon>
         </button>
+        <!-- Chevron on mobile, X on desktop - see the note in case-header. -->
         <button class="sg__btn" type="button" aria-label="Close alert" (click)="ws.close('sg')">
-          <mat-icon>close</mat-icon>
+          <mat-icon class="sg__glyph sg__glyph--x">close</mat-icon>
+          <mat-icon class="sg__glyph sg__glyph--back">arrow_back</mat-icon>
         </button>
       </div>
 
@@ -88,6 +90,24 @@ import { PillComponent } from './ui-pill.component';
         border-radius: 12px;
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
         overflow: hidden;
+      }
+      /* A view, not a floating card: square, flat, edge to edge. */
+      .sg__glyph--back {
+        display: none;
+      }
+      @media (max-width: 719.98px) {
+        .sg {
+          border-radius: 0;
+          border-left: 0;
+          border-right: 0;
+          box-shadow: none;
+        }
+        .sg__glyph--x {
+          display: none;
+        }
+        .sg__glyph--back {
+          display: inline-block;
+        }
       }
       .sg__head {
         display: flex;

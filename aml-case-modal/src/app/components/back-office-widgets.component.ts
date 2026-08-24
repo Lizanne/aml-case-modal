@@ -46,7 +46,12 @@ import { PillComponent } from './ui-pill.component';
       to. See the note in app.component for the scrim half of the same rule.
     -->
     @if (showRow()) {
-    <div class="widgets">
+    <div class="widgets" [style.width]="ws.rowCss()">
+      <!--
+        SG belongs to the dual composition only. With no panel open the row is
+        the AML card alone, right-docked over where its panel will appear.
+      -->
+      @if (dual()) {
       <!-- ------------------------------------------------------- SG alerts -->
       <article class="w">
         <span class="w__type w__type--sg">
@@ -89,6 +94,7 @@ import { PillComponent } from './ui-pill.component';
           </div>
         </div>
       </article>
+      }
 
       <!-- -------------------------------------------------------- AML case -->
       <article class="w">
@@ -163,10 +169,15 @@ import { PillComponent } from './ui-pill.component';
       }
       /* auto-fit with a min() floor: a track whose floor is wider than the
          container overflows it rather than collapsing to one column. */
+      /* Right-docked. The width comes from the store as an inline style, so
+         the cap and the panel's cap are one value; the auto margin is what
+         puts the spare space on the LEFT, which is what makes the two share a
+         right edge as well as a left one. */
       .widgets {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
+        margin-left: auto;
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */

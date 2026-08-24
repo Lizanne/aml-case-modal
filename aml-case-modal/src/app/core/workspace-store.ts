@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 
-import { MODAL_GAP_PX, SOLO_MAX_PX, STACK_AUTO_MINIMISE_PX } from './models';
+import { MODAL_GAP_PX, SOLO_WIDTH_CSS, STACK_AUTO_MINIMISE_PX } from './models';
 
 export type ModalId = 'sg' | 'aml';
 
@@ -111,10 +111,17 @@ export class WorkspaceStore {
    * nothing.
    */
   readonly panelCss = computed(() =>
-    this.visibleCount() === 2
-      ? `calc(50% - ${MODAL_GAP_PX / 2}px)`
-      : `min(100%, ${SOLO_MAX_PX}px)`,
+    this.visibleCount() === 2 ? `calc(50% - ${MODAL_GAP_PX / 2}px)` : SOLO_WIDTH_CSS,
   );
+
+  /**
+   * The widget row's width. Full bleed in the dual state, where it sits above
+   * two panels that between them span everything; otherwise the same capped,
+   * right-docked width a solo panel takes - the SAME string, not a second
+   * expression that happens to agree today, so the row and the panel that
+   * replaces it share an edge exactly.
+   */
+  readonly rowCss = computed(() => (this.visibleCount() === 2 ? '100%' : SOLO_WIDTH_CSS));
 
   /** True when the stage is too tight to show two modals side by side. */
   readonly tooTightForTwo = computed(() => this.stageWidth() < STACK_AUTO_MINIMISE_PX);

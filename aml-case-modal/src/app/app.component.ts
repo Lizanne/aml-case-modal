@@ -220,8 +220,17 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * on the stage: the padding exists to inset the widget row, and in this
        * composition there is no widget row to inset.
        */
+      /**
+       * VERTICAL only. Zeroing the horizontal padding too made the panel flush
+       * to the viewport while the widget row it replaces kept its gutters, so
+       * the two sat 20px apart at 1440 and agreed at 1024 only because a media
+       * query happened to override the solo rule there. Both live inside the
+       * content gutters now and share their edges at every width; the panel
+       * still runs flush from under the player bar to the viewport bottom.
+       */
       .page--solo {
-        padding: 0;
+        padding-top: 0;
+        padding-bottom: 0;
         gap: 0;
       }
       .page__dev {
@@ -339,6 +348,21 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
           flex: none;
           height: calc(100vh - var(--top-bar-h) - var(--player-bar-h) - 36px);
           min-height: 420px;
+        }
+        /**
+         * No scrim on mobile, because there is nothing left to dim: the panel
+         * is full-bleed below the player bar and covers the content area
+         * outright. A scrim under an opaque full-screen view is a layer that
+         * can only ever be seen if something else is wrong.
+         */
+        .page__scrim {
+          display: none;
+        }
+        /* Edge to edge. The 16px gutters are the widget row's; with a panel up
+           there is no row, and the panel is a view. */
+        .page--solo {
+          padding-left: 0;
+          padding-right: 0;
         }
         .page__dev {
           padding: 16px;
