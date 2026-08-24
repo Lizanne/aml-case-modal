@@ -62,11 +62,9 @@ import { PillComponent } from './ui-pill.component';
          as a grid item that would size the whole stream. The reason ellipsises
          to absorb the difference. */
       /**
-       * A card: white, 12px radius, 16px of side padding - 22319:5225.
-       *
-       * Still NO border, which is what keeps it lighter than an outcome card.
-       * Those carry a border as well as a fill, so the event reads as a
-       * quieter sibling rather than as another entry of the same weight.
+       * The card's geometry from 22319:5225 - 12px radius, 16px of side
+       * padding - but no fill and no border. An outcome card carries both, so
+       * an event with neither stays the lighter of the two.
        */
       .row {
         display: flex;
@@ -75,7 +73,7 @@ import { PillComponent } from './ui-pill.component';
         gap: 4px;
         padding: 12px 16px;
         border-radius: 12px;
-        background: var(--panel);
+        background: none;
         border: 0;
         font-size: 14px;
         line-height: 20px;
@@ -131,18 +129,19 @@ import { PillComponent } from './ui-pill.component';
       /**
        * The reason: its own line, full width, two lines then ellipsis.
        *
-       * min-height reserves the second line whether or not it is used, so a
-       * one-line reason and a clamped three-line one make the same shape. It
-       * costs 20px of white under short reasons; the alternative is a stream
-       * whose rows jump height with the length of someone's sentence.
+       * It HUGS. There is deliberately no height here of any kind: -webkit-box
+       * with a line clamp is a maximum, not a size, so a one-line reason
+       * occupies one line and only a genuinely overflowing one is cut at two.
        *
-       * 2 x the 20px line-height. Derived from the same line-height the box
-       * clamps with, not a measured 40.
+       * A min-height of two lines here reserved the second line whether it was
+       * used or not, which bought uniform row heights at the price of 20px of
+       * empty space under every short reason. The padding on .row is what
+       * holds the rhythm instead, and it is the same above and below whichever
+       * height the reason lands on.
        */
       .row__reason {
         margin: 0;
         min-width: 0;
-        min-height: calc(2 * 20px);
         color: var(--ink-3);
         display: -webkit-box;
         -webkit-line-clamp: 2;

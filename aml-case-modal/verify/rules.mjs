@@ -224,23 +224,24 @@ check('the lock lift IS in the Timeline', await (async () => {
   return rows.some((t) => t.includes('lock lifted'));
 })());
 /**
- * Events carry a fill now (22319:5225) but still no border, and the point of
- * the old rule survives: an event stays LIGHTER than an outcome card.
- *
- * Compared against the card itself rather than to literals - "lighter" is a
- * relation between the two, and two hardcoded values would go on passing if
- * the card changed underneath them.
+ * An event stays LIGHTER than an outcome card: no fill and no border, against
+ * a card that has both. Compared against the card itself rather than to
+ * literals - "lighter" is a relation between the two, and hardcoded values
+ * would go on passing if the card changed underneath them.
  */
-check('event rows are filled but unbordered, still lighter than a card', await page.evaluate(() => {
+check('event rows are unfilled and unbordered, lighter than a card', await page.evaluate(() => {
   const row = document.querySelector('event-row .row');
   const card = document.querySelector('outcome-card .card:not(.card--decision)');
   if (!row || !card) return false;
   const r = getComputedStyle(row);
   const c = getComputedStyle(card);
-  const filled = r.backgroundColor !== 'rgba(0, 0, 0, 0)' && r.backgroundColor !== 'transparent';
-  const noBorder = parseFloat(r.borderTopWidth) === 0 && parseFloat(r.borderLeftWidth) === 0;
-  // The card is the boxed one; that difference IS the hierarchy.
-  return filled && noBorder && parseFloat(c.borderTopWidth) > 0;
+  const bare = (r.backgroundColor === 'rgba(0, 0, 0, 0)' || r.backgroundColor === 'transparent')
+    && parseFloat(r.borderTopWidth) === 0 && parseFloat(r.borderLeftWidth) === 0;
+  // The card is the one that is filled AND boxed; that difference IS the
+  // hierarchy, so assert the card's side of it too.
+  const cardIsBoxed = parseFloat(c.borderTopWidth) > 0
+    && c.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  return bare && cardIsBoxed;
 }));
 check('an outcome card is still boxed and white', await page.evaluate(() => {
   const card = document.querySelector('outcome-card .card:not(.card--decision)');

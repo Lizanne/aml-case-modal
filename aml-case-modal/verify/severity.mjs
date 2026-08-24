@@ -152,8 +152,10 @@ const evShape = async () => page.evaluate(() => {
   return {
     h: Math.round(row.getBoundingClientRect().height),
     borderW: cs.borderTopWidth, bg: cs.backgroundColor, radius: cs.borderRadius,
-    // The card's fill must be the panel token, not a second white.
-    panelToken: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+    // Measured as the actual gap between the row's edge and its content, so a
+    // reserved line inside the reason would show up as extra space below.
+    padAbove: Math.round(head.getBoundingClientRect().top - row.getBoundingClientRect().top),
+    padBelow: Math.round(row.getBoundingClientRect().bottom - reason.getBoundingClientRect().bottom),
     pillSizes: [...e.querySelectorAll('ui-pill')].map((x) => x.getAttribute('data-size')),
     iconSizes: [...e.querySelectorAll('mat-icon')].map((i) => getComputedStyle(i).width),
     // Right-aligned to the line, whole, and not clipped.
@@ -183,20 +185,26 @@ for (const [label, w] of [['1440', 1440], ['narrow panel', 900]]) {
   await setReason(LONG);
   await page.waitForTimeout(200);
   const long = await evShape();
-  // A filled card with NO border - the fill is what 22319:5225 adds, the
-  // absent border is what still keeps it lighter than an outcome card.
-  check(`${label}: filled card, 12px radius, no border`,
-    short.borderW === '0px' && short.radius === '12px' && short.bg !== 'rgba(0, 0, 0, 0)',
-    `${short.borderW} ${short.radius} ${short.bg}`);
+  check(`${label}: no fill and no border`,
+    short.borderW === '0px' && short.bg === 'rgba(0, 0, 0, 0)', `${short.borderW} ${short.bg}`);
   check(`${label}: both severity pills are sm`,
     short.pillSizes.length === 2 && short.pillSizes.every((s) => s === 'sm'), short.pillSizes.join(','));
   check(`${label}: both arrows are 16px`,
     short.iconSizes.length === 2 && short.iconSizes.every((s) => s === '16px'), short.iconSizes.join(','));
-  check(`${label}: reason holds two lines`, short.reasonLines === 2 && long.reasonLines === 2,
-    `${short.reasonLines} / ${long.reasonLines}`);
-  check(`${label}: a long reason clamps`, long.reasonClamped);
+  // Hugging, not reserving: one line for a short reason, two for a long one.
+  check(`${label}: a short reason is one line`, short.reasonLines === 1, `${short.reasonLines}`);
+  check(`${label}: a long reason clamps at two`, long.reasonLines === 2 && long.reasonClamped,
+    `${long.reasonLines} lines, clamped=${long.reasonClamped}`);
+  check(`${label}: a short reason does not clamp`, !short.reasonClamped);
   check(`${label}: the full text is on title`, long.hasTitle);
-  check(`${label}: height does not move with the reason`, short.h === long.h, `${short.h} vs ${long.h}`);
+  // The row is TALLER with a long reason - the old min-height made these equal
+  // by reserving a line that was not being used.
+  check(`${label}: the row grows by exactly the extra line`,
+    long.h - short.h === 20, `${short.h} -> ${long.h}`);
+  // ...and the padding is untouched by which of the two it is.
+  check(`${label}: padding above and below is unchanged`,
+    short.padAbove === long.padAbove && short.padBelow === long.padBelow,
+    `above ${short.padAbove}/${long.padAbove}, below ${short.padBelow}/${long.padBelow}`);
   check(`${label}: author and time stay flush right`, long.metaFlushRight);
   check(`${label}: author and time are never clipped`, !long.metaClipped);
   check(`${label}: line one does not overflow`, !long.headOverflows);
