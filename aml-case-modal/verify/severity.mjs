@@ -127,9 +127,6 @@ await page.locator('severity-dialog button:has-text("Save severity")').click();
 await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
 check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
-// The widget badge is ui-pill at size sm now, not a local .w__sev copy.
-check('the widget follows too',
-  (await page.locator('back-office-widgets .w__titles ui-pill[data-sev]').innerText()).trim() === 'EDD');
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
 check('the timeline entry names the direction', await (async () => {
@@ -138,6 +135,24 @@ check('the timeline entry names the direction', await (async () => {
   const rows = await page.locator('player-info-panel .timeline__what').allInnerTexts();
   return rows.some((r) => r.includes('AML to EDD') && r.includes('escalation'));
 })());
+
+/**
+ * The widget follows the escalation too - checked with the panel CLOSED,
+ * because it has to be. The widget row does not render while a panel is open,
+ * so the old side-by-side comparison is no longer a thing the composition can
+ * show. Closing first still proves the point that matters: the badge is driven
+ * by the store, not by anything the panel was holding open.
+ */
+check('the row is hidden while the panel is up',
+  (await page.locator('back-office-widgets .w').count()) === 0);
+// Minimised, not closed: the panel leaves the stage so the row comes back, and
+// everything after this still has a case to work in.
+await page.locator('case-header .head__actions button').first().click();
+await page.waitForTimeout(600);
+check('the widget follows the escalation',
+  (await page.locator('back-office-widgets .w__titles ui-pill[data-sev]').innerText()).trim() === 'EDD');
+await page.locator('minimised-bar .bar__restore').click();
+await page.waitForTimeout(600);
 
 // ---------------------------------------------------------------- attachments
 console.log('\nDraft attachments are removable; saved ones are not');

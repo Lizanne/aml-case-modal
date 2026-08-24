@@ -21,12 +21,6 @@ import { MatIconModule } from '@angular/material/icon';
       <span class="bar__brand">LOTTOMART</span>
       <span class="bar__env">DEVELOPMENT</span>
 
-      <button class="bar__region" type="button">
-        <span class="bar__flag" aria-hidden="true">🇬🇧</span>
-        UK
-        <mat-icon class="bar__caret">arrow_drop_down</mat-icon>
-      </button>
-
       <span class="bar__clock">{{ clock }}</span>
       <button class="bar__icon" type="button" aria-label="Search">
         <mat-icon>search</mat-icon>
@@ -89,37 +83,13 @@ import { MatIconModule } from '@angular/material/icon';
         font-weight: 700;
         color: var(--brand-bar-accent);
       }
-      /* The region picker is the centre item; auto margins hold it there
-         whatever the brand and the clock happen to measure. */
-      .bar__region {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        margin: 0 auto;
-        padding: 4px 8px;
-        border: 0;
-        border-radius: 8px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .bar__region:hover {
-        background: rgba(0, 0, 0, 0.08);
-      }
-      .bar__flag {
-        font-size: 18px;
-        line-height: 1;
-      }
-      mat-icon.bar__caret {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
+      /* The region picker used to be the centre item, and its "margin: 0 auto"
+         was what pushed the clock and the icon buttons to the right edge. With
+         it gone the auto margin moves here, or the whole right-hand group
+         collapses in against the brand. */
       .bar__clock {
         flex: none;
+        margin-left: auto;
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
@@ -134,18 +104,19 @@ import { MatIconModule } from '@angular/material/icon';
         .bar__clock {
           display: none;
         }
+        /* The clock carries the auto margin, so hiding it takes the spacer with
+           it. The next element inherits the job. */
+        .bar__clock + .bar__icon {
+          margin-left: auto;
+        }
       }
 
-      /* At 320 the brand, the region picker and two icon buttons come to more
-         than the bar is wide. The region picker is the one piece that is
-         neither identity nor an action, so it is what goes. Same breakpoint as
-         the panel reflow and the 16px gutters. */
+      /* At 320 the brand and two icon buttons come to more than the bar is
+         wide, so the brand truncates. Same breakpoint as the panel reflow and
+         the 16px gutters. */
       @media (max-width: 719.98px) {
         .bar {
           gap: 4px;
-        }
-        .bar__region {
-          display: none;
         }
         .bar__brand {
           flex: 0 1 auto;

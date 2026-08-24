@@ -93,7 +93,26 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       <div class="shell__main">
         <player-header />
 
-        <main class="page" id="workspace">
+        <main class="page" id="workspace" [class.page--solo]="solo()">
+          <!--
+            The scrim belongs to the SOLO composition only. Dual is a working
+            layout - two panels and the row that owns them are all live - so
+            dimming the space between them would be dimming nothing that is out
+            of play. One panel is the case taking over the content area, and
+            the scrim is what says so.
+
+            It is a CHILD of .page, which is already bounded by the player bar
+            above and the nav to the left, so those two are outside it by
+            construction rather than by offsets kept in step with them.
+
+            aria-hidden and no handler: it dims, and that is all it does.
+            Clicking must not close the panel, so there is nothing to click -
+            but it does swallow the click, which is the point.
+          -->
+          @if (solo()) {
+            <div class="page__scrim" aria-hidden="true"></div>
+          }
+
           <back-office-widgets />
 
       <!--
@@ -163,6 +182,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       /* The content area under the player bar. It is the panels' container, so
          the panels start exactly where the chrome ends. */
       .page {
+        position: relative;
         flex: 1;
         min-height: 0;
         padding: 16px 20px 20px;
@@ -170,6 +190,39 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         flex-direction: column;
         gap: 16px;
         overflow: hidden;
+      }
+      /**
+       * Stacking, bottom to top: page content, scrim, widget row, panels.
+       *
+       * The widget row sits ABOVE the scrim deliberately - it is the only way
+       * to open the second panel, so dimming it would strand the dual state
+       * behind a sheet of grey. The panels are above both.
+       *
+       * inset: 0 covers .page's padding as well as its content, so the dim
+       * reaches the gutters and there is no bright margin down the right edge.
+       */
+      .page__scrim {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: rgba(0, 0, 0, 0.25);
+      }
+      .page > back-office-widgets,
+      .page > .stage {
+        position: relative;
+        z-index: 2;
+      }
+      /**
+       * Solo: the panel takes the content area outright - flush under the
+       * player bar, flush to the bottom and right edges, at its capped width.
+       *
+       * Dropping .page's padding is what does it, rather than negative margins
+       * on the stage: the padding exists to inset the widget row, and in this
+       * composition there is no widget row to inset.
+       */
+      .page--solo {
+        padding: 0;
+        gap: 0;
       }
       .page__dev {
         flex: none;
@@ -306,6 +359,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
    * subtract it. Without this a bar overlaps the survivor's pinned footer,
    * which is exactly the control the agent needs.
    */
+  /**
+   * Exactly one panel on the stage: the solo composition. Both the scrim and
+   * the full-bleed panel read from this one signal, so they can never be half
+   * applied.
+   */
+  readonly solo = computed(() => this.ws.visibleCount() === 1);
+
   readonly dockHeight = computed(() => {
     const n = this.ws.minimisedBars().length;
     return n === 0 ? 0 : 24 + n * 46 + (n - 1) * 8;

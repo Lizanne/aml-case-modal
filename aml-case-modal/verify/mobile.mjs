@@ -238,7 +238,11 @@ for (const width of MOBILE) {
   check('both footer buttons stay inside it', footer.inside);
 
   console.log('\nWidgets and the dev panel share the gutter');
+  // With no panel open: state 01 opens one, and the row does not render while
+  // a panel is up, so there would be no widget here to measure a gutter on.
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Escape');
   await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
   await page.waitForTimeout(450);
   const chrome = await page.evaluate((vw) => {

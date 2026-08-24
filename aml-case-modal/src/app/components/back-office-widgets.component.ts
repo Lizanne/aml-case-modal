@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
+import { lockStatusLine } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { PillComponent } from './ui-pill.component';
 
@@ -34,6 +35,17 @@ import { PillComponent } from './ui-pill.component';
   imports: [MatIconModule, MatTooltipModule, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!--
+      The row renders when NO panel is open, and in the dual state. It does not
+      render while exactly one panel is up: that composition is the panel
+      against the scrim, nothing else.
+
+      Consequence, accepted deliberately: the row is the only way to open a
+      panel, so once one is open the other can no longer be added from here.
+      Dual is a state the prototype can be put INTO, not one it can be driven
+      to. See the note in app.component for the scrim half of the same rule.
+    -->
+    @if (showRow()) {
     <div class="widgets">
       <!-- ------------------------------------------------------- SG alerts -->
       <article class="w">
@@ -59,13 +71,16 @@ import { PillComponent } from './ui-pill.component';
             </div>
           </div>
 
+          <!--
+            Open, its panel owns everything; closed, the widget does. Close is
+            the exception the dual state earns: two open panels need two
+            distinct close targets.
+          -->
           <div class="w__actions">
-            @if (!ws.isOpen('sg')) {
-              <button class="w__btn w__btn--compact" type="button">Unlock</button>
-            }
             @if (ws.isOpen('sg')) {
               <button class="w__btn" type="button" (click)="ws.close('sg')">Close alert</button>
             } @else {
+              <button class="w__btn w__btn--compact" type="button">Unlock</button>
               <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
                 <mat-icon aria-hidden="true">done</mat-icon>
                 Resolve and archive
@@ -98,6 +113,12 @@ import { PillComponent } from './ui-pill.component';
             </div>
           </div>
 
+          <!--
+            Rule 4. While the panel is open it owns both jobs: its header holds
+            the lock controls and its own X closes it, so the widget is
+            identity and status only. The dual state is the single exception,
+            and it earns exactly one button.
+          -->
           <div class="w__actions">
             @if (!ws.isOpen('aml') && !store.isResolved()) {
               @switch (store.lockState()) {
@@ -133,6 +154,7 @@ import { PillComponent } from './ui-pill.component';
         </div>
       </article>
     </div>
+    }
   `,
   styles: [
     `
@@ -294,6 +316,7 @@ import { PillComponent } from './ui-pill.component';
 
       /* The severity badge is ui-pill at size sm - no local copy, no dot, and
          no third place where COMPLIANCE has its own hardcoded lilac. */
+
 
       /* ---- meta line: first to truncate --------------------------------- */
       .w__meta {
@@ -473,6 +496,23 @@ export class BackOfficeWidgetsComponent {
   readonly ws = inject(WorkspaceStore);
   readonly store = inject(CaseStore);
 
+  /**
+   * Both panels on the stage. Not "both open" - a minimised panel is
+   * represented by its dock bar, and a widget standing in for it as well would
+   * be two controls for one thing.
+   */
+  readonly dual = computed(() => this.ws.visibleCount() === 2);
+
+  /**
+   * The row is present with NO panel open, and in the dual state. Exactly one
+   * panel open is the solo composition, which is the panel and the scrim and
+   * nothing above it.
+   *
+   * Expressed as "not exactly one" rather than "zero or two" so it stays true
+   * of whatever a third panel would do.
+   */
+  readonly showRow = computed(() => this.ws.visibleCount() !== 1);
+
   /** "Open" / "In progress" / "Resolved", per the design's meta line. */
   readonly stage = computed(() => {
     if (this.store.isResolved()) return 'Resolved';
@@ -487,20 +527,19 @@ export class BackOfficeWidgetsComponent {
    */
   readonly lockChip = computed<{ label: string; initials: string; mine: boolean } | null>(() => {
     if (this.store.isResolved()) return null;
-    switch (this.store.lockState()) {
-      case 'locked-to-me':
-        return { label: 'Locked to you', initials: 'LF', mine: true };
-      case 'locked-to-other': {
-        const name = this.store.lockOwner()?.name ?? 'another agent';
-        return { label: `Locked to ${name}`, initials: initialsOf(name), mine: false };
-      }
-      default:
-        // Present, not absent. The Figma nodes draw no status while unlocked,
-        // but that made the card a line shorter in one of its three states and
-        // moved the actions with it. Same slot, muted, so the three states are
-        // the same shape.
-        return { label: 'Not locked', initials: '', mine: false };
-    }
+    const state = this.store.lockState();
+    const owner = this.store.lockOwner()?.name;
+    return {
+      // Rule 5: ONE source. The widget used to compose its own "Locked to you"
+      // and "Locked to {name}" strings, which is a copy of the panel band's
+      // vocabulary that nothing stopped from drifting - and the two are read
+      // side by side. Both call lockStatusLine now, so they cannot disagree.
+      // The band adds "since {time}" and the unlocked hint on top; the widget
+      // takes the bare line, which is the same sentence, shorter.
+      label: lockStatusLine(state, owner),
+      initials: state === 'locked-to-me' ? 'LF' : owner ? initialsOf(owner) : '',
+      mine: state === 'locked-to-me',
+    };
   });
 
   /** Rule 3: the case must be locked to you before it can be opened. */
