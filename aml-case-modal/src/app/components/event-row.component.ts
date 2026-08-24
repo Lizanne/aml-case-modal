@@ -25,21 +25,29 @@ import { PillComponent } from './ui-pill.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="row">
-      <mat-icon class="row__icon" [class.row__icon--escalation]="event.direction === 'escalation'">
-        {{ event.direction === 'escalation' ? 'arrow_upward' : 'arrow_downward' }}
-      </mat-icon>
+      <!--
+        Line one is fixed-width parts only. Nothing here shrinks and nothing
+        ellipsises, so the author and time cannot be pushed out or clipped by a
+        long label or a wide pill - the only elastic thing in the row is the
+        reason, and it is on the line below.
+      -->
+      <div class="row__head">
+        <mat-icon class="row__icon" [class.row__icon--escalation]="event.direction === 'escalation'">
+          {{ event.direction === 'escalation' ? 'arrow_upward' : 'arrow_downward' }}
+        </mat-icon>
 
-      <span class="row__label">
-        {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
-      </span>
+        <span class="row__label">
+          {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
+        </span>
 
-      <ui-pill [severity]="event.from">{{ event.from }}</ui-pill>
-      <mat-icon class="row__arrow">arrow_forward</mat-icon>
-      <ui-pill [severity]="event.to">{{ event.to }}</ui-pill>
+        <ui-pill [severity]="event.from">{{ event.from }}</ui-pill>
+        <mat-icon class="row__arrow">arrow_forward</mat-icon>
+        <ui-pill [severity]="event.to">{{ event.to }}</ui-pill>
 
-      <span class="row__reason" [title]="event.reason">{{ event.reason }}</span>
+        <span class="row__meta">{{ event.actor }} · {{ event.at | stamp }}</span>
+      </div>
 
-      <span class="row__meta">{{ event.actor }} · {{ event.at | stamp }}</span>
+      <p class="row__reason" [title]="event.reason">{{ event.reason }}</p>
     </div>
   `,
   styles: [
@@ -53,17 +61,37 @@ import { PillComponent } from './ui-pill.component';
          nowrap line of nowrap parts, so its min-content is its full width, and
          as a grid item that would size the whole stream. The reason ellipsises
          to absorb the difference. */
+      /* Two lines, no border and no fill: an event is an annotation between
+         outcome cards, and a box around it would give it their weight. */
       .row {
         display: flex;
-        align-items: center;
+        flex-direction: column;
         min-width: 0;
-        gap: 8px;
+        gap: 2px;
         padding: 4px 2px;
         background: none;
         border: 0;
         font-size: 14px;
         line-height: 20px;
         color: var(--ink-2);
+      }
+      /**
+       * Wraps, at every width - not just on mobile.
+       *
+       * Nothing on this line may truncate, so when it will not fit there are
+       * only two outcomes available: overflow, or wrap. It was overflowing at
+       * around 430px of stream, which is narrower than the dual half but well
+       * inside what a 900px window gives, and an author and time pushed past
+       * the edge is the failure this rule exists to prevent. Wrapping drops
+       * them to their own line intact instead.
+       */
+      .row__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        row-gap: 2px;
+        min-width: 0;
       }
       .row__icon,
       .row__arrow {
@@ -92,21 +120,32 @@ import { PillComponent } from './ui-pill.component';
         font-weight: 600;
         color: var(--ink-2);
       }
-      /* The reason takes what is left and ellipsises, so the row stays one
-         line; the full text is on the title attribute. */
+      /**
+       * The reason: its own line, full width, two lines then ellipsis.
+       *
+       * min-height reserves the second line whether or not it is used, so a
+       * one-line reason and a clamped three-line one make the same shape. It
+       * costs 20px of white under short reasons; the alternative is a stream
+       * whose rows jump height with the length of someone's sentence.
+       *
+       * 2 x the 20px line-height. Derived from the same line-height the box
+       * clamps with, not a measured 40.
+       */
       .row__reason {
-        flex: 1 1 auto;
+        margin: 0;
         min-width: 0;
+        min-height: calc(2 * 20px);
         color: var(--ink-3);
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
       }
+      /* Right-aligned and unshrinkable. flex: none is the whole guarantee:
+         given any shrink it would be the first thing to give, because it is
+         the longest run of text on the line. */
       .row__meta {
-        flex: 0 1 auto;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        flex: none;
         margin-left: auto;
         text-align: right;
         white-space: nowrap;
@@ -115,24 +154,13 @@ import { PillComponent } from './ui-pill.component';
       }
 
       /**
-       * Mobile: the one-line rule is what has to give.
+       * Mobile: line one wraps rather than overflowing.
        *
-       * At ~310px the reason had 9px to ellipsise into, which is not an
-       * annotation, it is a smudge. The row wraps instead: label and arrows
-       * hold the first line, the reason wraps below at full width, and the
-       * timestamp trails it.
+       * Nothing on it may truncate, so when it will not fit the only honest
+       * move left is to let it wrap - the author and time drop to their own
+       * line intact rather than being clipped.
        */
       @media (max-width: 719.98px) {
-        .row {
-          flex-wrap: wrap;
-          row-gap: 2px;
-        }
-        .row__reason {
-          flex: 1 1 100%;
-          white-space: normal;
-          overflow: visible;
-          text-overflow: clip;
-        }
         .row__meta {
           margin-left: 0;
           text-align: left;

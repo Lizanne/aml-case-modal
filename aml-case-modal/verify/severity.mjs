@@ -129,6 +129,67 @@ check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD
 check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
+
+/**
+ * The event row's shape: two lines, no box, and a first line that cannot give.
+ *
+ * The height check compares the row against ITSELF with a long reason
+ * substituted in, rather than against a literal - the point is that the length
+ * of someone's sentence does not move the row, and a hardcoded 74 would pass
+ * just as well if both were wrong.
+ */
+console.log('\nSeverity event row: two lines, fixed first line');
+const evShape = async () => page.evaluate(() => {
+  const e = document.querySelector('event-row');
+  const row = e.querySelector('.row');
+  const head = e.querySelector('.row__head');
+  const meta = e.querySelector('.row__meta');
+  const reason = e.querySelector('.row__reason');
+  const cs = getComputedStyle(row);
+  return {
+    h: Math.round(row.getBoundingClientRect().height),
+    borderW: cs.borderTopWidth, bg: cs.backgroundColor,
+    // Right-aligned to the line, whole, and not clipped.
+    metaFlushRight: Math.round(head.getBoundingClientRect().right - meta.getBoundingClientRect().right) === 0,
+    metaClipped: meta.scrollWidth - meta.clientWidth > 1,
+    headOverflows: head.scrollWidth - head.clientWidth > 1,
+    reasonLines: Math.round(reason.getBoundingClientRect().height / 20),
+    reasonClamped: reason.scrollHeight - reason.clientHeight > 1,
+    hasTitle: !!reason.getAttribute('title'),
+  };
+});
+const LONG = 'Escalated after the adverse media review surfaced two further matches that could not be excluded on name alone, and the source-of-funds documentation supplied by the player does not reconcile with the deposit pattern observed over the last ninety days.';
+const setReason = (t) => page.evaluate((text) => {
+  const r = document.querySelector('event-row .row__reason');
+  r.textContent = text;
+  r.setAttribute('title', text);
+}, t);
+const SHORT = await page.evaluate(() => document.querySelector('event-row .row__reason').textContent);
+// 900 puts the panel at roughly the width one half of the dual layout gets, so
+// this is the narrow stream and not a second run at the same size.
+for (const [label, w] of [['1440', 1440], ['narrow panel', 900]]) {
+  await page.setViewportSize({ width: w, height: 1000 });
+  await page.waitForTimeout(350);
+  await setReason(SHORT);
+  await page.waitForTimeout(200);
+  const short = await evShape();
+  await setReason(LONG);
+  await page.waitForTimeout(200);
+  const long = await evShape();
+  check(`${label}: no border and no fill`,
+    short.borderW === '0px' && short.bg === 'rgba(0, 0, 0, 0)', `${short.borderW} ${short.bg}`);
+  check(`${label}: reason holds two lines`, short.reasonLines === 2 && long.reasonLines === 2,
+    `${short.reasonLines} / ${long.reasonLines}`);
+  check(`${label}: a long reason clamps`, long.reasonClamped);
+  check(`${label}: the full text is on title`, long.hasTitle);
+  check(`${label}: height does not move with the reason`, short.h === long.h, `${short.h} vs ${long.h}`);
+  check(`${label}: author and time stay flush right`, long.metaFlushRight);
+  check(`${label}: author and time are never clipped`, !long.metaClipped);
+  check(`${label}: line one does not overflow`, !long.headOverflows);
+}
+await page.setViewportSize({ width: 1440, height: 1000 });
+await setReason(SHORT);
+await page.waitForTimeout(300);
 check('the timeline entry names the direction', await (async () => {
   await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
   await page.waitForTimeout(300);
