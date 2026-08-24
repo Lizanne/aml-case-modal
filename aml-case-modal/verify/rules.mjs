@@ -353,8 +353,8 @@ const minState = await page.evaluate(() => {
     bars: document.querySelectorAll('minimised-bar').length,
     widgets: document.querySelectorAll('.w').length,
     widgetCloses: [...document.querySelectorAll('.w__btn')].filter((b) => /Close/.test(b.textContent)).length,
-    barHasRestore: !!document.querySelector('.bar__restore'),
-    barHasClose: !!document.querySelector('.bar__close'),
+    barHasRestore: !!document.querySelector('.bar__icon-btn[aria-label^="Restore"]'),
+    barHasClose: !!document.querySelector('.bar__icon-btn[aria-label^="Close"]'),
     barWidth: bar ? Math.round(bar.getBoundingClientRect().width) : null,
     // Aligned to the panel's right edge, measured against the panel itself.
     alignedRight: bar && panel
@@ -371,7 +371,7 @@ check('the bar hugs its content, under the 400 cap',
   minState.barWidth > 0 && minState.barWidth <= 400, `${minState.barWidth}px`);
 check('the bar aligns to the panel right edge', minState.alignedRight);
 
-await page.locator('.bar__restore').click();
+await page.locator('.bar__icon-btn[aria-label^="Restore"]').click();
 await page.waitForTimeout(700);
 check('restoring brings the panel and the row back', await page.evaluate(() =>
   document.querySelectorAll('minimised-bar').length === 0

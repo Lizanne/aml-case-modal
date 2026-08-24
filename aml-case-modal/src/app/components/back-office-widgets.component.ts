@@ -493,11 +493,51 @@ import { PillComponent } from './ui-pill.component';
         }
       }
 
-      /* Below the panel's own reflow point the two widgets stop sharing a row.
-         Same breakpoint as the segmented layout and the 16px gutters. */
+      /**
+       * Mobile, per the Mobile variants of 22290:2443.
+       *
+       * The card STACKS - it is not a horizontal row that wraps. That is the
+       * bug this replaces: .w__actions kept its auto left margin and its
+       * wrap, so the buttons floated right and broke onto two lines of their
+       * own, and .w__content was left competing with them for width, which is
+       * why the meta line ellipsised with empty space beside it.
+       *
+       * Values read from the node: 16px padding on all four sides, 10px
+       * between the identity block and the actions row, 32px buttons at
+       * 13px/16px.
+       */
       @media (max-width: 719.98px) {
         .widgets {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .w {
+          gap: 10px;
+          padding: 16px;
+          align-items: flex-start;
+        }
+        .w__inner {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+        }
+        /* Full width, so the meta line has the whole card before it truncates
+           rather than whatever the buttons left over. */
+        .w__content {
+          flex: none;
+          width: 100%;
+          min-width: 0;
+        }
+        /* A row of its own: left-aligned, no auto margin pushing it right, and
+           no wrap - the buttons share the line instead of stacking. */
+        .w__actions {
+          width: 100%;
+          margin-left: 0;
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+        }
+        .w__btn {
+          font-size: 13px;
+          line-height: 16px;
         }
       }
     `,

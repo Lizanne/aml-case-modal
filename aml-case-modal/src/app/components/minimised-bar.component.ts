@@ -21,30 +21,29 @@ import { PillComponent } from './ui-pill.component';
   template: `
     <div class="bar" [class.bar--pulse]="pulsing()">
       <!--
-        The bar IS the restore control: one button spanning everything but the
-        close, so a tap anywhere on it restores. The chevron is the visual cue
-        and carries no text of its own - a "Restore" link inside a button that
-        already restores was a second affordance for one action.
+        The surface is INERT: a label, not a control. It was one big restore
+        button with a separate X inside it, which put two targets in one and
+        made the whole bar light up on hover for an action the chevron already
+        names. Now the two icon buttons are the only interactive things here.
       -->
+      <div class="bar__label">
+        <ui-pill [severity]="severity()" tone="info">{{ tag() }}</ui-pill>
+        <span class="bar__title">{{ title() }}</span>
+      </div>
+
       <button
-        class="bar__restore"
+        class="bar__icon-btn"
         type="button"
         [attr.aria-label]="'Restore ' + panelName() + ' panel'"
         (click)="ws.restore(id)"
       >
-        <ui-pill [severity]="severity()" tone="info">{{ tag() }}</ui-pill>
-        <span class="bar__title">{{ title() }}</span>
-        <mat-icon class="bar__icon" aria-hidden="true">expand_less</mat-icon>
+        <mat-icon aria-hidden="true">expand_less</mat-icon>
       </button>
-      <!-- Its own control, and its own hit area. stopPropagation is belt and
-           braces: they are siblings, not nested, so a click here cannot reach
-           the restore button - but nothing in the markup says so, and someone
-           will nest them one day. -->
       <button
-        class="bar__close"
+        class="bar__icon-btn"
         type="button"
         [attr.aria-label]="'Close ' + panelName() + ' panel'"
-        (click)="$event.stopPropagation(); ws.close(id)"
+        (click)="ws.close(id)"
       >
         <mat-icon aria-hidden="true">close</mat-icon>
       </button>
@@ -55,30 +54,23 @@ import { PillComponent } from './ui-pill.component';
       :host {
         display: block;
       }
+      /* No hover, no cursor, no handler - the surface is not a control. */
       .bar {
         display: flex;
-        align-items: stretch;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px 6px 12px;
         border: 1px solid var(--line);
         border-radius: 10px;
         background: var(--panel);
         box-shadow: 0 -2px 14px rgba(24, 24, 27, 0.1);
-        overflow: hidden;
       }
-      .bar__restore {
+      .bar__label {
         display: flex;
         align-items: center;
         gap: 10px;
         flex: 1;
         min-width: 0;
-        padding: 8px 12px;
-        border: 0;
-        background: transparent;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-      }
-      .bar__restore:hover {
-        background: var(--page);
       }
       .bar__title {
         flex: 1;
@@ -91,46 +83,43 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .bar__icon {
-        flex: none;
-        color: var(--primary);
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-      /* 32px square with a 16px glyph, matching every other close and minimise
-         control. It used to be a full-height strip with a border-left divider;
-         at a fixed size it cannot stretch, so it centres itself and the divider
-         goes rather than hanging short of the bar edges. */
-      /* 44px of hit area, and the 16px gutter the design asks for - it was
-         clipped at 8px. The visual button stays 32px; the target is the
-         padding around it. */
-      .bar__close {
+      /**
+       * The two controls. 44px of hit area each, with the hover drawn on a
+       * 32px rounded square INSIDE that - so the target meets the touch
+       * minimum while the visible affordance stays the size of the icon it
+       * sits behind, rather than a 44px slab.
+       *
+       * background-clip: content-box with 6px of padding is what insets the
+       * tint: the padding is transparent to the eye and solid to the pointer.
+       */
+      .bar__icon-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex: none;
-        align-self: center;
         width: 44px;
         height: 44px;
-        margin-right: 16px;
+        padding: 6px;
         border: 0;
-        border-radius: 8px;
+        border-radius: 10px;
         background: transparent;
+        background-clip: content-box;
         color: var(--ink-3);
         cursor: pointer;
       }
-      .bar__close:hover mat-icon {
+      .bar__icon-btn:hover {
+        background-color: rgba(0, 0, 0, 0.06);
         color: var(--ink);
       }
-      .bar__close:hover {
-        color: var(--ink);
+      .bar__icon-btn:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: -4px;
       }
-      .bar__close mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
+      .bar__icon-btn mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
       }
 
       /* One pulse, then done. Purely decorative, so it is dropped entirely
