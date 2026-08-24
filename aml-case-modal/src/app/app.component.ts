@@ -129,17 +129,23 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
               }
             }
           </div>
+
+          <!--
+            The dock lives INSIDE .page, which is the same box the panels are
+            laid out in - so its right edge is their right edge at every width,
+            with no offset to keep in step. Minimise and restore then read as
+            the panel shrinking into and growing out of the same corner.
+          -->
+          @if (ws.minimisedBars().length) {
+            <div class="dock">
+              @for (id of ws.minimisedBars(); track id) {
+                <minimised-bar [id]="id" />
+              }
+            </div>
+          }
         </main>
       </div>
     </div>
-
-    @if (ws.minimisedBars().length) {
-      <div class="dock">
-        @for (id of ws.minimisedBars(); track id) {
-          <minimised-bar [id]="id" />
-        }
-      </div>
-    }
   `,
   styles: [
     `
@@ -279,18 +285,27 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         min-width: 0;
         min-height: 0;
       }
-      /* Bars dock to the bottom edge and stack. */
+      /**
+       * Bottom right, hugging its content, stacking upward.
+       *
+       * absolute inside .page rather than fixed to the viewport: .page is the
+       * panels' own box, so right: 0 IS the panel's right edge - flush when
+       * solo, inside the gutters in dual - without a second offset to keep in
+       * step with the padding rules above.
+       *
+       * width: max-content is the hug. The 400px cap is what stops a long case
+       * title turning the bar into a full-width strip; the bar's own title
+       * ellipsises into whatever that leaves.
+       */
       .dock {
-        position: fixed;
-        left: 0;
+        position: absolute;
         right: 0;
-        bottom: 0;
-        z-index: 30;
+        bottom: 16px;
+        z-index: 3;
         display: grid;
         gap: 8px;
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 12px 20px;
+        width: max-content;
+        max-width: min(400px, 100%);
       }
 
 
@@ -369,8 +384,12 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         .page__dev {
           padding: 16px;
         }
+        /* Full width is right on a phone - there is no panel edge to align to
+           that is not also the screen edge. */
         .dock {
-          padding: 12px 16px;
+          left: 0;
+          width: auto;
+          max-width: none;
         }
 
       }
@@ -394,7 +413,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   readonly dockHeight = computed(() => {
     const n = this.ws.minimisedBars().length;
-    return n === 0 ? 0 : 24 + n * 46 + (n - 1) * 8;
+    // 16 is the dock's bottom offset, doubled so the clearance reads as a gap
+    // above the bar as well as below it.
+    return n === 0 ? 0 : 32 + n * 46 + (n - 1) * 8;
   });
 
   /**

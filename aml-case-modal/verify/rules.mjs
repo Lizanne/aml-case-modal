@@ -328,6 +328,55 @@ const dualRadii = await page.evaluate(() =>
 check('dual panels keep the 12px radius',
   dualRadii.length === 2 && dualRadii.every((r) => r === '12px'), dualRadii.join(', '));
 
+/**
+ * A minimised panel's bar is its ONLY control surface. The widget's Close and
+ * the bar's controls must never be on screen together - they would be two
+ * controls for one panel, in opposite corners.
+ */
+console.log('\nA minimised panel is controlled from its bar alone');
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const dualState = await page.evaluate(() => ({
+  bars: document.querySelectorAll('minimised-bar').length,
+  closes: [...document.querySelectorAll('.w__btn')].filter((b) => /Close/.test(b.textContent)).length,
+}));
+check('dual: two widget Closes, no bars',
+  dualState.bars === 0 && dualState.closes === 2, JSON.stringify(dualState));
+
+await page.locator('case-header .head__actions button').first().click();
+await page.waitForTimeout(700);
+const minState = await page.evaluate(() => {
+  const bar = document.querySelector('minimised-bar .bar');
+  const panel = document.querySelector('.stage > *');
+  return {
+    bars: document.querySelectorAll('minimised-bar').length,
+    widgets: document.querySelectorAll('.w').length,
+    widgetCloses: [...document.querySelectorAll('.w__btn')].filter((b) => /Close/.test(b.textContent)).length,
+    barHasRestore: !!document.querySelector('.bar__restore'),
+    barHasClose: !!document.querySelector('.bar__close'),
+    barWidth: bar ? Math.round(bar.getBoundingClientRect().width) : null,
+    // Aligned to the panel's right edge, measured against the panel itself.
+    alignedRight: bar && panel
+      ? Math.round(bar.getBoundingClientRect().right - panel.getBoundingClientRect().right) === 0
+      : false,
+  };
+});
+check('minimised: the bar exists and carries both controls',
+  minState.bars === 1 && minState.barHasRestore && minState.barHasClose, JSON.stringify(minState));
+check('minimised: NO widget row, so no second Close',
+  minState.widgets === 0 && minState.widgetCloses === 0,
+  `${minState.widgets} widgets, ${minState.widgetCloses} closes`);
+check('the bar hugs its content, under the 400 cap',
+  minState.barWidth > 0 && minState.barWidth <= 400, `${minState.barWidth}px`);
+check('the bar aligns to the panel right edge', minState.alignedRight);
+
+await page.locator('.bar__restore').click();
+await page.waitForTimeout(700);
+check('restoring brings the panel and the row back', await page.evaluate(() =>
+  document.querySelectorAll('minimised-bar').length === 0
+  && document.querySelectorAll('.w').length === 2));
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

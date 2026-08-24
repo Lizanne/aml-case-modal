@@ -515,14 +515,20 @@ export class BackOfficeWidgetsComponent {
   readonly dual = computed(() => this.ws.visibleCount() === 2);
 
   /**
-   * The row is present with NO panel open, and in the dual state. Exactly one
-   * panel open is the solo composition, which is the panel and the scrim and
-   * nothing above it.
+   * The row is present when NOTHING is open, and in the dual state.
    *
-   * Expressed as "not exactly one" rather than "zero or two" so it stays true
-   * of whatever a third panel would do.
+   * "Open" includes minimised. A minimised panel has not gone anywhere - it is
+   * sitting in its dock bar, and that bar is its control surface: the chevron
+   * restores it, the X closes it. A widget offering Close for the same panel
+   * at the same time would be a second control for one thing, and the two
+   * would be in different corners of the screen.
+   *
+   * So this is not visibleCount(): a panel minimised to its bar leaves the
+   * stage but does not bring the row back.
    */
-  readonly showRow = computed(() => this.ws.visibleCount() !== 1);
+  readonly showRow = computed(
+    () => this.dual() || !(this.ws.isOpen('sg') || this.ws.isOpen('aml')),
+  );
 
   /** "Open" / "In progress" / "Resolved", per the design's meta line. */
   readonly stage = computed(() => {

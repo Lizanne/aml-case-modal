@@ -228,14 +228,16 @@ check('the timeline entry names the direction', await (async () => {
  */
 check('the row is hidden while the panel is up',
   (await page.locator('back-office-widgets .w').count()) === 0);
-// Minimised, not closed: the panel leaves the stage so the row comes back, and
-// everything after this still has a case to work in.
-await page.locator('case-header .head__actions button').first().click();
-await page.waitForTimeout(600);
-check('the widget follows the escalation',
-  (await page.locator('back-office-widgets .w__titles ui-pill[data-sev]').innerText()).trim() === 'EDD');
-await page.locator('minimised-bar .bar__restore').click();
-await page.waitForTimeout(600);
+/**
+ * The widget's own view of the escalation is checked at the END of this file,
+ * with the panel CLOSED.
+ *
+ * It used to minimise and read the row underneath. Minimising no longer brings
+ * the row back - a minimised panel is still open, and its bar is its only
+ * control surface - so there is no longer any point in the run where the panel
+ * and its widget are both on screen. Closing is the only way to see the
+ * widget, and closing here would take the case away from everything below.
+ */
 
 // ---------------------------------------------------------------- attachments
 console.log('\nDraft attachments are removable; saved ones are not');
@@ -569,6 +571,30 @@ check('clicking a row opens that case',
   (await page.locator('player-info-panel .placeholder').innerText()).includes(
     `#${FIXTURE.pastCases[0].caseId}`,
   ));
+
+/**
+ * Last, because it needs the panel gone: with a panel open - minimised or not -
+ * there is no widget row to read. Driven from a fresh escalation so the check
+ * does not depend on state carried down the whole file.
+ */
+console.log('\nThe widget carries the severity once the panel is closed');
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+await page.locator('workflow-panel .footer button:has-text("Adjust severity")').click();
+await page.waitForTimeout(300);
+await page.locator('severity-dialog mat-radio-button:has-text("EDD") input').click();
+await page.locator('severity-dialog textarea').fill('Escalated for verification.');
+await page.waitForTimeout(150);
+await page.locator('severity-dialog button:has-text("Save severity")').click();
+await page.waitForTimeout(500);
+check('the panel now reads EDD',
+  (await page.locator('case-header ui-pill[data-sev]').innerText()).trim() === 'EDD');
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+check('closing the panel brings the row back',
+  (await page.locator('back-office-widgets .w').count()) > 0);
+check('the widget carries the same severity',
+  (await page.locator('back-office-widgets .w__titles ui-pill[data-sev]').innerText()).trim() === 'EDD');
 
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
