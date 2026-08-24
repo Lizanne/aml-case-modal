@@ -50,7 +50,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
     '[style.width]': 'ws.panelCss()',
   },
   template: `
-    <div class="modal" [class.modal--narrow]="isNarrow()">
+    <div class="modal" [class.modal--narrow]="isNarrow()" [class.modal--dual]="ws.visibleCount() === 2">
       <case-header (minimise)="ws.minimise('aml')" (close)="ws.close('aml')" />
       <trigger-strip />
 
@@ -128,16 +128,25 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         min-height: 0;
         background: var(--panel);
         border: 1px solid var(--line);
-        border-radius: 12px;
+        border-radius: 0;
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
         overflow: hidden;
       }
-      /* A view, not a floating card: square, flat, edge to edge. The slide-in
-         is untouched - it still arrives from the right, which is what makes it
+      /**
+       * Square by default; rounded only in the dual state.
+       *
+       * Solo, the panel is flush to the viewport on three sides, and a radius
+       * on an edge with nothing beyond it just cuts a notch out of the screen.
+       * In dual the panels are two cards on a page, so they keep the 12px.
+       */
+      .modal--dual {
+        border-radius: 12px;
+      }
+      /* A view, not a floating card: flat and edge to edge. The slide-in is
+         untouched - it still arrives from the right, which is what makes it
          read as a view being pushed on rather than a sheet appearing. */
       @media (max-width: 719.98px) {
         .modal {
-          border-radius: 0;
           border-left: 0;
           border-right: 0;
           box-shadow: none;

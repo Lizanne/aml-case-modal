@@ -63,17 +63,10 @@ import { PillComponent } from './ui-pill.component';
           >
             <mat-icon>remove</mat-icon>
           </button>
-          <!--
-            Two glyphs, one control. On mobile the panel is a view rather than
-            a floating card, and a back chevron is what leaving a view looks
-            like; on desktop it is still a dismissable card, so it keeps the X.
-            The ACTION is the same either way, which is why the accessible name
-            does not change with the glyph - it names what the button does, not
-            what it looks like.
-          -->
+          <!-- One glyph at every width: the control closes, and an X is what
+               closing looks like. -->
           <button class="head__close" type="button" aria-label="Close case" (click)="close.emit()">
-            <mat-icon class="head__glyph head__glyph--x">close</mat-icon>
-            <mat-icon class="head__glyph head__glyph--back">arrow_back</mat-icon>
+            <mat-icon>close</mat-icon>
           </button>
         </div>
       </div>
@@ -245,18 +238,18 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      /* One glyph at a time. Keyed to the VIEWPORT, not to the panel's own
-         width: the chevron is about the panel being a full-screen view, which
-         a narrow panel on a desktop is not. */
-      .head__glyph--back {
-        display: none;
-      }
+      /**
+       * Mobile gutters: 16px, matching the page and info__body.
+       *
+       * Both selectors, because a mobile header is always ALSO narrow, and
+       * ".head--narrow .head__main" is two classes to this one's one - it
+       * would win on specificity and put 20px back regardless of order.
+       */
       @media (max-width: 719.98px) {
-        .head__glyph--x {
-          display: none;
-        }
-        .head__glyph--back {
-          display: inline-block;
+        .head__main,
+        .head--narrow .head__main {
+          padding-left: 16px;
+          padding-right: 16px;
         }
       }
       .head--narrow .head__lock button {

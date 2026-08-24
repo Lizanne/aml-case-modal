@@ -221,16 +221,18 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * composition there is no widget row to inset.
        */
       /**
-       * VERTICAL only. Zeroing the horizontal padding too made the panel flush
-       * to the viewport while the widget row it replaces kept its gutters, so
-       * the two sat 20px apart at 1440 and agreed at 1024 only because a media
-       * query happened to override the solo rule there. Both live inside the
-       * content gutters now and share their edges at every width; the panel
-       * still runs flush from under the player bar to the viewport bottom.
+       * Flush on all four sides: the panel runs from under the player bar to
+       * the viewport bottom, and from its capped left edge to the viewport
+       * right. No scrim shows to its right or below it, because there is
+       * nothing between the panel and those two edges.
+       *
+       * The cost, stated: the widget row that stands in this spot when no
+       * panel is open keeps the content gutters, so it sits 20px inside the
+       * panel's right edge rather than sharing it. Flush beat matching here
+       * because they are never on screen together.
        */
       .page--solo {
-        padding-top: 0;
-        padding-bottom: 0;
+        padding: 0;
         gap: 0;
       }
       .page__dev {

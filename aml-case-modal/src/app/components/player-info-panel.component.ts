@@ -262,6 +262,15 @@ const TAB_LABEL: Record<InfoTab, string> = {
         overflow-y: auto;
         padding: 12px 20px;
       }
+      /* 16px on mobile, matching head__main and the page gutter. Placed BEFORE
+         the flush rule below on purpose: both are single-class selectors, so
+         the later one wins, and Past AML cases must still reach 0. */
+      @media (max-width: 719.98px) {
+        .info__body {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+      }
       /**
        * Past AML cases only: the body gives up its side padding so the rows
        * reach both edges. The rows are buttons - a hover or active tint that

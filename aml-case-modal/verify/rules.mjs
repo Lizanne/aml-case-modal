@@ -285,6 +285,49 @@ check('resolved: the strip still expands', await (async () => {
   return (await page.locator('trigger-strip .trigger').count()) > 2;
 })());
 
+/**
+ * A solo panel is flush to the viewport on the right and the bottom, and the
+ * scrim never shows past it on either side.
+ *
+ * The scrim comparison is the load-bearing one: "flush" measured against
+ * innerWidth alone would still pass with a 20px strip of scrim painted over
+ * the top of the panel, and that strip is what the gap actually looked like.
+ * Square corners go with it - a radius on an edge with nothing beyond it.
+ */
+console.log('\nSolo panel is flush to the viewport');
+for (const vw of [1440, 1200]) {
+  await page.setViewportSize({ width: vw, height: 900 });
+  await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(450);
+  const flush = await page.evaluate(() => {
+    const m = document.querySelector('.stage > *');
+    const s = document.querySelector('.page__scrim');
+    if (!m || !s) return null;
+    const mb = m.getBoundingClientRect();
+    const sb = s.getBoundingClientRect();
+    return {
+      right: Math.round(window.innerWidth - mb.right),
+      bottom: Math.round(window.innerHeight - mb.bottom),
+      scrimPastRight: Math.round(sb.right - mb.right),
+      scrimPastBottom: Math.round(sb.bottom - mb.bottom),
+      radius: getComputedStyle(m.querySelector('.modal') ?? m).borderRadius,
+    };
+  });
+  check(`${vw}: flush to the right edge`, flush.right === 0, `${flush.right}px short`);
+  check(`${vw}: flush to the bottom`, flush.bottom === 0, `${flush.bottom}px short`);
+  check(`${vw}: no scrim to the right of it`, flush.scrimPastRight === 0, `${flush.scrimPastRight}px`);
+  check(`${vw}: no scrim below it`, flush.scrimPastBottom === 0, `${flush.scrimPastBottom}px`);
+  check(`${vw}: square corners when solo`, flush.radius === '0px', flush.radius);
+}
+// ...and the dual pair keeps its radius, because those two ARE cards on a page.
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+const dualRadii = await page.evaluate(() =>
+  [...document.querySelectorAll('.stage > * > div')].map((d) => getComputedStyle(d).borderRadius));
+check('dual panels keep the 12px radius',
+  dualRadii.length === 2 && dualRadii.every((r) => r === '12px'), dualRadii.join(', '));
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

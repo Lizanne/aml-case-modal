@@ -30,7 +30,7 @@ import { PillComponent } from './ui-pill.component';
     '[style.width]': 'ws.panelCss()',
   },
   template: `
-    <div class="sg" [class.sg--narrow]="store.layoutNarrow()">
+    <div class="sg" [class.sg--narrow]="store.layoutNarrow()" [class.sg--dual]="ws.visibleCount() === 2">
       <div class="sg__head" data-panel-header tabindex="-1">
         <h2 class="sg__title">Resolve &amp; archive active alert</h2>
         <!-- SG-alert material stays in the primary blue family, never severity. -->
@@ -44,10 +44,8 @@ import { PillComponent } from './ui-pill.component';
         >
           <mat-icon>remove</mat-icon>
         </button>
-        <!-- Chevron on mobile, X on desktop - see the note in case-header. -->
         <button class="sg__btn" type="button" aria-label="Close alert" (click)="ws.close('sg')">
-          <mat-icon class="sg__glyph sg__glyph--x">close</mat-icon>
-          <mat-icon class="sg__glyph sg__glyph--back">arrow_back</mat-icon>
+          <mat-icon>close</mat-icon>
         </button>
       </div>
 
@@ -87,26 +85,27 @@ import { PillComponent } from './ui-pill.component';
         min-height: 0;
         background: var(--panel);
         border: 1px solid var(--line);
-        border-radius: 12px;
+        border-radius: 0;
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
         overflow: hidden;
       }
-      /* A view, not a floating card: square, flat, edge to edge. */
-      .sg__glyph--back {
-        display: none;
+      /**
+       * Square by default; rounded only in the dual state.
+       *
+       * Solo, the panel is flush to the viewport on three sides, and a corner
+       * radius on an edge that has nothing beyond it just cuts a notch out of
+       * the screen. In dual the panels are two cards on a page, so they keep
+       * the 12px.
+       */
+      .sg--dual {
+        border-radius: 12px;
       }
+      /* A view, not a floating card: flat and edge to edge. */
       @media (max-width: 719.98px) {
         .sg {
-          border-radius: 0;
           border-left: 0;
           border-right: 0;
           box-shadow: none;
-        }
-        .sg__glyph--x {
-          display: none;
-        }
-        .sg__glyph--back {
-          display: inline-block;
         }
       }
       .sg__head {
