@@ -167,7 +167,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
                       restyle - the past does not get re-graded. The pill is
                       keyed on the stored string only.
                     -->
-                    <ui-pill [severity]="past.severity">
+                    <ui-pill size="sm" [severity]="past.severity">
                       {{ past.severity }}
                     </ui-pill>
                   </span>

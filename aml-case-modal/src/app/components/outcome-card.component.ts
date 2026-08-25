@@ -96,7 +96,6 @@ import { AttachmentListComponent } from './attachment-list.component';
        * step with the first.
        */
       .card--viewing {
-        border-left: 3px solid var(--primary);
         background: var(--primary-bg);
       }
       /* Pressed, not merely hovered - it stays down while the snapshot is up. */

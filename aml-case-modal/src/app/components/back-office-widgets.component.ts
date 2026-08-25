@@ -46,7 +46,7 @@ import { PillComponent } from './ui-pill.component';
       to. See the note in app.component for the scrim half of the same rule.
     -->
     @if (showRow()) {
-    <div class="widgets" [style.width]="ws.rowCss()">
+    <div class="widgets" [class.widgets--half]="!dual()" [style.width]="ws.rowCss()">
       <!--
         SG belongs to the dual composition only. With no panel open the row is
         the AML card alone, right-docked over where its panel will appear.
@@ -186,6 +186,19 @@ import { PillComponent } from './ui-pill.component';
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         gap: 12px;
         margin-left: auto;
+      }
+      /**
+       * Solo: the card takes half the row, not all of it.
+       *
+       * The ROW keeps the panel's full width and its shared edges - only the
+       * track inside it halves, so the card still starts on the panel's left
+       * edge. Sizing the row instead would have moved that edge and broken the
+       * alignment the panel below depends on.
+       *
+       * Dual is untouched: two cards over two panels, each above its own.
+       */
+      .widgets--half {
+        grid-template-columns: minmax(0, 50%);
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */

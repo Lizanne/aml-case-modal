@@ -128,7 +128,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         min-height: 0;
         background: var(--panel);
         border: 1px solid var(--line);
-        border-radius: 0;
+        border-radius: 12px;
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
         overflow: hidden;
       }
