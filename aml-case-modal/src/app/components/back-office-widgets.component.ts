@@ -593,7 +593,7 @@ export class BackOfficeWidgetsComponent {
       // side by side. Both call lockStatusLine now, so they cannot disagree.
       // The band adds "since {time}" and the unlocked hint on top; the widget
       // takes the bare line, which is the same sentence, shorter.
-      label: lockStatusLine(state, owner),
+      label: lockStatusLine(state, owner, { sinceIso: this.store.lockedSince() ?? undefined }),
       initials: state === 'locked-to-me' ? 'LF' : owner ? initialsOf(owner) : '',
       mine: state === 'locked-to-me',
     };

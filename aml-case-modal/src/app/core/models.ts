@@ -22,18 +22,49 @@ export type LockState = 'unlocked' | 'locked-to-me' | 'locked-to-other';
  * one of them with a full stop. Copy that appears on four surfaces is not four
  * strings.
  */
+/**
+ * A relative age in the widget's own shorthand: 3d, 2mo, 1mo.
+ *
+ * Same vocabulary as the meta lines beside it ("Opened 12d ago", "Last trigger
+ * 1mo ago") so the lock age reads as one more of those rather than a second
+ * time format. Rounded DOWN at every step - a lock 29 days old is "4w" worth of
+ * stale, and calling it "1mo" would overstate it.
+ */
+export function relativeAge(iso: string, now: number = Date.now()): string {
+  const ms = now - Date.parse(iso);
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+  return `${Math.floor(months / 12)}y`;
+}
+
 export function lockStatusLine(
   state: LockState,
   ownerName: string | null | undefined,
-  options: { since?: string; resolved?: boolean } = {},
+  options: { since?: string; sinceIso?: string; resolved?: boolean } = {},
 ): string {
   if (options.resolved) return 'Resolved - read-only';
-  const since = options.since ? ` since ${options.since}` : '';
   switch (state) {
     case 'locked-to-me':
-      return `Locked to you${since}`;
-    case 'locked-to-other':
-      return `Locked to ${ownerName ?? 'another agent'}${since}`;
+      // Your own lock needs no age - you know when you took it. The band still
+      // shows the absolute stamp when it is given one.
+      return `Locked to you${options.since ? ` since ${options.since}` : ''}`;
+    case 'locked-to-other': {
+      /**
+       * The age is REQUIRED information, not decoration: it is how an agent
+       * judges whether someone else's lock is stale enough to take. Computed
+       * here rather than passed in as text, so the widget and the panel band
+       * cannot show two different ages for one lock.
+       */
+      const age = options.sinceIso ? relativeAge(options.sinceIso) : '';
+      return `Locked to ${ownerName ?? 'another agent'}${age ? ` · ${age}` : ''}`;
+    }
     default:
       return 'Not locked';
   }

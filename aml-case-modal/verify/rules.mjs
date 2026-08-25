@@ -384,6 +384,55 @@ check('restoring brings the panel and the row back', await page.evaluate(() =>
   document.querySelectorAll('minimised-bar').length === 0
   && document.querySelectorAll('.w').length === 2));
 
+/**
+ * Someone else's lock carries its age, and the band and the widget carry the
+ * SAME one - compared to each other, not to a literal, because the age moves
+ * with the clock and a hardcoded "13d" would rot overnight.
+ */
+console.log('\nA lock held by someone else shows its age');
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?state=00b`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+if (await page.locator('confirm-unlock-dialog').count()) {
+  await page.locator('confirm-unlock-dialog button:has-text("Cancel")').click();
+  await page.waitForTimeout(350);
+}
+const bandLine = (await page.locator('case-header .head__lock-text').innerText()).trim();
+const AGE = /· \d+(m|h|d|mo|y)$/;
+check('the band names the owner and the age', AGE.test(bandLine) && bandLine.includes('Locked to '), bandLine);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+const widgetLine = (await page.locator('.w__lock').first().innerText()).replace(/\s+/g, ' ').trim();
+check('the widget says the same thing', widgetLine.endsWith(bandLine), `${widgetLine} vs ${bandLine}`);
+
+/**
+ * Force unlock is a two-step: it opens the dialog and never unlocks on its
+ * own, and confirming leaves the case UNLOCKED rather than handing it over.
+ */
+console.log('\nForce unlock confirms first, and does not take the lock');
+await page.goto(`${BASE}/?state=00b`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+if (await page.locator('confirm-unlock-dialog').count()) {
+  await page.locator('confirm-unlock-dialog button:has-text("Cancel")').click();
+  await page.waitForTimeout(350);
+}
+const beforeForce = (await page.locator('case-header .head__lock-text').innerText()).trim();
+await page.locator('case-header .danger-button').click();
+await page.waitForTimeout(400);
+check('it opens the confirm dialog', (await page.locator('confirm-unlock-dialog').count()) === 1);
+check('nothing is unlocked while the dialog is up',
+  (await page.locator('case-header .head__lock-text').innerText()).trim() === beforeForce);
+await page.locator('confirm-unlock-dialog button:has-text("Unlock case")').click();
+await page.waitForTimeout(600);
+check('confirming leaves the case unlocked, not locked to me',
+  (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
+check('and writes the Timeline event naming the previous owner', await (async () => {
+  await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
+  await page.waitForTimeout(300);
+  const rows = await page.locator('player-info-panel .timeline__what').allInnerTexts();
+  return rows.some((t) => t.includes('force-released') && t.includes('M. Torres'));
+})());
+
 console.log(`\nconsole errors: ${errors.length}`);
 errors.slice(0, 5).forEach((e) => console.log(`  ! ${e.slice(0, 200)}`));
 

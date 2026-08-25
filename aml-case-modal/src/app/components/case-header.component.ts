@@ -287,6 +287,9 @@ export class CaseHeaderComponent {
   readonly shortLockLine = computed(() =>
     lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
       resolved: this.store.isResolved(),
+      // The age survives the narrow layout; only the absolute stamp is dropped.
+      // It is the part that decides whether to take the lock.
+      sinceIso: this.store.lockedSince() ?? undefined,
     }),
   );
 
@@ -300,7 +303,12 @@ export class CaseHeaderComponent {
     if (this.store.lockState() === 'unlocked') return NOT_LOCKED_HINT;
     const since = this.store.lockedSince();
     return lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
+      // Both forms handed over: the absolute stamp for your own lock, the raw
+      // ISO for someone else's, where the line carries an age instead. The
+      // helper picks per state, so the band and the widget agree by
+      // construction rather than by two call sites staying in step.
       since: since ? new StampPipe().transform(since) : undefined,
+      sinceIso: since ?? undefined,
     });
   });
 }
