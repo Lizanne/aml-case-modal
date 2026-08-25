@@ -298,14 +298,32 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * ellipsises into whatever that leaves.
        */
       .dock {
+        /* One inset, used four ways: the right offset, the bottom offset, and
+           both halves of the width cap. Changing it at the mobile breakpoint
+           moves all four together, so the bar cannot end up 16px from one edge
+           and 32px from another. */
+        --dock-inset: 32px;
         position: absolute;
-        right: 0;
-        bottom: 16px;
+        right: var(--dock-inset);
+        bottom: var(--dock-inset);
         z-index: 3;
         display: grid;
         gap: 8px;
         width: max-content;
-        max-width: min(400px, 100%);
+        /* Subtracting the inset TWICE is what keeps the far gutter: the bar is
+           right-anchored, so without it a wide bar grows leftward and runs off
+           the left edge instead of shrinking. */
+        max-width: min(400px, calc(100% - var(--dock-inset) * 2));
+      }
+      /**
+       * Grid items get min-width: auto, so a bar whose title is wider than the
+       * cap refuses to shrink and overflows it - the title ran past the edge
+       * and pushed both icon buttons out of the bar entirely. min-width: 0 is
+       * what lets the cap actually bind, and the title's own ellipsis absorbs
+       * the difference.
+       */
+      .dock > * {
+        min-width: 0;
       }
 
 
@@ -384,12 +402,11 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         .page__dev {
           padding: 16px;
         }
-        /* Full width is right on a phone - there is no panel edge to align to
-           that is not also the screen edge. */
+        /* Same shape, tighter gutters. Only the inset changes - the bar still
+           hugs its content and stays right-aligned rather than going full
+           width, so the two sizes are one layout at two scales. */
         .dock {
-          left: 0;
-          width: auto;
-          max-width: none;
+          --dock-inset: 16px;
         }
 
       }
@@ -413,9 +430,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   readonly dockHeight = computed(() => {
     const n = this.ws.minimisedBars().length;
-    // 16 is the dock's bottom offset, doubled so the clearance reads as a gap
-    // above the bar as well as below it.
-    return n === 0 ? 0 : 32 + n * 46 + (n - 1) * 8;
+    // The dock's bottom offset, doubled, so the clearance reads as a gap above
+    // the bar as well as below it. Takes the DESKTOP inset: mobile's is half
+    // that, so this over-reserves there by 32px, which costs a little panel
+    // height and never lets a bar sit on the footer.
+    return n === 0 ? 0 : 64 + n * 46 + (n - 1) * 8;
   });
 
   /**

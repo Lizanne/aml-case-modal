@@ -356,10 +356,14 @@ const minState = await page.evaluate(() => {
     barHasRestore: !!document.querySelector('.bar__icon-btn[aria-label^="Restore"]'),
     barHasClose: !!document.querySelector('.bar__icon-btn[aria-label^="Close"]'),
     barWidth: bar ? Math.round(bar.getBoundingClientRect().width) : null,
-    // Aligned to the panel's right edge, measured against the panel itself.
-    alignedRight: bar && panel
-      ? Math.round(bar.getBoundingClientRect().right - panel.getBoundingClientRect().right) === 0
-      : false,
+    // Inset from the viewport by --dock-inset, on the right and the bottom.
+    // Read from the custom property rather than a literal, so the check moves
+    // with the breakpoint instead of pinning the desktop number.
+    inset: parseFloat(getComputedStyle(document.querySelector('.dock')).getPropertyValue('--dock-inset')),
+    rightGap: Math.round(window.innerWidth - document.querySelector('.dock').getBoundingClientRect().right),
+    bottomGap: Math.round(window.innerHeight - document.querySelector('.dock').getBoundingClientRect().bottom),
+    // Still right-of-centre: the bar hugs the corner rather than spanning.
+    hugsRight: bar ? bar.getBoundingClientRect().left > window.innerWidth / 2 : false,
   };
 });
 check('minimised: the bar exists and carries both controls',
@@ -369,7 +373,10 @@ check('minimised: NO widget row, so no second Close',
   `${minState.widgets} widgets, ${minState.widgetCloses} closes`);
 check('the bar hugs its content, under the 400 cap',
   minState.barWidth > 0 && minState.barWidth <= 400, `${minState.barWidth}px`);
-check('the bar aligns to the panel right edge', minState.alignedRight);
+check('the bar is inset by --dock-inset on both edges',
+  minState.rightGap === minState.inset && minState.bottomGap === minState.inset,
+  `inset ${minState.inset}, right ${minState.rightGap}, bottom ${minState.bottomGap}`);
+check('the bar hugs the right corner', minState.hugsRight);
 
 await page.locator('.bar__icon-btn[aria-label^="Restore"]').click();
 await page.waitForTimeout(700);
