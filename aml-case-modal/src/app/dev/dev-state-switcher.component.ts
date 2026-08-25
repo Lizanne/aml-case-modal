@@ -97,15 +97,31 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
       .dev__label {
         color: rgba(255, 255, 255, 0.62);
       }
+      /**
+       * The chevron is OURS, not the UA's.
+       *
+       * padding-right does not move a native select's arrow: Chrome and Safari
+       * draw it against the BORDER box and ignore the padding entirely, which
+       * is why widening the padding moved the label and left the chevron
+       * exactly where it was. appearance: none drops the UA arrow, and the
+       * background image puts one back at a position we control - "right 16px
+       * center", the same 16px as the left padding.
+       *
+       * padding-right is 16 + 12 + 12: the gutter, the glyph, and a gap so a
+       * long option label cannot run underneath it.
+       */
       .dev__select {
         font: inherit;
-        /* 16px each side. The right value is what the chevron sits on - a
-           native select draws it inside the padding box, so it was 10px from
-           the border and looked pinned to the edge. */
-        padding: 6px 16px;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 6px 40px 6px 16px;
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
-        background: #12161f;
+        background-color: #12161f;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.75 6 6.25 11 1.75' fill='none' stroke='%23e6e9ef' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+        background-size: 12px 8px;
         color: #e6e9ef;
         min-width: 340px;
       }
