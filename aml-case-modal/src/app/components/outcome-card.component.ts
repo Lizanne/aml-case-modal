@@ -32,6 +32,7 @@ import { AttachmentListComponent } from './attachment-list.component';
       class="card"
       [class.card--decision]="outcome.actionType === 'decision'"
       [class.card--narrow]="store.layoutNarrow()"
+      [class.card--viewing]="isViewing()"
     >
       <div class="card__head">
         <h3 class="card__title">{{ outcome.title }}</h3>
@@ -47,9 +48,22 @@ import { AttachmentListComponent } from './attachment-list.component';
           <attachment-list class="card__files" [attachments]="outcome.attachments" [removable]="false" />
         }
         <div class="card__actions">
-          <button mat-stroked-button type="button" (click)="viewSnapshot.emit(outcome)">
+          <!--
+            One control both ways: pressed and reading "Viewing" while this
+            card's snapshot is up, and clicking it again returns to current.
+            aria-pressed carries the state, because a label that changes is
+            not by itself a state a screen reader can report.
+          -->
+          <button
+            mat-stroked-button
+            type="button"
+            class="card__snap"
+            [class.card__snap--on]="isViewing()"
+            [attr.aria-pressed]="isViewing()"
+            (click)="viewSnapshot.emit(outcome)"
+          >
             <mat-icon>history</mat-icon>
-            View snapshot
+            {{ isViewing() ? 'Viewing' : 'View snapshot' }}
           </button>
         </div>
       </footer>
@@ -69,6 +83,27 @@ import { AttachmentListComponent } from './attachment-list.component';
         border-radius: 12px;
         background: var(--panel);
         padding: 16px;
+      }
+      /**
+       * The card whose snapshot the left panel is showing. Persistent, not a
+       * hover: it is the answer to "which of these am I looking at", and it has
+       * to hold while the agent reads the other panel.
+       *
+       * border-left rather than an inset shadow or an outline, so it survives
+       * the card's own border-radius and cannot be clipped by the stream's
+       * overflow. The 3px replaces the 1px, so nothing shifts sideways when it
+       * turns on - a padding compensation would be a second value to keep in
+       * step with the first.
+       */
+      .card--viewing {
+        border-left: 3px solid var(--primary);
+        background: var(--primary-bg);
+      }
+      /* Pressed, not merely hovered - it stays down while the snapshot is up. */
+      .card__snap--on {
+        --mdc-outlined-button-outline-color: var(--primary);
+        --mdc-outlined-button-label-text-color: var(--primary-ink);
+        background: rgba(26, 115, 201, 0.12);
       }
       /**
        * The decision card (state 07). Background, border colour and border
@@ -174,4 +209,16 @@ export class OutcomeCardComponent {
 
   @Input({ required: true }) outcome!: OutcomeItem;
   @Output() viewSnapshot = new EventEmitter<OutcomeItem>();
+
+  /**
+   * Whether THIS card is the one the left panel is showing.
+   *
+   * Derived from the single viewedSnapshot signal rather than held per card,
+   * which is what makes "only one selected at a time" structural: there is one
+   * value, so there is nothing to keep in step. Clearing it - by Back, or by
+   * pressing this button again - deselects everything at once.
+   */
+  isViewing(): boolean {
+    return this.store.viewedSnapshot()?.outcomeId === this.outcome.id;
+  }
 }

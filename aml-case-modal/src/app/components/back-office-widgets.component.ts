@@ -149,7 +149,15 @@ import { PillComponent } from './ui-pill.component';
               }
             }
             @if (ws.isOpen('aml')) {
-              <button class="w__btn" type="button" (click)="ws.close('aml')">Close case</button>
+              <!--
+                Solo: no buttons at all. The panel's own X is the only close
+                control and its header owns the lock, so the widget is
+                identity and status. Dual is the exception - two open panels
+                need two distinct close targets.
+              -->
+              @if (dual()) {
+                <button class="w__btn" type="button" (click)="ws.close('aml')">Close case</button>
+              }
             } @else if (canOpen()) {
               <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
                 <mat-icon aria-hidden="true">open_in_new</mat-icon>
@@ -555,20 +563,14 @@ export class BackOfficeWidgetsComponent {
   readonly dual = computed(() => this.ws.visibleCount() === 2);
 
   /**
-   * The row is present when NOTHING is open, and in the dual state.
+   * Always. The row sits above the panel in every state, sharing its width,
+   * so the case identity stays on screen while the panel is worked in.
    *
-   * "Open" includes minimised. A minimised panel has not gone anywhere - it is
-   * sitting in its dock bar, and that bar is its control surface: the chevron
-   * restores it, the X closes it. A widget offering Close for the same panel
-   * at the same time would be a second control for one thing, and the two
-   * would be in different corners of the screen.
-   *
-   * So this is not visibleCount(): a panel minimised to its bar leaves the
-   * stage but does not bring the row back.
+   * A computed rather than a literal true in the template: the row's presence
+   * has been a rule three times over and will be again, and this is where that
+   * rule belongs when it comes back.
    */
-  readonly showRow = computed(
-    () => this.dual() || !(this.ws.isOpen('sg') || this.ws.isOpen('aml')),
-  );
+  readonly showRow = computed(() => true);
 
   /** "Open" / "In progress" / "Resolved", per the design's meta line. */
   readonly stage = computed(() => {

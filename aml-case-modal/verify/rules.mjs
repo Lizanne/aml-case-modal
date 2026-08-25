@@ -298,38 +298,40 @@ check('resolved: the strip still expands', await (async () => {
 })());
 
 /**
- * A solo panel is flush to the viewport on the right and the bottom, and the
- * scrim never shows past it on either side.
+ * The widget row sits ABOVE the panel and shares its edges, and there is no
+ * scrim in any state.
  *
- * The scrim comparison is the load-bearing one: "flush" measured against
- * innerWidth alone would still pass with a 20px strip of scrim painted over
- * the top of the panel, and that strip is what the gap actually looked like.
- * Square corners go with it - a radius on an edge with nothing beyond it.
+ * Edges compared between the two elements rather than to the viewport: they
+ * are driven from one width string, and the claim is that they agree - which a
+ * pair of viewport measurements would not actually test.
  */
-console.log('\nSolo panel is flush to the viewport');
+console.log('\nWidget row above the panel, sharing its edges, no scrim');
 for (const vw of [1440, 1200]) {
   await page.setViewportSize({ width: vw, height: 900 });
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(450);
-  const flush = await page.evaluate(() => {
-    const m = document.querySelector('.stage > *');
-    const s = document.querySelector('.page__scrim');
-    if (!m || !s) return null;
-    const mb = m.getBoundingClientRect();
-    const sb = s.getBoundingClientRect();
+  const comp = await page.evaluate(() => {
+    const row = document.querySelector('.widgets');
+    const panel = document.querySelector('.stage > *');
+    if (!row || !panel) return null;
+    const r = row.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
     return {
-      right: Math.round(window.innerWidth - mb.right),
-      bottom: Math.round(window.innerHeight - mb.bottom),
-      scrimPastRight: Math.round(sb.right - mb.right),
-      scrimPastBottom: Math.round(sb.bottom - mb.bottom),
-      radius: getComputedStyle(m.querySelector('.modal') ?? m).borderRadius,
+      scrim: !!document.querySelector('.page__scrim'),
+      sameLeft: Math.round(r.left) === Math.round(p.left),
+      sameRight: Math.round(r.right) === Math.round(p.right),
+      rowAbove: Math.round(r.bottom) <= Math.round(p.top),
+      widgetButtons: document.querySelectorAll('.w__btn').length,
     };
   });
-  check(`${vw}: flush to the right edge`, flush.right === 0, `${flush.right}px short`);
-  check(`${vw}: flush to the bottom`, flush.bottom === 0, `${flush.bottom}px short`);
-  check(`${vw}: no scrim to the right of it`, flush.scrimPastRight === 0, `${flush.scrimPastRight}px`);
-  check(`${vw}: no scrim below it`, flush.scrimPastBottom === 0, `${flush.scrimPastBottom}px`);
-  check(`${vw}: square corners when solo`, flush.radius === '0px', flush.radius);
+  check(`${vw}: no scrim anywhere`, comp.scrim === false);
+  check(`${vw}: the row and the panel share both edges`, comp.sameLeft && comp.sameRight,
+    `left ${comp.sameLeft}, right ${comp.sameRight}`);
+  check(`${vw}: the row sits above the panel`, comp.rowAbove);
+  // Solo: the panel header owns the lock and its own X closes it, so the
+  // widget has nothing left to offer.
+  check(`${vw}: no widget buttons while its panel is open`, comp.widgetButtons === 0,
+    `${comp.widgetButtons}`);
 }
 // ...and the dual pair keeps its radius, because those two ARE cards on a page.
 await page.setViewportSize({ width: 1440, height: 900 });
@@ -380,8 +382,12 @@ const minState = await page.evaluate(() => {
 });
 check('minimised: the bar exists and carries both controls',
   minState.bars === 1 && minState.barHasRestore && minState.barHasClose, JSON.stringify(minState));
-check('minimised: NO widget row, so no second Close',
-  minState.widgets === 0 && minState.widgetCloses === 0,
+// The row is present again, so the guarantee moves: the widget for a panel
+// that is OPEN - minimised included - offers no Close, so the bar's is the
+// only one. Two controls for one panel is the thing being prevented, not the
+// row itself.
+check('minimised: the row is there but offers no second Close',
+  minState.widgets > 0 && minState.widgetCloses === 0,
   `${minState.widgets} widgets, ${minState.widgetCloses} closes`);
 check('the bar hugs its content, under the 400 cap',
   minState.barWidth > 0 && minState.barWidth <= 400, `${minState.barWidth}px`);

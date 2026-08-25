@@ -145,13 +145,13 @@ for (const width of MOBILE) {
           document.querySelectorAll('player-info-panel').length,
       };
     }, width);
-    // Full-bleed, not guttered. The panel is a view on mobile now, not a card
-    // floating in the page, so the 16px gutters it used to keep belong to the
-    // widget row - which does not render while a panel is up.
-    check(`${state}: no gutter, edge to edge`, m.left === 0 && m.right === 0,
+    // Back inside the gutters: the widget row renders above the panel again
+    // and the two share their edges, so the panel takes the row's 16px rather
+    // than running to the screen edge on its own.
+    check(`${state}: 16px gutter on both sides`, m.left === GUTTER && m.right === GUTTER,
       `${m.left} / ${m.right}`);
-    check(`${state}: width is the full viewport`, m.width === width,
-      `${m.width} vs ${width}`);
+    check(`${state}: width is the viewport minus both gutters`, m.width === width - GUTTER * 2,
+      `${m.width} vs ${width - GUTTER * 2}`);
     check(`${state}: reflowed to the segmented layout`, m.segmented && m.panels === 1,
       `segmented=${m.segmented} panels=${m.panels}`);
   }

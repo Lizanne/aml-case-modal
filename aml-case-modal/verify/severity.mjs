@@ -231,8 +231,8 @@ check('the timeline entry names the direction', await (async () => {
  * show. Closing first still proves the point that matters: the badge is driven
  * by the store, not by anything the panel was holding open.
  */
-check('the row is hidden while the panel is up',
-  (await page.locator('back-office-widgets .w').count()) === 0);
+check('the row stays above the panel',
+  (await page.locator('back-office-widgets .w').count()) > 0);
 /**
  * The widget's own view of the escalation is checked at the END of this file,
  * with the panel CLOSED.

@@ -616,6 +616,12 @@ export class CaseStore {
   // ---------------------------------------------------------------- snapshots
 
   viewSnapshot(outcome: OutcomeItem): void {
+    // A toggle: pressing the control on the card already being viewed returns
+    // to the current snapshot. Same button, same place, both directions.
+    if (this.viewedSnapshot()?.outcomeId === outcome.id) {
+      this.clearSnapshot();
+      return;
+    }
     this.viewedSnapshot.set({
       outcomeId: outcome.id,
       title: outcome.title,

@@ -93,26 +93,12 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       <div class="shell__main">
         <player-header />
 
-        <main class="page" id="workspace" [class.page--solo]="solo()">
+        <main class="page" id="workspace">
           <!--
-            The scrim belongs to the SOLO composition only. Dual is a working
-            layout - two panels and the row that owns them are all live - so
-            dimming the space between them would be dimming nothing that is out
-            of play. One panel is the case taking over the content area, and
-            the scrim is what says so.
-
-            It is a CHILD of .page, which is already bounded by the player bar
-            above and the nav to the left, so those two are outside it by
-            construction rather than by offsets kept in step with them.
-
-            aria-hidden and no handler: it dims, and that is all it does.
-            Clicking must not close the panel, so there is nothing to click -
-            but it does swallow the click, which is the point.
+            No scrim, in any state. The widget row stays above the panel and
+            the page beneath is simply the page - there is nothing here that
+            the agent is being kept out of, so there is nothing to dim.
           -->
-          @if (solo()) {
-            <div class="page__scrim" aria-hidden="true"></div>
-          }
-
           <back-office-widgets />
 
       <!--
@@ -196,50 +182,6 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         flex-direction: column;
         gap: 16px;
         overflow: hidden;
-      }
-      /**
-       * Stacking, bottom to top: page content, scrim, widget row, panels.
-       *
-       * The widget row sits ABOVE the scrim deliberately - it is the only way
-       * to open the second panel, so dimming it would strand the dual state
-       * behind a sheet of grey. The panels are above both.
-       *
-       * inset: 0 covers .page's padding as well as its content, so the dim
-       * reaches the gutters and there is no bright margin down the right edge.
-       */
-      .page__scrim {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        background: rgba(0, 0, 0, 0.25);
-      }
-      .page > back-office-widgets,
-      .page > .stage {
-        position: relative;
-        z-index: 2;
-      }
-      /**
-       * Solo: the panel takes the content area outright - flush under the
-       * player bar, flush to the bottom and right edges, at its capped width.
-       *
-       * Dropping .page's padding is what does it, rather than negative margins
-       * on the stage: the padding exists to inset the widget row, and in this
-       * composition there is no widget row to inset.
-       */
-      /**
-       * Flush on all four sides: the panel runs from under the player bar to
-       * the viewport bottom, and from its capped left edge to the viewport
-       * right. No scrim shows to its right or below it, because there is
-       * nothing between the panel and those two edges.
-       *
-       * The cost, stated: the widget row that stands in this spot when no
-       * panel is open keeps the content gutters, so it sits 20px inside the
-       * panel's right edge rather than sharing it. Flush beat matching here
-       * because they are never on screen together.
-       */
-      .page--solo {
-        padding: 0;
-        gap: 0;
       }
       .page__dev {
         flex: none;
@@ -390,15 +332,6 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
          * outright. A scrim under an opaque full-screen view is a layer that
          * can only ever be seen if something else is wrong.
          */
-        .page__scrim {
-          display: none;
-        }
-        /* Edge to edge. The 16px gutters are the widget row's; with a panel up
-           there is no row, and the panel is a view. */
-        .page--solo {
-          padding-left: 0;
-          padding-right: 0;
-        }
         .page__dev {
           padding: 16px;
         }
@@ -426,8 +359,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
    * the full-bleed panel read from this one signal, so they can never be half
    * applied.
    */
-  readonly solo = computed(() => this.ws.visibleCount() === 1);
-
   readonly dockHeight = computed(() => {
     const n = this.ws.minimisedBars().length;
     // The dock's bottom offset, doubled, so the clearance reads as a gap above
