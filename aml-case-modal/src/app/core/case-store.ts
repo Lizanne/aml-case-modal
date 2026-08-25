@@ -71,12 +71,32 @@ const OPENING_SEVERITY: Severity = (() => {
 
 const nowIso = () => new Date().toISOString();
 
-function mapAttachment(raw: { name: string; type: string; sizeKb: number }): Attachment {
+/**
+ * The two real files the prototype ships. Every PDF fixture resolves to the
+ * first and every image to the second - DELIBERATELY, not by mistake. The
+ * names and sizes stay per-file, so the list still reads as three separate
+ * attachments; only the bytes behind them are shared.
+ *
+ * Resolved here rather than written into mock-case.json against every entry:
+ * this is the one place raw fixture data becomes an Attachment, so it is the
+ * one place a real upload service would hand back a per-file URL instead.
+ */
+export const SAMPLE_PDF = 'assets/samples/adverse-media-results.pdf';
+export const SAMPLE_IMAGE = 'assets/samples/sanctions-screen.png';
+
+function mapAttachment(raw: {
+  name: string;
+  type: string;
+  sizeKb: number;
+  url?: string;
+}): Attachment {
+  const kind = (raw.type as AttachmentKind) ?? 'other';
   return {
     id: nextId('att'),
     name: raw.name,
-    kind: (raw.type as AttachmentKind) ?? 'other',
+    kind,
     sizeKb: raw.sizeKb,
+    url: raw.url ?? (kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE),
   };
 }
 
@@ -462,7 +482,15 @@ export class CaseStore {
         });
         continue;
       }
-      accepted.push({ id: nextId('att'), name: f.name, kind: f.kind, sizeKb: f.sizeKb });
+      // A file picked in the prototype has no bytes behind it either, so it
+      // resolves to the same two samples as the fixtures do.
+      accepted.push({
+        id: nextId('att'),
+        name: f.name,
+        kind: f.kind,
+        sizeKb: f.sizeKb,
+        url: f.kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE,
+      });
     }
 
     this.draft.set({ ...d, attachments: accepted, errors });

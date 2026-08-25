@@ -1,4 +1,4 @@
-import { CaseStore } from './case-store';
+import { CaseStore, SAMPLE_IMAGE, SAMPLE_PDF } from './case-store';
 import { Attachment, Draft } from './models';
 import { WorkspaceStore } from './workspace-store';
 
@@ -19,7 +19,14 @@ export interface Scenario {
 }
 
 function attachment(name: string, kind: 'pdf' | 'image', sizeKb: number): Attachment {
-  return { id: `seed-${name}`, name, kind, sizeKb };
+  // Same two shared samples as every other attachment - see SAMPLE_PDF.
+  return {
+    id: `seed-${name}`,
+    name,
+    kind,
+    sizeKb,
+    url: kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE,
+  };
 }
 
 /** Locked to me, mid-morning, matching the fixture's lock timestamp. */

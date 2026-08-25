@@ -188,6 +188,16 @@ export interface Attachment {
   name: string;
   kind: AttachmentKind;
   sizeKb: number;
+  /**
+   * What the preview loads.
+   *
+   * DELIBERATE, not a bug: every PDF fixture points at the same sample PDF and
+   * every image fixture at the same sample PNG. The prototype ships two real
+   * assets and reuses them; the names and sizes stay distinct so the list still
+   * reads as separate files, which is what the UI is here to demonstrate.
+   * Anything real would carry a per-file URL from the upload service.
+   */
+  url: string;
 }
 
 /** Rule 5. Per-file inline error. Never removes files that did validate. */
