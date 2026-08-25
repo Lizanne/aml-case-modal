@@ -150,6 +150,12 @@ const TAB_LABEL: Record<InfoTab, string> = {
                   "
                   (click)="store.viewPastCase(past.caseId)"
                 >
+                  <!--
+                    Two lines, same rhythm as the starred rows: a fixed head
+                    that never truncates, then the reason at full width below.
+                    Still ONE button, so hover and focus cover both lines.
+                  -->
+                  <span class="past__head">
                   <span class="past__id">#{{ past.caseId }}</span>
                   <span class="past__sev">
                     <!--
@@ -168,6 +174,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
                   <time class="past__date" [attr.datetime]="past.dateCreated">
                     {{ past.dateCreated | stamp }}
                   </time>
+                  </span>
+                  <span class="past__reason" [title]="past.reason">{{ past.reason }}</span>
                 </button>
               }
             </div>
@@ -190,7 +198,6 @@ const TAB_LABEL: Record<InfoTab, string> = {
               @for (star of store.sortedStarred(); track star.at) {
                 <li class="starred__row">
                   <div class="starred__head">
-                    <ui-pill [severity]="star.tag">{{ star.tag }}</ui-pill>
                     <span class="starred__who">{{ star.who }}</span>
                     <time class="starred__at" [attr.datetime]="star.at">{{ star.at | stamp }}</time>
                   </div>
@@ -456,19 +463,25 @@ const TAB_LABEL: Record<InfoTab, string> = {
         line-height: 20px;
         color: var(--ink-3);
       }
-      /* Past AML cases: 90px ID / severity pill / right-aligned date. */
+      /**
+       * Past AML cases: two lines, on the starred rows' rhythm - 12px/20px
+       * padding, a fixed head line, then muted body text below.
+       *
+       * The subgrid is gone with the fixed height: the row is a column now, so
+       * there are no columns for the parent to hand down, and a height would
+       * cut the second line off.
+       */
       .past {
-        display: grid;
-        grid-template-columns: 90px auto 1fr;
+        display: block;
       }
       .past__row {
-        display: grid;
-        grid-column: 1 / -1;
-        grid-template-columns: subgrid;
-        align-items: center;
-        gap: 0 12px;
-        height: 44px;
-        padding: 0 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: 100%;
+        text-align: left;
+        padding: 12px 20px;
         border: 0;
         border-bottom: 1px solid var(--line);
         background: transparent;
@@ -489,7 +502,15 @@ const TAB_LABEL: Record<InfoTab, string> = {
       .past__row--active {
         background: var(--primary-bg);
       }
+      /* Line one. Nothing here shrinks or truncates; the date holds the right
+         edge with an auto margin, the same guarantee the event row uses. */
+      .past__head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
       .past__id {
+        flex: none;
         font-weight: 600;
         font-size: 14px;
         line-height: 20px;
@@ -497,9 +518,24 @@ const TAB_LABEL: Record<InfoTab, string> = {
       }
       .past__sev {
         display: flex;
+        flex: none;
+      }
+      /* Line two: full width, two lines then ellipsis, full text on title.
+         No height of any kind - the clamp is a maximum, so a short reason
+         renders at one line. */
+      .past__reason {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
         min-width: 0;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--ink-3);
       }
       .past__date {
+        flex: none;
+        margin-left: auto;
         text-align: right;
         white-space: nowrap;
         font-size: 14px;

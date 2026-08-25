@@ -32,10 +32,8 @@ import { PillComponent } from './ui-pill.component';
         reason, and it is on the line below.
       -->
       <div class="row__head">
-        <mat-icon class="row__icon" [class.row__icon--escalation]="event.direction === 'escalation'">
-          {{ event.direction === 'escalation' ? 'arrow_upward' : 'arrow_downward' }}
-        </mat-icon>
-
+        <!-- The direction arrow is gone: the label already says escalation or
+             de-escalation, and the pills say which way. -->
         <span class="row__label">
           {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
         </span>

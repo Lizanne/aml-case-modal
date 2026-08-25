@@ -424,16 +424,22 @@ export class TriggerStripComponent {
   readonly canToggle = computed(() => this.total() > TRIGGER_COLLAPSE_THRESHOLD);
 
   /**
-   * Collapsed shows the two most recent when there is an overflow, or every row
-   * when there is not. Expanded always shows all of them.
+   * Collapsed shows the OLDEST and the NEWEST - the two ends of the history -
+   * rather than the top two of the list. Expanded shows every row, oldest to
+   * newest.
    *
-   * Rule 11: sortedTriggers pins an unresynced arrival first, so it occupies
-   * the top row of the preview and can never be one of the hidden ones.
+   * That pairing is what carries rule 11 now: an unresynced arrival is by
+   * definition the newest, so it is always the second preview row and can
+   * never be one of the hidden ones. Taking the first two instead would bury
+   * it the moment there were three triggers.
    */
   readonly visible = computed(() => {
     const all = this.store.sortedTriggers();
     if (this.store.triggersExpanded() || !this.canToggle()) return all;
-    return all.slice(0, TRIGGER_PREVIEW_ROWS);
+    if (all.length <= TRIGGER_PREVIEW_ROWS) return all;
+    // The two ends. Written for a two-row preview, which is what the constant
+    // is; a wider preview would want the oldest n-1 plus the newest.
+    return [all[0], all[all.length - 1]];
   });
 
   /**

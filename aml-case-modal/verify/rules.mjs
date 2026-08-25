@@ -114,19 +114,31 @@ await page.locator('dev-state-switcher button:has-text("New trigger")').click();
 await page.waitForTimeout(250);
 check('snapshot flagged out of sync', (await page.locator('workflow-panel .resync').count()) === 1);
 check('recording blocked', await page.locator('action-placeholder button').first().isDisabled());
-// The arrival occupies the top row in BOTH modes - it is sorted first, so the
-// collapsed two-row preview always contains it. It is never hidden behind the
-// overflow badge.
+/**
+ * Rule 11's guarantee survives the reordering, by a different route: the list
+ * is oldest-first, so the arrival is the NEWEST and therefore the last row -
+ * and the collapsed preview takes the two ENDS of the history rather than the
+ * top two, which is what keeps it on screen.
+ */
 check('collapsed: the count chip carries the arrival',
   (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 1);
-check('collapsed: the arrival is the top preview row',
-  (await page.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'));
+check('collapsed: the arrival is the last preview row',
+  (await page.locator('trigger-strip .trigger').last().getAttribute('class')).includes('trigger--new'));
 check('collapsed: it is inside the preview, not behind the badge',
   (await page.locator('trigger-strip .trigger--new').count()) === 1);
+// The preview is the two ends, so it must NOT be two adjacent rows.
+check('collapsed: the preview spans the whole history', await page.evaluate(() => {
+  const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
+  return at.length === 2 && at[0] < at[1];
+}));
 await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
-check('expanded: still pinned top with the NEW marker',
-  (await page.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'));
+check('expanded: oldest first, arrival last', await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('trigger-strip .trigger')];
+  const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
+  const ascending = at.every((v, i) => i === 0 || at[i - 1] <= v);
+  return ascending && rows[rows.length - 1].className.includes('trigger--new');
+}));
 await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
 

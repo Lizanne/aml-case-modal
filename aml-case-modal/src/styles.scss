@@ -56,16 +56,23 @@
   --link: #1D4ED8;
   --link-hover: #1E40AF;
 
-  /* Severity language. Used ONLY for severity. */
-  --sev-aml: #7F1D1D;
-  --sev-aml-bg: #FEF2F2;
   /**
-   * EDD was #B06A00, which is only 3.83:1 on its own tint - under AA for the
-   * 12px pill text it is used for. Darkened to the same hue at 5.66:1.
-   * Doubles as the warn tone below, so the two stay one colour.
+   * Severity language. Used ONLY for severity.
+   *
+   * AML and EDD are SWAPPED relative to their earlier assignment: AML now
+   * carries the amber pair and EDD the red one. Swapped at the token values
+   * rather than in each selector, so every consumer - pills, the widget type
+   * tiles and their glyphs, the event row - moves together and there is no
+   * place left holding the old pairing.
+   *
+   * Both were already checked for contrast at 12px: amber #78350F on #FEF3C7
+   * is 5.66:1, red #7F1D1D on #FEF2F2 is 8.6:1. Swapping the pairs keeps each
+   * foreground on its own background, so neither number changes.
    */
-  --sev-edd: #78350F;
-  --sev-edd-bg: #FEF3C7;
+  --sev-aml: #78350F;
+  --sev-aml-bg: #FEF3C7;
+  --sev-edd: #7F1D1D;
+  --sev-edd-bg: #FEF2F2;
   --sev-compliance: #270A6B;
   --sev-compliance-bg: #EBE8FF;
 

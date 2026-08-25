@@ -251,12 +251,19 @@ export class CaseStore {
    * with an offset like +01:00, and array order would mis-sort the moment the
    * mock data was edited.
    */
-  readonly sortedTriggers = computed<Trigger[]>(() => {
-    const byTime = [...this.triggers()].sort(
-      (a, b) => Date.parse(b.at) - Date.parse(a.at),
-    );
-    return [...byTime.filter((t) => t.isNew), ...byTime.filter((t) => !t.isNew)];
-  });
+  /**
+   * OLDEST first - the order the triggers actually happened in, so the list
+   * reads as a history and the newest arrival is at the bottom.
+   *
+   * The isNew pin is gone with it. It existed to keep an unresynced arrival
+   * inside the two-row collapsed preview; that guarantee now lives in the
+   * preview itself, which takes the oldest AND the newest rather than the top
+   * two. Pinning here as well would have put the newest first, which is the
+   * one thing this ordering is meant to stop.
+   */
+  readonly sortedTriggers = computed<Trigger[]>(() =>
+    [...this.triggers()].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
+  );
 
   /**
    * Starred commentaries, newest first.

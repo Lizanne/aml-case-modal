@@ -244,6 +244,8 @@ export interface PastCase {
   caseId: string;
   status: CaseStatus;
   severity: Severity;
+  /** Why the case was raised. The row's second line. */
+  reason: string;
   dateCreated: string;
 }
 

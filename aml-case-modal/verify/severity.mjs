@@ -49,30 +49,30 @@ const token = async (name) =>
     probe.remove();
     return c;
   }, name);
-let AML_RED, EDD_AMBER, WARN;
+let AML_TONE, EDD_TONE, WARN;
 
 await go('01');
-AML_RED = await token('--sev-aml');
-EDD_AMBER = await token('--sev-edd');
+AML_TONE = await token('--sev-aml');
+EDD_TONE = await token('--sev-edd');
 WARN = await token('--warn');
-console.log(`tokens: --sev-aml ${AML_RED}  --sev-edd ${EDD_AMBER}  --warn ${WARN}`);
+console.log(`tokens: --sev-aml ${AML_TONE}  --sev-edd ${EDD_TONE}  --warn ${WARN}`);
 
-console.log('\nPre-escalation states: the case opens at AML, red');
+console.log('\nPre-escalation states: the case opens at AML');
 for (const state of ['00a', '01', '02', '10', '09']) {
   await go(state);
   const text = (await headerPill().innerText()).trim();
   const colour = await rgb(await headerPill().elementHandle());
   check(`${state}: header pill reads AML`, text === 'AML', text);
-  check(`${state}: header pill is AML red`, colour === AML_RED, colour);
+  check(`${state}: header pill is the AML tone`, colour === AML_TONE, colour);
 }
 
-console.log('\nPost-escalation states: EDD, amber');
+console.log('\nPost-escalation states: EDD');
 for (const state of ['03', '07']) {
   await go(state);
   const text = (await headerPill().innerText()).trim();
   const colour = await rgb(await headerPill().elementHandle());
   check(`${state}: header pill reads EDD`, text === 'EDD', text);
-  check(`${state}: header pill is EDD amber`, colour === EDD_AMBER, colour);
+  check(`${state}: header pill is the EDD tone`, colour === EDD_TONE, colour);
 }
 
 console.log('\nThe severity event in the stream reads AML -> EDD, escalation');
@@ -82,15 +82,19 @@ check('event pills are AML then EDD', eventPills.map((t) => t.trim()).join('->')
   eventPills.join('->'));
 check('the row calls it an escalation',
   (await page.locator('event-row .row').innerText()).includes('Severity escalation'));
-check('the arrow points up',
-  (await page.locator('event-row .row .row__icon').innerText()).trim() === 'arrow_upward');
-// PROTOTYPE.md: an escalation arrow is in the warn colour. Only escalation.
-check('the escalation arrow is the warn tone',
-  (await page.evaluate(() =>
-    getComputedStyle(document.querySelector('event-row .row__icon')).color)) === WARN);
+/**
+ * The direction arrow is gone. PROTOTYPE.md gave it a warn tone on escalation;
+ * the label and the two pills carry the direction now, so there is nothing
+ * left for a third signal to add. What matters is that the ONLY icon left is
+ * the between-pills arrow.
+ */
+check('no direction arrow, only the between-pills one', await page.evaluate(() => {
+  const icons = [...document.querySelectorAll('event-row mat-icon')].map((i) => i.textContent.trim());
+  return icons.length === 1 && icons[0] === 'arrow_forward';
+}));
 // Primary ink, per 22319:5225 - the label is the row's heading now that the
 // row is a card, and --ink-2 made it read as secondary to its own reason line.
-// The arrow above keeps the warn tone; that is still the only coloured part.
+// The pills are the only coloured parts now.
 check('the label is primary ink',
   (await page.evaluate(() =>
     getComputedStyle(document.querySelector('event-row .row__label')).color)) === (await token('--ink')));
@@ -129,7 +133,7 @@ await page.waitForTimeout(200);
 await page.locator('severity-dialog button:has-text("Save severity")').click();
 await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
-check('header pill is now amber', (await rgb(await headerPill().elementHandle())) === EDD_AMBER);
+check('header pill is now the EDD tone', (await rgb(await headerPill().elementHandle())) === EDD_TONE);
 check('a new event row says escalation',
   (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
 
@@ -189,8 +193,9 @@ for (const [label, w] of [['1440', 1440], ['narrow panel', 900]]) {
     short.borderW === '0px' && short.bg === 'rgba(0, 0, 0, 0)', `${short.borderW} ${short.bg}`);
   check(`${label}: both severity pills are sm`,
     short.pillSizes.length === 2 && short.pillSizes.every((s) => s === 'sm'), short.pillSizes.join(','));
-  check(`${label}: both arrows are 16px`,
-    short.iconSizes.length === 2 && short.iconSizes.every((s) => s === '16px'), short.iconSizes.join(','));
+  // One arrow now, between the pills - the direction arrow is gone.
+  check(`${label}: the only arrow is 16px`,
+    short.iconSizes.length === 1 && short.iconSizes[0] === '16px', short.iconSizes.join(','));
   // Hugging, not reserving: one line for a short reason, two for a long one.
   check(`${label}: a short reason is one line`, short.reasonLines === 1, `${short.reasonLines}`);
   check(`${label}: a long reason clamps at two`, long.reasonLines === 2 && long.reasonClamped,
@@ -433,8 +438,8 @@ check(`its label clears AA on that fill (${action.label}:1, needs 4.5)`, action.
 
 // ------------------------------------------------------------- past AML cases
 SEV_TOKEN = {
-  AML: AML_RED,
-  EDD: EDD_AMBER,
+  AML: AML_TONE,
+  EDD: EDD_TONE,
   COMPLIANCE: await token('--sev-compliance'),
 };
 console.log('\nPast AML cases: three shared columns, and severity frozen at resolution');
@@ -535,17 +540,41 @@ await page.waitForTimeout(400);
 
 check('one row per past case', past.length === FIXTURE.pastCases.length);
 check('rows are real buttons', past.every((r) => r.tag === 'button'));
-check('every row is a single line of equal height',
-  new Set(past.map((r) => r.height)).size === 1);
-check('all rows share the ID column', new Set(past.map((r) => r.idLeft)).size === 1);
-check('all rows share the severity column', new Set(past.map((r) => r.sevLeft)).size === 1);
-check('all dates end on the same right edge', new Set(past.map((r) => r.dateRight)).size === 1);
-check('the ID column is declared at 90px', track.declared === 90, `${track.declared}px`);
-const expectedId = Math.round(track.declared - track.padLeft - track.gap / 2);
-check('every ID cell renders that track less the row inset',
-  past.every((r) => Math.abs(r.idWidth - expectedId) <= 1),
-  `${past.map((r) => r.idWidth).join(',')} vs ${expectedId} ` +
-    `(90 - ${track.padLeft} padding - ${track.gap / 2} half-gap)`);
+/**
+ * Two lines now, so the equal-height and shared-column checks are gone with
+ * the subgrid: rows are DIFFERENT heights by design, because the second line
+ * is a reason that clamps at two. What replaces them is the head-line
+ * contract - ID left, date flush right, neither truncating - plus the clamp.
+ */
+const twoLine = await page.evaluate(() => [...document.querySelectorAll('.past__row')].map((r) => {
+  const head = r.querySelector('.past__head');
+  const reason = r.querySelector('.past__reason');
+  const date = r.querySelector('.past__date');
+  const id = r.querySelector('.past__id');
+  return {
+    nestedButtons: r.querySelectorAll('button').length,
+    dateFlushRight: Math.round(head.getBoundingClientRect().right - date.getBoundingClientRect().right) === 0,
+    headOverflows: head.scrollWidth - head.clientWidth > 1,
+    idTruncated: id.scrollWidth - id.clientWidth > 1,
+    reasonLines: Math.round(reason.getBoundingClientRect().height / 20),
+    hasTitle: !!reason.getAttribute('title'),
+    // Same rhythm as the starred rows: 12px/20px.
+    pad: getComputedStyle(r).padding,
+    starredPad: getComputedStyle(document.querySelector('.starred__row') ?? r).padding,
+  };
+}));
+check('the row is still ONE button, nothing nested inside it',
+  twoLine.every((r) => r.nestedButtons === 0));
+check('line one: the date is flush right and nothing truncates',
+  twoLine.every((r) => r.dateFlushRight && !r.headOverflows && !r.idTruncated));
+check('line two: at most two lines, full text on title',
+  twoLine.every((r) => r.reasonLines >= 1 && r.reasonLines <= 2 && r.hasTitle),
+  twoLine.map((r) => r.reasonLines).join(','));
+check('rows carry the 12px/20px rhythm',
+  twoLine.every((r) => r.pad === '12px 20px'), twoLine.map((r) => r.pad).join(' | '));
+check('a long reason clamps and a short one does not',
+  new Set(twoLine.map((r) => r.reasonLines)).size === 2,
+  twoLine.map((r) => r.reasonLines).join(','));
 check('IDs render as #NNNN at weight 600',
   past.every((r, i) => r.idText === `#${FIXTURE.pastCases[i].caseId}` && r.idWeight === '600'));
 check('dates are right-aligned and never wrap',

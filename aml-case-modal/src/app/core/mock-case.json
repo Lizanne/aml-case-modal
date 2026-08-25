@@ -303,12 +303,14 @@
       "caseId": "3310",
       "status": "RESOLVED",
       "severity": "COMPLIANCE",
+      "reason": "£30,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
       "dateCreated": "2025-11-02T10:00:00Z"
     },
     {
       "caseId": "2984",
       "status": "RESOLVED",
       "severity": "EDD",
+      "reason": "£30,000 Lifetime Net Loss Checkpoint.",
       "dateCreated": "2025-06-18T14:30:00Z"
     }
   ],
