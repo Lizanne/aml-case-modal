@@ -199,6 +199,11 @@ import { PillComponent } from './ui-pill.component';
        */
       .widgets--half {
         grid-template-columns: minmax(0, 50%);
+        /* The spare half goes on the LEFT, so the card's right edge meets the
+           panel's right edge rather than its left one. justify-content moves
+           the track within the row; the row itself still spans the panel, so
+           the shared edge is preserved - it is just the other side now. */
+        justify-content: end;
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */
