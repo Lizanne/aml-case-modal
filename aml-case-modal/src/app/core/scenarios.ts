@@ -1,4 +1,4 @@
-import { CaseStore, SAMPLE_IMAGE, SAMPLE_PDF } from './case-store';
+import { CaseStore, sampleUrlFor } from './case-store';
 import { Attachment, Draft } from './models';
 import { WorkspaceStore } from './workspace-store';
 
@@ -19,13 +19,16 @@ export interface Scenario {
 }
 
 function attachment(name: string, kind: 'pdf' | 'image', sizeKb: number): Attachment {
-  // Same two shared samples as every other attachment - see SAMPLE_PDF.
+  // Resolved by name, through the same function mapAttachment and addFiles
+  // use - a seeded chip and a fixture chip of the same filename must open the
+  // same document, or the dev harness would be demonstrating something the
+  // app does not do.
   return {
     id: `seed-${name}`,
     name,
     kind,
     sizeKb,
-    url: kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE,
+    url: sampleUrlFor(name, kind),
   };
 }
 

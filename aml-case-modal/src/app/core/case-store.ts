@@ -72,17 +72,51 @@ const OPENING_SEVERITY: Severity = (() => {
 const nowIso = () => new Date().toISOString();
 
 /**
- * The two real files the prototype ships. Every PDF fixture resolves to the
- * first and every image to the second - DELIBERATELY, not by mistake. The
- * names and sizes stay per-file, so the list still reads as three separate
- * attachments; only the bytes behind them are shared.
+ * The fallback pair, for attachments the prototype ships no document for.
+ *
+ * Named fixtures do NOT use these - see SAMPLE_BY_NAME below. These are what a
+ * file picked in the prototype resolves to, because a file picked here has no
+ * bytes behind it: the picker hands over a name and a size, and the File
+ * itself is dropped before it reaches the store.
+ */
+export const SAMPLE_PDF = 'assets/samples/adverse-media-results.pdf';
+export const SAMPLE_IMAGE = 'assets/samples/sanctions-screen.png';
+
+/**
+ * Each named fixture, mapped to its OWN document.
+ *
+ * These all used to point at the two files above. That was invisible until the
+ * preview opened them, and then it was not: our header names the attachment
+ * that was clicked, while the browser's PDF toolbar names the file actually
+ * loaded, so a preview of call-log-2026-08-11.pdf was captioned
+ * "call-log-2026-08-11.pdf" above a viewer reading "adverse-media-results.pdf".
+ *
+ * Copying the same bytes under each name would have quietened the toolbar and
+ * left the same contradiction inside the document, whose own footer says which
+ * file it is. So each fixture has its own document, written by
+ * tools/make-sample-pdfs.py.
  *
  * Resolved here rather than written into mock-case.json against every entry:
  * this is the one place raw fixture data becomes an Attachment, so it is the
  * one place a real upload service would hand back a per-file URL instead.
  */
-export const SAMPLE_PDF = 'assets/samples/adverse-media-results.pdf';
-export const SAMPLE_IMAGE = 'assets/samples/sanctions-screen.png';
+const SAMPLE_BY_NAME: Readonly<Record<string, string>> = {
+  'adverse-media-results.pdf': 'assets/samples/adverse-media-results.pdf',
+  'call-log-2026-08-11.pdf': 'assets/samples/call-log-2026-08-11.pdf',
+  'companies-house-extract.pdf': 'assets/samples/companies-house-extract.pdf',
+  'sanctions-screen.png': 'assets/samples/sanctions-screen.png',
+};
+
+/**
+ * The document for an attachment, by its own filename.
+ *
+ * Exported because three construction sites need the same answer - mapAttachment
+ * here, addFiles below, and the attachment() seed helper in scenarios.ts - and
+ * a preview is only honest if all three resolve identically.
+ */
+export function sampleUrlFor(name: string, kind: AttachmentKind): string {
+  return SAMPLE_BY_NAME[name] ?? (kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE);
+}
 
 function mapAttachment(raw: {
   name: string;
@@ -96,7 +130,7 @@ function mapAttachment(raw: {
     name: raw.name,
     kind,
     sizeKb: raw.sizeKb,
-    url: raw.url ?? (kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE),
+    url: raw.url ?? sampleUrlFor(raw.name, kind),
   };
 }
 
@@ -482,14 +516,18 @@ export class CaseStore {
         });
         continue;
       }
-      // A file picked in the prototype has no bytes behind it either, so it
-      // resolves to the same two samples as the fixtures do.
+      // A file picked in the prototype has no bytes behind it - the picker
+      // drops the File and keeps the name and size - so unless the name
+      // happens to match a fixture it falls back to the shared sample. That
+      // fallback is the one case where the preview header and the browser's
+      // PDF toolbar can still disagree, and it cannot be fixed from here: no
+      // asset can exist for a filename chosen at run time.
       accepted.push({
         id: nextId('att'),
         name: f.name,
         kind: f.kind,
         sizeKb: f.sizeKb,
-        url: f.kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE,
+        url: sampleUrlFor(f.name, f.kind),
       });
     }
 

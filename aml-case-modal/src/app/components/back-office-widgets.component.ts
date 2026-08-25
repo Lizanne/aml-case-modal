@@ -25,9 +25,19 @@ import { PillComponent } from './ui-pill.component';
  * because it was smaller than a pill; ui-pill has a size for that now, so it is
  * the shared component at size sm and the dot is gone.
  *
- * The lock rule from the previous pass still holds: while a panel is open its
- * header owns the lock, so the widget's lock control goes and the primary
- * becomes Close.
+ * WHILE A PANEL IS OPEN ITS WIDGET HAS NO ACTIONS AT ALL. Not fewer actions,
+ * none - in every state, dual included. An open panel owns its own controls:
+ * its header holds the lock and its own X closes it, so anything the widget
+ * offered would be a second control for a job already spoken for, sitting
+ * further from the thing it acts on.
+ *
+ * Dual used to be the exception, on the argument that two open panels need two
+ * distinct close targets. They have two: each panel's own X, which is where a
+ * user looks for it and which cannot be ambiguous about which panel it closes.
+ * The exception bought nothing and cost the rule.
+ *
+ * So the widget is identity and lock status while a panel is up, and gains its
+ * buttons back only when the panel is closed.
  */
 @Component({
   selector: 'back-office-widgets',
@@ -66,32 +76,16 @@ import { PillComponent } from './ui-pill.component';
             </div>
             <div class="w__meta-group">
               <p class="w__meta">12 snoozed · Last trigger 1mo ago</p>
-              <!-- Lock status: an inline icon and a line of text, under the
-                   meta, in the content column. No pill, no avatar. Absent
-                   entirely when there is no holder. -->
-              <span class="w__lock w__lock--mine">
-                <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
-                Locked to you
-              </span>
             </div>
           </div>
 
           <!--
-            Open, its panel owns everything; closed, the widget does. Close is
-            the exception the dual state earns: two open panels need two
-            distinct close targets.
+            No lock line and no actions, and no branch that could produce
+            either. This card renders only in dual, and dual means both panels
+            are visible - so the SG panel is open whenever this is on screen,
+            and an open panel is the single source for its own lock state and
+            its own controls. Identity only: icon, name, count, meta.
           -->
-          <div class="w__actions">
-            @if (ws.isOpen('sg')) {
-              <button class="w__btn" type="button" (click)="ws.close('sg')">Close alert</button>
-            } @else {
-              <button class="w__btn w__btn--compact" type="button">Unlock</button>
-              <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
-                <mat-icon aria-hidden="true">done</mat-icon>
-                Resolve and archive
-              </button>
-            }
-          </div>
         </div>
       </article>
       }
@@ -110,61 +104,71 @@ import { PillComponent } from './ui-pill.component';
             </div>
             <div class="w__meta-group">
               <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
-              @if (lockChip(); as chip) {
-                <span class="w__lock" [class.w__lock--mine]="chip.mine">
-                  <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
-                  {{ chip.label }}
-                </span>
+              <!--
+                Lock status belongs to the CLOSED widget only. While the panel
+                is open its header is the single source for lock state, and a
+                second reading of the same lock a few hundred pixels above it
+                is a thing that can be stale, contradict the header, or simply
+                be read instead of it. One statement of the lock, in the place
+                that also owns the controls for it.
+              -->
+              @if (!ws.isOpen('aml')) {
+                @if (lockChip(); as chip) {
+                  <span class="w__lock" [class.w__lock--mine]="chip.mine">
+                    <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
+                    {{ chip.label }}
+                  </span>
+                }
               }
             </div>
           </div>
 
           <!--
-            Rule 4. While the panel is open it owns both jobs: its header holds
-            the lock controls and its own X closes it, so the widget is
-            identity and status only. The dual state is the single exception,
-            and it earns exactly one button.
+            Rule 4, with the dual exception withdrawn. ONE condition wraps
+            every action: the panel is closed. Nested conditions inside it
+            choose between them, but none of them can put a button on screen
+            while the panel is up, which is the property that kept getting
+            lost when the rule was spread across two sibling blocks.
+
+            The condition is OUTSIDE the container, not inside it. .w__inner is
+            a flex row with an 8px gap - 10px and a column on mobile - so an
+            empty .w__actions would still claim its gap and leave the card
+            padded on the right for buttons that are not there.
           -->
-          <div class="w__actions">
-            @if (!ws.isOpen('aml') && !store.isResolved()) {
-              @switch (store.lockState()) {
-                @case ('locked-to-me') {
-                  <button class="w__btn w__btn--compact" type="button" (click)="store.requestUnlock()">
-                    Unlock
-                  </button>
-                }
-                @case ('locked-to-other') {
-                  <button class="w__btn w__btn--danger" type="button" (click)="store.requestUnlock()">
-                    <mat-icon aria-hidden="true">lock</mat-icon>
-                    Force unlock
-                  </button>
-                }
-                @default {
-                  <!-- Primary, matching the panel's "Lock to me": taking the
-                       lock is the only thing you can do from here. -->
-                  <button class="w__btn w__btn--primary" type="button" (click)="store.lock()">
-                    Lock
-                  </button>
+          @if (!ws.isOpen('aml')) {
+            <div class="w__actions">
+              @if (!store.isResolved()) {
+                @switch (store.lockState()) {
+                  @case ('locked-to-me') {
+                    <button class="w__btn w__btn--compact" type="button" (click)="store.requestUnlock()">
+                      Unlock
+                    </button>
+                  }
+                  @case ('locked-to-other') {
+                    <button class="w__btn w__btn--danger" type="button" (click)="store.requestUnlock()">
+                      <mat-icon aria-hidden="true">lock</mat-icon>
+                      Force unlock
+                    </button>
+                  }
+                  @default {
+                    <!-- "Lock case", not "Lock": the widget names its object,
+                         the way Open case does beside it. The panel band can
+                         say "Lock to me" because the case it means is the one
+                         it is the header of. -->
+                    <button class="w__btn w__btn--primary" type="button" (click)="store.lock()">
+                      Lock case
+                    </button>
+                  }
                 }
               }
-            }
-            @if (ws.isOpen('aml')) {
-              <!--
-                Solo: no buttons at all. The panel's own X is the only close
-                control and its header owns the lock, so the widget is
-                identity and status. Dual is the exception - two open panels
-                need two distinct close targets.
-              -->
-              @if (dual()) {
-                <button class="w__btn" type="button" (click)="ws.close('aml')">Close case</button>
+              @if (canOpen()) {
+                <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
+                  <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                  Open case
+                </button>
               }
-            } @else if (canOpen()) {
-              <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
-                <mat-icon aria-hidden="true">open_in_new</mat-icon>
-                Open case
-              </button>
-            }
-          </div>
+            </div>
+          }
         </div>
       </article>
     </div>
@@ -460,7 +464,35 @@ import { PillComponent } from './ui-pill.component';
       .w__btn--primary:hover {
         background: var(--primary-ink);
       }
+      /**
+       * Force unlock, demoted at rest.
+       *
+       * A case locked to another agent is a NORMAL state, not an error. Red
+       * text sitting permanently in the widget row said otherwise every time
+       * the row was looked at, and a warning that is always on is a warning
+       * nobody reads. So the danger treatment moves to the point of intent:
+       * quiet grey until you reach for it, danger the moment you do.
+       *
+       * Demoted, not hidden. It stays a visible button in the row rather than
+       * moving into an overflow menu - breaking someone else's lock should be
+       * a considered act, and a considered act you cannot find is not safer,
+       * only slower.
+       *
+       * border-color transparent rather than removing the border outright:
+       * .w__btn's 32px height sits on a 1px border, so dropping it would
+       * leave this button 2px shorter than Lock and Open case beside it.
+       */
       .w__btn--danger {
+        border-color: transparent;
+        background: var(--colors-background-background-tertiary, #f4f4f5);
+        color: var(--ink);
+      }
+      /* One rule for both, deliberately: the button must read the same to a
+         pointer and to a keyboard, and the focus ring is what the keyboard
+         gets on top rather than instead. */
+      .w__btn--danger:hover,
+      .w__btn--danger:focus-visible {
+        background: var(--danger-bg);
         color: var(--danger);
       }
       .w__btn mat-icon {

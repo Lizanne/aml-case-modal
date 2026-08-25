@@ -89,13 +89,18 @@ import { AttachmentListComponent } from './attachment-list.component';
        * hover: it is the answer to "which of these am I looking at", and it has
        * to hold while the agent reads the other panel.
        *
-       * border-left rather than an inset shadow or an outline, so it survives
-       * the card's own border-radius and cannot be clipped by the stream's
-       * overflow. The 3px replaces the 1px, so nothing shifts sideways when it
-       * turns on - a padding compensation would be a second value to keep in
-       * step with the first.
+       * The tint carries it alone - no border, and no left accent either. The
+       * selected card is the only tinted thing in the stream, so an outline
+       * around it is a second marker for a state that is already unambiguous,
+       * and it fought the tint at the corners.
+       *
+       * border-color: transparent, not border: 0. The card is border-box with
+       * 16px of padding, so dropping the border outright would hand its
+       * content 2px more width than every unselected card beside it and shift
+       * the text as selection moved down the stream.
        */
       .card--viewing {
+        border-color: transparent;
         background: var(--primary-bg);
       }
       /* Pressed, not merely hovered - it stays down while the snapshot is up. */

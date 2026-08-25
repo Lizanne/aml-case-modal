@@ -161,7 +161,10 @@ import { PillComponent } from './ui-pill.component';
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 16px;
+        /* 20px at the sides, 16px top and bottom. The side gutter is the one
+           the eye measures the column against; the vertical one is spacing
+           between stacked blocks and reads correctly tighter. */
+        padding: 16px 20px;
       }
       .sg__note {
         padding: 12px;

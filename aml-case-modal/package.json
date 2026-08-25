@@ -9,12 +9,16 @@
     "test": "ng test",
     "verify:states": "node verify/states.mjs",
     "verify:rules": "node verify/rules.mjs",
-    "verify": "npm run verify:states && npm run verify:rules && npm run verify:layout && npm run verify:dual && npm run verify:severity && npm run verify:a11y && npm run verify:mobile",
+    "verify": "npm run verify:states && npm run verify:rules && npm run verify:preview && npm run verify:force-unlock && npm run verify:widget-actions && npm run verify:layout && npm run verify:dual && npm run verify:severity && npm run verify:a11y && npm run verify:mobile",
     "verify:layout": "node verify/layout.mjs",
     "verify:dual": "node verify/dual.mjs",
     "verify:severity": "node verify/severity.mjs",
     "verify:a11y": "node verify/a11y.mjs",
-    "verify:mobile": "node verify/mobile.mjs"
+    "verify:mobile": "node verify/mobile.mjs",
+    "verify:preview": "node verify/preview.mjs",
+    "verify:preview-pdf": "node verify/preview-pdf.mjs",
+    "verify:force-unlock": "node verify/force-unlock.mjs",
+    "verify:widget-actions": "node verify/widget-actions.mjs"
   },
   "private": true,
   "dependencies": {

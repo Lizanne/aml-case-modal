@@ -3,7 +3,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
-import { lockStatusLine } from '../core/models';
 import { StampPipe } from '../core/format';
 import { DialogShellComponent } from './dialog-shell.component';
 
@@ -20,21 +19,28 @@ import { DialogShellComponent } from './dialog-shell.component';
   imports: [MatButtonModule, MatIconModule, DialogShellComponent, StampPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog-shell heading="Force unlock this case?" initialFocus=".panel__foot button" (dismiss)="close()">
-      <!-- Same sentence as the panel band and the widget, so the dialog does
-           not restate the lock in a third form. -->
-      <p class="lead">{{ lockLine() }}.</p>
+    <!-- Focus lands on Cancel, not the confirm: the action is destructive and
+         irreversible for the other agent, so the safe way out is what a
+         keyboard user gets first. Named by class rather than by "the first
+         button in the footer", which would silently follow a reorder. -->
+    <dialog-shell heading="Force unlock this case?" initialFocus=".cancel" (dismiss)="close()">
+      <!--
+        Names the owner and when they took it, then says what breaking it
+        costs THEM. "may be mid investigation" is the point of the sentence:
+        the lock is not an obstacle, it is a colleague working.
+      -->
+      <p class="lead">
+        <strong>{{ owner() }}</strong> has held the lock since {{ since() }} and may be mid
+        investigation.
+      </p>
 
       <p class="danger-note">
         <mat-icon fontSet="material-icons-outlined">warning_amber</mat-icon>
-        <span>
-          Unlocking takes the case from {{ owner() }}. Anything they have typed and not saved is
-          lost. The unlock is recorded against your name in the case timeline.
-        </span>
+        <span>Unlocking removes their lock and interrupts any action they're recording.</span>
       </p>
 
       <ng-container dialogActions>
-        <button mat-button type="button" (click)="close()">Cancel</button>
+        <button mat-button class="cancel" type="button" (click)="close()">Cancel</button>
         <button mat-flat-button class="danger-button-filled" type="button" (click)="confirm()">
           Unlock case
         </button>
@@ -75,20 +81,23 @@ import { DialogShellComponent } from './dialog-shell.component';
   ],
 })
 export class ConfirmUnlockDialogComponent {
-  readonly lockLine = computed(() =>
-    lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
-      since: this.store.lockedSince()
-        ? new StampPipe().transform(this.store.lockedSince())
-        : undefined,
-    }),
-  );
-
   readonly store = inject(CaseStore);
+
+  /** When the lock was taken. Absolute, not "2h ago": this is the sentence a
+   *  decision gets made on, and an absolute stamp cannot be misread as the
+   *  age of the case. The relative age is one line above, on the band or the
+   *  widget the button was clicked from. */
+  readonly since = computed(() => new StampPipe().transform(this.store.lockedSince()));
 
   owner(): string {
     return this.store.lockOwner()?.name ?? 'Another agent';
   }
 
+  /**
+   * Unlocks. It does NOT then lock the case to me - taking the lock is a
+   * separate, deliberate press of Lock, and rolling the two together would
+   * make "get them out of my way" and "start work" one irreversible action.
+   */
   confirm(): void {
     this.store.forceUnlock();
   }

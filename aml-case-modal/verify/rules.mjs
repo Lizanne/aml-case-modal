@@ -343,20 +343,28 @@ check('dual panels keep the 12px radius',
   dualRadii.length === 2 && dualRadii.every((r) => r === '12px'), dualRadii.join(', '));
 
 /**
- * A minimised panel's bar is its ONLY control surface. The widget's Close and
- * the bar's controls must never be on screen together - they would be two
- * controls for one panel, in opposite corners.
+ * A panel is controlled from exactly one place, whichever place that is: open,
+ * its own X; minimised, its bar.
+ *
+ * This used to be narrower - the widget carried a Close in the dual state, and
+ * the rule was that it and a bar must never be on screen together. The widget
+ * now carries no actions in ANY state, so the dual case is no longer an
+ * exception to police: there is simply never a widget Close to collide with a
+ * bar. Each panel's own X is what closes it.
  */
-console.log('\nA minimised panel is controlled from its bar alone');
+console.log('\nA panel is controlled from one place - its X, or its bar');
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 const dualState = await page.evaluate(() => ({
   bars: document.querySelectorAll('minimised-bar').length,
   closes: [...document.querySelectorAll('.w__btn')].filter((b) => /Close/.test(b.textContent)).length,
+  panelCloses: document.querySelectorAll('.stage [aria-label^="Close"]').length,
 }));
-check('dual: two widget Closes, no bars',
-  dualState.bars === 0 && dualState.closes === 2, JSON.stringify(dualState));
+check('dual: no bars, and no widget Closes either',
+  dualState.bars === 0 && dualState.closes === 0, JSON.stringify(dualState));
+check('dual: each panel carries its own X instead',
+  dualState.panelCloses === 2, JSON.stringify(dualState));
 
 await page.locator('case-header .head__actions button').first().click();
 await page.waitForTimeout(700);

@@ -1,6 +1,14 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
+import { AttachmentPreviewStore } from '../core/attachment-preview-store';
 import { FileSizePipe } from '../core/format';
 import { Attachment, AttachmentError } from '../core/models';
 
@@ -28,17 +36,31 @@ import { Attachment, AttachmentError } from '../core/models';
       <ul class="files" [attr.aria-label]="removable ? 'Attachments in this draft' : 'Attachments'">
         @for (file of attachments; track file.id) {
           <li class="file">
-            <mat-icon class="file__icon" fontSet="material-icons-outlined" aria-hidden="true">{{
-              file.kind === 'pdf' ? 'picture_as_pdf' : 'image'
-            }}</mat-icon>
-            <span class="file__name">{{ file.name }}</span>
-            <span class="file__size">{{ file.sizeKb | fileSize }}</span>
+            <!--
+              The button IS the file: icon, name and size are all inside it,
+              and there is deliberately no separate view/preview icon beside
+              them. A second control would be asking which part of a chip
+              labelled with a filename opens the file.
+            -->
+            <button
+              type="button"
+              class="file__open"
+              [attr.aria-label]="'Open ' + file.name"
+              [attr.title]="file.name"
+              (click)="preview.open(file)"
+            >
+              <mat-icon class="file__icon" fontSet="material-icons-outlined" aria-hidden="true">{{
+                file.kind === 'pdf' ? 'picture_as_pdf' : 'image'
+              }}</mat-icon>
+              <span class="file__name">{{ file.name }}</span>
+              <span class="file__size">{{ file.sizeKb | fileSize }}</span>
+            </button>
             @if (removable) {
               <button
                 type="button"
                 class="file__remove"
                 [attr.aria-label]="'Remove ' + file.name"
-                (click)="remove.emit(file.id)"
+                (click)="onRemove($event, file.id)"
               >
                 <mat-icon>close</mat-icon>
               </button>
@@ -96,6 +118,29 @@ import { Attachment, AttachmentError } from '../core/models';
         line-height: 20px;
         color: var(--ink-2);
       }
+      /* The tint belongs to the whole chip, but only the open button earns it -
+         hovering the remove X is aiming at something else and gets its own
+         feedback. :has is what lets the <li> react to a child's state without
+         a wrapper element that exists purely to be hovered. */
+      .file:has(.file__open:hover) {
+        background: var(--line);
+      }
+      /* Transparent and unstyled: the chip around it already carries the
+         padding, the ground and the radius, so this contributes hit area and
+         semantics rather than a second box. */
+      .file__open {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
       /* mat-icon.<class>: Material's own .mat-icon sets 24px at the same class
          specificity, so the element tag is what wins. */
       mat-icon.file__icon {
@@ -111,6 +156,13 @@ import { Attachment, AttachmentError } from '../core/models';
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      /* The filename is the link here, so it takes the link colour on hover -
+         the icon and the size stay put, because underlining the whole chip
+         would make the size read as part of the file's name. */
+      .file__open:hover .file__name {
+        color: var(--link);
+        text-decoration: underline;
       }
       .file__size {
         color: var(--ink-3);
@@ -192,4 +244,18 @@ export class AttachmentListComponent {
 
   @Output() remove = new EventEmitter<string>();
   @Output() dismiss = new EventEmitter<string>();
+
+  /** The overlay opens itself; this component only names the file. */
+  readonly preview = inject(AttachmentPreviewStore);
+
+  /**
+   * Remove is a SIBLING of the open button, not a child, so a click on the X
+   * cannot reach it by bubbling. stopPropagation is belt and braces against
+   * that nesting ever changing - removing a file you meant to keep because
+   * the preview also opened is not a mistake worth leaving available.
+   */
+  onRemove(event: Event, id: string): void {
+    event.stopPropagation();
+    this.remove.emit(id);
+  }
 }

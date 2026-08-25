@@ -17,9 +17,13 @@ import { AppTopBarComponent } from './chrome/app-top-bar.component';
 import { PlayerHeaderComponent } from './chrome/player-header.component';
 import { SideNavComponent } from './chrome/side-nav.component';
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
+import { AttachmentPreviewComponent } from './components/attachment-preview.component';
 import { BackOfficeWidgetsComponent } from './components/back-office-widgets.component';
+import { ConfirmUnlockDialogComponent } from './components/confirm-unlock-dialog.component';
 import { MinimisedBarComponent } from './components/minimised-bar.component';
 import { SgAlertModalComponent } from './components/sg-alert-modal.component';
+import { AttachmentPreviewStore } from './core/attachment-preview-store';
+import { CaseStore } from './core/case-store';
 import { WorkspaceStore } from './core/workspace-store';
 import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
 
@@ -35,6 +39,8 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   standalone: true,
   imports: [
     AmlCaseModalComponent,
+    AttachmentPreviewComponent,
+    ConfirmUnlockDialogComponent,
     SgAlertModalComponent,
     BackOfficeWidgetsComponent,
     MinimisedBarComponent,
@@ -132,6 +138,31 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         </main>
       </div>
     </div>
+
+    <!--
+      Outside .shell, because the preview covers the whole composition rather
+      than the page inside it. position: fixed would escape .page's overflow
+      anyway; what it would NOT escape is a transformed ancestor, and
+      .stage__modal is transformed for the 300ms of its entry animation.
+      Sitting at the top level, it never has one.
+    -->
+    @if (preview.current(); as file) {
+      <attachment-preview [file]="file" (dismiss)="preview.close()" />
+    }
+
+    <!--
+      Force unlock is offered in two places - the panel's lock band and the
+      AML widget - and the widget shows its actions only while the panel is
+      CLOSED. Hosted inside the panel, as it was, the widget's button set
+      openDialog and then had nothing to render into, so it did nothing at
+      all. Here it does not care whether a panel exists.
+
+      Severity and decision stay inside the panel: both are reached from
+      controls in it, so neither can be asked for while it is shut.
+    -->
+    @if (store.openDialog() === 'confirm-unlock') {
+      <confirm-unlock-dialog />
+    }
   `,
   styles: [
     `
@@ -348,6 +379,9 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
   readonly ws = inject(WorkspaceStore);
+  readonly preview = inject(AttachmentPreviewStore);
+  /** Only for the force-unlock dialog above - see the template comment. */
+  readonly store = inject(CaseStore);
 
   /**
    * Height the docked bars occupy, published as --dock-h so the modals can
@@ -425,9 +459,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
    * host. This is a document listener, so it would still fire for a keypress
    * OUTSIDE the dialog and take the panel out from under it. Hence the guard:
    * if a dialog is on screen, Escape is not ours.
+   *
+   * The attachment preview is in the guard for the same reason. Losing the
+   * panel and its draft behind a preview you were only closing would be the
+   * worst outcome of pressing Escape twice quickly.
    */
   onEscape(): void {
-    if (document.querySelector('dialog-shell')) return;
+    if (document.querySelector('dialog-shell, attachment-preview')) return;
     const order = this.ws.visibleOrder();
     const newest = order[order.length - 1];
     if (newest) this.ws.close(newest);

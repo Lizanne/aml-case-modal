@@ -14,7 +14,6 @@ import { focusPanelHeader } from './sg-alert-modal.component';
 import { NARROW_BREAKPOINT_PX } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { CaseHeaderComponent } from './case-header.component';
-import { ConfirmUnlockDialogComponent } from './confirm-unlock-dialog.component';
 import { DecisionDialogComponent } from './decision-dialog.component';
 import { PlayerInfoPanelComponent } from './player-info-panel.component';
 import { SeverityDialogComponent } from './severity-dialog.component';
@@ -43,7 +42,6 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
     WorkflowPanelComponent,
     SeverityDialogComponent,
     DecisionDialogComponent,
-    ConfirmUnlockDialogComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -91,15 +89,23 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         }
       </div>
 
+      <!--
+        Severity and decision only. Both are reached from controls inside this
+        panel, so neither can be asked for while the panel is shut.
+
+        confirm-unlock is NOT here, and the omission is the point: Force unlock
+        also appears on the WIDGET, which only shows its actions while this
+        panel is closed. Hosted here, that click set openDialog and rendered
+        nothing, because there was no panel to render it in. It lives in
+        app.component instead, alongside the attachment preview, for the same
+        reason - a viewport-fixed overlay should not depend on a panel.
+      -->
       @switch (store.openDialog()) {
         @case ('severity') {
           <severity-dialog />
         }
         @case ('decision') {
           <decision-dialog />
-        }
-        @case ('confirm-unlock') {
-          <confirm-unlock-dialog />
         }
       }
     </div>
