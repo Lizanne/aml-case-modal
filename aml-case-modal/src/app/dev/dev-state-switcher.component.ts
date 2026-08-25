@@ -99,7 +99,10 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
       }
       .dev__select {
         font: inherit;
-        padding: 6px 10px;
+        /* 16px each side. The right value is what the chevron sits on - a
+           native select draws it inside the padding box, so it was 10px from
+           the border and looked pinned to the edge. */
+        padding: 6px 16px;
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: #12161f;
