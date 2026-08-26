@@ -80,7 +80,7 @@ const nowIso = () => new Date().toISOString();
  * itself is dropped before it reaches the store.
  */
 export const SAMPLE_PDF = 'assets/samples/adverse-media-results.pdf';
-export const SAMPLE_IMAGE = 'assets/samples/sanctions-screen.png';
+export const SAMPLE_IMAGE = 'assets/samples/promo-catch-a-triple-wave.png';
 
 /**
  * Each named fixture, mapped to its OWN document.
@@ -104,7 +104,20 @@ const SAMPLE_BY_NAME: Readonly<Record<string, string>> = {
   'adverse-media-results.pdf': 'assets/samples/adverse-media-results.pdf',
   'call-log-2026-08-11.pdf': 'assets/samples/call-log-2026-08-11.pdf',
   'companies-house-extract.pdf': 'assets/samples/companies-house-extract.pdf',
-  'sanctions-screen.png': 'assets/samples/sanctions-screen.png',
+  /**
+   * The only image fixture, and the only REAL file in this list.
+   *
+   * It replaced sanctions-screen.png, which was a drawn-up screening export -
+   * plausible, but built to flatter the preview it was displayed in. This is an
+   * actual campaign creative, so the image path is exercised against real
+   * dimensions, real colour and real text at real sizes rather than against a
+   * mock-up sized to fit.
+   *
+   * Quantised to a 256-colour palette on the way in: 188KB rather than the
+   * 912KB a straight PNG of the same image costs, and at 1340x1000 the two are
+   * indistinguishable. Flat illustration is what makes that free.
+   */
+  'promo-catch-a-triple-wave.png': 'assets/samples/promo-catch-a-triple-wave.png',
 };
 
 /**

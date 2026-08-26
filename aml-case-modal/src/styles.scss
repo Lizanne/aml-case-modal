@@ -12,7 +12,7 @@
  *   - Text on tinted backgrounds uses the darkest tone of the same family.
  * ------------------------------------------------------------------------ */
 :root {
-  --ink: #18181b;
+  --ink: #09090B;
   --ink-2: #52525B;
   /**
    * Was #71717A, which is 4.83:1 on --panel but only 4.43:1 on --page and
@@ -23,15 +23,29 @@
   --ink-3: #52525B;
   --line: #E4E4E7;
   --line-strong: #A1A1AA;
-  --page: #f4f5f7;
+  --page: #FAFAFA;
   --panel: #ffffff;
+  /**
+   * The workflow stream's ground, and the one surface that is NOT --page.
+   *
+   * The stream is a recessed well inside a --panel card, so it needs to read
+   * as a step down from white. --page no longer does that job: at #FAFAFA it
+   * is 2% off the panel it sits in, which reads as a rendering artefact rather
+   * than a deliberate recess. This is the tone --page used to carry, kept
+   * where the contrast was actually doing work.
+   *
+   * A token, not a literal on .stream: it is a surface in the palette now, and
+   * the next surface that wants the same recess must take THIS rather than a
+   * second copy of the hex free to drift from it.
+   */
+  --stream-bg: #F4F5F7;
 
   /* Host-app chrome, sampled from frame 09. Not part of the case language:
      nothing inside a panel may use these. */
   --brand-bar: #E1F737;
-  --brand-bar-ink: #18181b;
+  --brand-bar-ink: #09090B;
   --brand-bar-accent: #1D4ED8;
-  --player-bar: #0A0A0A;
+  --player-bar: #09090B;
   --player-bar-ink: #ffffff;
   --nav-w: 256px;
   --top-bar-h: 56px;

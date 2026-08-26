@@ -158,7 +158,7 @@ import { AttachmentListComponent } from './attachment-list.component';
       .card__note {
         /* Long unbroken tokens (a URL, a reference) must not set the floor. */
         overflow-wrap: anywhere;
-        margin: 10px 0 0;
+        margin: 8px 0 0;
         font-size: 14px;
         line-height: 1.55;
         color: var(--ink-2);

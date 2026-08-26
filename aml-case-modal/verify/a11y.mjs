@@ -91,15 +91,40 @@ const reachable = await page.evaluate(() => {
 });
 check('a focusable path exists through the page', reachable > 10, String(reachable));
 
-// The trigger control is a real button, so Enter and Space must both work.
+/**
+ * The trigger control is a real button, so Enter and Space must both work.
+ *
+ * Measured by aria-expanded and the height of the window, NOT by counting
+ * rendered rows: both modes now render the whole history and differ only in
+ * how many rows are visible at once, so a row count cannot tell them apart.
+ */
 await go('01');
+const stripState = () =>
+  page.evaluate(() => {
+    const el = document.querySelector('trigger-strip .strip__list');
+    const row = document.querySelector('trigger-strip .cell').getBoundingClientRect().height;
+    return {
+      expanded: document.querySelector('trigger-strip .strip__verb').getAttribute('aria-expanded'),
+      rowsVisible: Math.round(el.getBoundingClientRect().height / row),
+    };
+  });
 await page.locator('trigger-strip .strip__verb').focus();
 await page.keyboard.press('Enter');
 await page.waitForTimeout(300);
-check('Enter expands the trigger strip', (await page.locator('trigger-strip .trigger').count()) > 2);
+const afterEnter = await stripState();
+check(
+  'Enter expands the trigger strip',
+  afterEnter.expanded === 'true' && afterEnter.rowsVisible === 10,
+  JSON.stringify(afterEnter),
+);
 await page.keyboard.press('Space');
 await page.waitForTimeout(300);
-check('Space collapses it again', (await page.locator('trigger-strip .trigger').count()) === 2);
+const afterSpace = await stripState();
+check(
+  'Space collapses it again',
+  afterSpace.expanded === 'false' && afterSpace.rowsVisible === 5,
+  JSON.stringify(afterSpace),
+);
 
 console.log('\nKeyboard: the scrollable trigger list is reachable');
 await go('10');

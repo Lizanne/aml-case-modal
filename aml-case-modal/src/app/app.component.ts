@@ -24,6 +24,7 @@ import { MinimisedBarComponent } from './components/minimised-bar.component';
 import { SgAlertModalComponent } from './components/sg-alert-modal.component';
 import { AttachmentPreviewStore } from './core/attachment-preview-store';
 import { CaseStore } from './core/case-store';
+import { MODAL_GAP_PX } from './core/models';
 import { WorkspaceStore } from './core/workspace-store';
 import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
 
@@ -55,23 +56,55 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     '(document:keydown.escape)': 'onEscape()',
   },
   /**
-   * The drawer convention: a panel arrives from the right edge and leaves the
-   * same way, 300ms ease-out.
+   * The drawer convention: a panel arrives from the right edge, 300ms ease-out.
    *
    * :leave takes the panel out of flow first. Left in flow it would hold its
    * width for the whole 300ms and the survivor could not start widening until
    * it had gone - two sequential moves instead of the one continuous one the
    * spec asks for.
+   *
+   * BUT A PANEL LEAVES FROM ITS OWN COLUMN, and that is what decides how it
+   * leaves. Out of flow, it has to be re-anchored, and the anchor used to be
+   * right: 0 for every panel - true of the right-hand one, and a lie about the
+   * left-hand one, which teleported a full column and gap to the right edge on
+   * the first frame, landing on top of the panel that was still there, before
+   * it began to slide. Two panels jumping in opposite directions in one frame:
+   * the closing one 604px right, the survivor 516px wider.
+   *
+   * So there are two exits, chosen by whether the panel is the last one on the
+   * stage:
+   *
+   *   tail   the right-hand panel, or a solo one. It is already against the
+   *          edge it entered from, so it leaves the way it arrived - out to
+   *          the right, the drawer convention exactly.
+   *
+   *   inner  anything with a panel to its right. It has nowhere to go: sliding
+   *          out would carry it straight across its neighbour, which is the
+   *          one thing the convention must not do. It dissolves in place with
+   *          a gap's worth of drift, and the survivor widens underneath it.
+   *
+   * The fade is not decoration. It is what covers the survivor's reflow, which
+   * is instant by design - the same job the newcomer's slide does on the way
+   * in, and the job nothing was doing on the way out.
    */
   animations: [
     trigger('panel', [
-      transition(':enter', [
+      transition('void => *', [
         style({ transform: 'translateX(100%)', opacity: 0 }),
         animate('300ms ease-out', style({ transform: 'translateX(0)', opacity: 1 })),
       ]),
-      transition(':leave', [
+      transition('tail => void', [
         style({ position: 'absolute', top: 0, right: 0 }),
         animate('300ms ease-out', style({ transform: 'translateX(100%)', opacity: 0 })),
+      ]),
+      transition('inner => void', [
+        // left: 0 - the stage is the panels' own box, so the first column
+        // starts on its left edge. No measurement, and nothing to keep in step.
+        style({ position: 'absolute', top: 0, left: 0 }),
+        animate(
+          '300ms ease-out',
+          style({ transform: `translateX(${MODAL_GAP_PX}px)`, opacity: 0 }),
+        ),
       ]),
     ]),
   ],
@@ -113,11 +146,22 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         is on, because no side is assigned to it.
       -->
           <div class="stage" #stage [@.disabled]="reducedMotion()">
-            @for (id of ws.visibleOrder(); track id) {
+            @for (id of ws.visibleOrder(); track id; let last = $last) {
+              <!--
+                The animation state is the panel's POSITION, which is what its
+                exit depends on. A component keeps its last-bound state when it
+                is removed, so the panel that closes leaves by the rule that
+                applied while it was still on the stage.
+
+                A surviving panel promoted from inner to tail changes state
+                too. No inner <=> tail transition is declared, so nothing
+                animates: its width is already reflowing, and a second motion
+                on top of that would be the abruptness by another route.
+              -->
               @if (id === 'sg') {
-                <sg-alert-modal class="stage__modal" @panel />
+                <sg-alert-modal class="stage__modal" [@panel]="last ? 'tail' : 'inner'" />
               } @else {
-                <aml-case-modal class="stage__modal" @panel />
+                <aml-case-modal class="stage__modal" [@panel]="last ? 'tail' : 'inner'" />
               }
             }
           </div>

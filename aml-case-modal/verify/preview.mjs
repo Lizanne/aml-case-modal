@@ -36,7 +36,7 @@ const go = async (state) => {
 };
 
 const pdfChip = '.file__open[aria-label="Open adverse-media-results.pdf"]';
-const imgChip = '.file__open[aria-label="Open sanctions-screen.png"]';
+const imgChip = '.file__open[aria-label="Open promo-catch-a-triple-wave.png"]';
 
 console.log('\nattachment chips are buttons');
 await go('02');
@@ -67,7 +67,7 @@ check(
 );
 
 console.log('\nremove still removes, and does not open a preview');
-await page.locator('.file__remove[aria-label="Remove sanctions-screen.png"]').click();
+await page.locator('.file__remove[aria-label="Remove promo-catch-a-triple-wave.png"]').click();
 await page.waitForTimeout(250);
 check('the file is gone', await page.locator(imgChip).count().then((n) => n === 0));
 check('no preview opened', await page.locator('attachment-preview').count().then((n) => n === 0));
@@ -168,14 +168,14 @@ check(
 );
 check(
   'alt text is the filename',
-  (await page.locator('attachment-preview img.image').getAttribute('alt')) === 'sanctions-screen.png',
+  (await page.locator('attachment-preview img.image').getAttribute('alt')) === 'promo-catch-a-triple-wave.png',
 );
 // The other half of the rule: an image has no viewer toolbar under it, so the
 // header's Download is the only way to save the file and has to be there.
 check(
   'an image header DOES carry Download',
   (await page.locator('attachment-preview a.panel__action').getAttribute('download')) ===
-    'sanctions-screen.png',
+    'promo-catch-a-triple-wave.png',
 );
 
 console.log('\nclose button, and focus handback');

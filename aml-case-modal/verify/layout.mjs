@@ -146,18 +146,42 @@ for (const state of ['00a', '01', '02', '02b', '03', '04', '07', '08', '10']) {
   await streamFit(state);
 }
 
-// And the narrowest the stream ever gets: the full stream in dual-modal mode.
+/**
+ * The narrowest the stream ever gets, in two passes rather than one.
+ *
+ * It used to be a single check: load 03 for its full stream, then open SG from
+ * the widget row to halve the panel. That is no longer a reachable
+ * composition - 03 seeds no SG alert, so there is no SG widget to open and
+ * never a second panel - and it had been silently failing on the missing
+ * button rather than measuring anything.
+ *
+ * Splitting it loses nothing and covers more. The width and the content were
+ * always two independent variables; one pass takes the real dual layout, the
+ * other takes the fullest stream in the app at the same panel width a dual
+ * half gives it.
+ */
 await page.setViewportSize({ width: 1500, height: 1040 });
-await page.goto(`${BASE}/?state=03`, { waitUntil: 'networkidle' });
-await page.waitForTimeout(400);
-await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(800);
-await streamFit('dual-modal, full stream');
+await streamFit('dual-modal');
 
 // The tightest dual the workspace allows: just above the auto-minimise floor.
-await page.setViewportSize({ width: 1260, height: 1040 });
+// Derived, not guessed - the floor is a STAGE width of MIN_DUAL_PANEL_PX * 2 +
+// MODAL_GAP_PX (1136), and the stage is the viewport less the nav and the
+// gutters. 1260 was left over from when the floor was a flat 1200 on a page
+// with no nav beside it, and it now auto-minimises rather than testing dual.
+await page.setViewportSize({ width: 1440, height: 1040 });
 await page.waitForTimeout(700);
 await streamFit('dual-modal at the narrowest allowed');
+
+// The fullest stream in the app, at that same half-panel width. 03 cannot be
+// put into dual, so the width is taken from the viewport instead - which is
+// the point the panel makes anyway: the layout follows the width it is given,
+// never a dual flag.
+await page.setViewportSize({ width: 632, height: 1040 });
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+await streamFit('full stream at a dual half-width');
 
 console.log('\nRadios select in primary blue; green stays reserved');
 const radioColour = async (state, sel, pick) => {
@@ -633,7 +657,12 @@ for (const state of ['00a', '01', '00b']) {
   await page.waitForTimeout(500);
   lockShapes.push(
     await page.evaluate(() => {
-      const aml = [...document.querySelectorAll('.w')][1];
+      // By name, not by index. These frames seed no SG alert, so the AML card
+      // is the only one on the row and index 1 was undefined - the card's
+      // position in the row is not what identifies it.
+      const aml = [...document.querySelectorAll('.w')].find(
+        (w) => w.querySelector('.w__name').textContent.trim() === 'AML Case',
+      );
       const box = aml.getBoundingClientRect();
       const btn = aml.querySelector('.w__btn');
       return {
@@ -843,15 +872,14 @@ const soloAml = await page.evaluate(() => {
   const e = document.querySelector('case-header .head__title');
   return e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null;
 });
-for (const [host, label] of [['aml-case-modal', 'Close case'], ['sg-alert-modal', 'Close alert']]) {
-  const btn = page.locator(`${host} button[aria-label="${label}"]`);
-  if (await btn.count()) {
-    await btn.click();
-    await page.waitForTimeout(400);
-  }
-}
-await page.locator('back-office-widgets button:has-text("Resolve and archive")').click();
-await page.waitForTimeout(600);
+// SG solo, which needs the one frame that has an SG alert at all: 01 seeds no
+// SG, so there was never a panel here to be left alone with the stage. Load 09
+// and close the case off it instead.
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('sg-alert-modal', { timeout: 15000 });
+await page.waitForTimeout(700);
+await page.locator('aml-case-modal button[aria-label="Close case"]').click();
+await page.waitForTimeout(700);
 const soloSg = await page.evaluate(() => {
   const e = document.querySelector('sg-alert-modal .sg__title');
   return e ? `${getComputedStyle(e).fontSize}/${getComputedStyle(e).lineHeight}` : null;
@@ -860,10 +888,22 @@ check('solo and wide: both titles take the 20px step',
   soloAml === '20px/30px' && soloSg === '20px/30px', `aml ${soloAml} / sg ${soloSg}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+/**
+ * Two cards sharing one row, which needs a frame that HAS two: 09 is the only
+ * one that seeds an SG alert, and this was pointed at 01, where the row has
+ * held a single card since the SG widget stopped rendering unconditionally.
+ * Every two-card assertion below - stacked, overlaps across both - was reading
+ * an undefined second card.
+ *
+ * Both cards are on the row at every width here, including the ones where the
+ * stage is too tight for two panels: a minimised item is still on the surface,
+ * so its widget stays. That is the point of the sweep - the row has to hold up
+ * at widths where the stage below it has already given up on two columns.
+ */
 console.log('\nWidgets share the row, truncate, then stack');
 for (const width of [1440, 1200, 1024, 768, 390]) {
   await page.setViewportSize({ width, height: 1040 });
-  await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
   await page.waitForTimeout(450);
   // Force the longest real lock string before measuring.

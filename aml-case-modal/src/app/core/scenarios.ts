@@ -96,7 +96,7 @@ export const SCENARIOS: Scenario[] = [
           note: 'Adverse media check complete. Two hits reviewed, both false positives relating to a namesake.',
           attachments: [
             attachment('adverse-media-results.pdf', 'pdf', 2150),
-            attachment('sanctions-screen.png', 'image', 480),
+            attachment('promo-catch-a-triple-wave.png', 'image', 188),
           ],
           errors: s.fixtureAttachmentErrors(),
         }),

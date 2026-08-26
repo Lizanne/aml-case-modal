@@ -119,8 +119,11 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
            backstop: whatever that number says, the modal never exceeds the
            viewport and never creates a horizontal scrollbar. */
         max-width: 100vw;
-        /* The reflow. Width is animated, never opacity or pointer-events, so
-           the modal stays fully interactive throughout. */
+        /* The reflow is INSTANT - no width transition here or on the SG panel.
+           A panel arriving or leaving is what covers it: the newcomer's slide
+           on the way in, the leaver's fade on the way out. Animating width as
+           well would put a second motion under one that is already covering
+           it, and cost a layout pass per frame on a panel this size. */
       }
       .modal {
         position: relative;

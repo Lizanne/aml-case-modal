@@ -185,19 +185,30 @@ check(
 console.log('\nthe widget button is demoted at rest, danger on intent');
 await go('00b');
 await closePanel();
+// The claim is "this button rests on --ink", so --ink is what it is compared
+// against - resolved from the page, not spelled out again here. Written out as
+// a hex it was a second copy of the token, and it broke the moment --ink was
+// darkened, reporting a palette change as a regression in this button.
 const rest = await page.evaluate(() => {
-  const s = getComputedStyle(document.querySelector('back-office-widgets .w__btn--danger'));
-  return { bg: s.backgroundColor, color: s.color, borderColor: s.borderTopColor, borderWidth: s.borderTopWidth };
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--ink)';
+  document.body.appendChild(probe);
+  const ink = getComputedStyle(probe).color;
+  probe.remove();
+  const btn = document.querySelector('back-office-widgets .w__btn--danger');
+  const s = getComputedStyle(btn);
+  return {
+    ink,
+    bg: s.backgroundColor,
+    color: s.color,
+    borderColor: s.borderTopColor,
+    icon: getComputedStyle(btn.querySelector('mat-icon')).color,
+  };
 });
 check('rest background is the tertiary grey', rest.bg === 'rgb(244, 244, 245)', rest.bg);
-check('rest text is --ink, not danger', rest.color === 'rgb(24, 24, 27)', rest.color);
+check('rest text is --ink, not danger', rest.color === rest.ink, `${rest.color} vs ${rest.ink}`);
 check('no visible border', rest.borderColor === 'rgba(0, 0, 0, 0)', rest.borderColor);
-check(
-  'the icon takes the text colour too',
-  await page.evaluate(
-    () => getComputedStyle(document.querySelector('back-office-widgets .w__btn--danger mat-icon')).color === 'rgb(24, 24, 27)',
-  ),
-);
+check('the icon takes the text colour too', rest.icon === rest.ink, `${rest.icon} vs ${rest.ink}`);
 check(
   'it still has the same height as the buttons beside it',
   await page.evaluate(() => {

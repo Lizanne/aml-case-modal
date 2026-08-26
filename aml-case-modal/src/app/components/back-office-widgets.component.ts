@@ -3,7 +3,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
-import { lockStatusLine } from '../core/models';
+import { StampPipe } from '../core/format';
+import { MODAL_GAP_PX, lockStatusLine } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { PillComponent } from './ui-pill.component';
 
@@ -38,30 +39,47 @@ import { PillComponent } from './ui-pill.component';
  *
  * So the widget is identity and lock status while a panel is up, and gains its
  * buttons back only when the panel is closed.
+ *
+ * A WIDGET IS NOT TIED TO ITS PANEL'S LIFETIME. It renders on the item being
+ * PRESENT on the surface - see ModalState.present - not on the panel being
+ * open, so closing a panel puts its widget back with its actions rather than
+ * taking the item away. The two are opposite states of one control: panel up,
+ * the widget is identity; panel down, the widget is how you bring it back.
+ *
+ * The SG card used to render only in the dual state, which made closing the SG
+ * panel a one-way door - the widget went with it and the alert could not be
+ * reopened. It renders on presence now, like the AML card, and the two are the
+ * same rule rather than two rules that happened to agree in one state.
  */
 @Component({
   selector: 'back-office-widgets',
   standalone: true,
-  imports: [MatIconModule, MatTooltipModule, PillComponent],
+  imports: [MatIconModule, MatTooltipModule, PillComponent, StampPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // The panels' own gap, so the row and the stage below it split their
+    // width at exactly the same two points. One constant, two layouts.
+    '[style.--widget-gap.px]': 'gap',
+  },
   template: `
     <!--
-      The row renders when NO panel is open, and in the dual state. It does not
-      render while exactly one panel is up: that composition is the panel
-      against the scrim, nothing else.
+      One card per item on the surface, in SLOT order - the same order the
+      panels dock in, so each card sits over its own panel rather than over
+      whichever one the markup happened to list first.
 
-      Consequence, accepted deliberately: the row is the only way to open a
-      panel, so once one is open the other can no longer be added from here.
-      Dual is a state the prototype can be put INTO, not one it can be driven
-      to. See the note in app.component for the scrim half of the same rule.
+      The row is sized from the store to the same box the panels occupy, and
+      the cards fill it - so a lone card spans its panel edge to edge, and two
+      cards over two panels each span their own. Nothing here knows which; the
+      grid below does it by construction.
+
+      Dual can now be driven to as well as staged: with the SG panel shut its
+      widget is on the row, so Open alert puts it back beside the case - and
+      back into the column its widget was already holding.
     -->
     @if (showRow()) {
-    <div class="widgets" [class.widgets--half]="!dual()" [style.width]="ws.rowCss()">
-      <!--
-        SG belongs to the dual composition only. With no panel open the row is
-        the AML card alone, right-docked over where its panel will appear.
-      -->
-      @if (dual()) {
+    <div class="widgets" [style.width]="ws.rowCss()">
+      @for (id of ws.presentIds(); track id) {
+      @if (id === 'sg') {
       <!-- ------------------------------------------------------- SG alerts -->
       <article class="w">
         <span class="w__type w__type--sg">
@@ -79,16 +97,36 @@ import { PillComponent } from './ui-pill.component';
             </div>
           </div>
 
-          <!--
-            No lock line and no actions, and no branch that could produce
-            either. This card renders only in dual, and dual means both panels
-            are visible - so the SG panel is open whenever this is on screen,
-            and an open panel is the single source for its own lock state and
-            its own controls. Identity only: icon, name, count, meta.
-          -->
         </div>
+
+        <!--
+          Rule 4, the same single condition the AML card uses: actions exist
+          only while this card's OWN panel is down. With the SG panel up its
+          header owns its controls, and the card is identity alone.
+
+          No lock line, because the SG alert has no lock: this panel is the
+          existing production modal, carried in as a peer to prove the dual
+          layout, and it has no lock band of its own to be a second reading of.
+          Inventing one here would be the widget asserting state the panel
+          itself would contradict the moment it was opened.
+
+          Outside .w__inner rather than in it, matching the AML card: an empty
+          .w__actions would still claim the flex gap and pad the card for
+          buttons that are not there.
+        -->
+        @if (!ws.isOpen('sg')) {
+          <div class="w__actions">
+            <!-- "Open alert", naming its object the way "Open case" does
+                 beside it, so two Open buttons on one row cannot be mistaken
+                 for each other. -->
+            <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
+              <mat-icon aria-hidden="true">open_in_new</mat-icon>
+              Open alert
+            </button>
+          </div>
+        }
       </article>
-      }
+      } @else {
 
       <!-- -------------------------------------------------------- AML case -->
       <article class="w">
@@ -103,7 +141,21 @@ import { PillComponent } from './ui-pill.component';
               <ui-pill size="sm" [severity]="store.severity()">{{ store.severity() }}</ui-pill>
             </div>
             <div class="w__meta-group">
-              <p class="w__meta">#AML-1042 · {{ stage() }} · Opened 12d ago</p>
+              <!--
+                Status, then the date it opened. NOT "Open · Opened 12d ago",
+                which said the word twice and then answered a question the
+                status had already answered.
+
+                Absolute, and taken from the fixture rather than the hardcoded
+                "12d ago" it replaces - a literal that was wrong the moment the
+                fixture date moved, and silently so. Relative time lives on the
+                lock line alone, which is the one place recency is the point:
+                how long someone has held a lock decides whether you take it,
+                whereas how long ago a case opened is a fact about the case.
+              -->
+              <p class="w__meta">
+                #AML-1042 · {{ stage() }} · {{ store.createdAt() | stamp: 'date' }}
+              </p>
               <!--
                 Lock status belongs to the CLOSED widget only. While the panel
                 is open its header is the single source for lock state, and a
@@ -171,6 +223,8 @@ import { PillComponent } from './ui-pill.component';
           }
         </div>
       </article>
+      }
+      }
     </div>
     }
   `,
@@ -179,35 +233,33 @@ import { PillComponent } from './ui-pill.component';
       :host {
         display: block;
       }
-      /* auto-fit with a min() floor: a track whose floor is wider than the
-         container overflows it rather than collapsing to one column. */
-      /* Right-docked. The width comes from the store as an inline style, so
-         the cap and the panel's cap are one value; the auto margin is what
-         puts the spare space on the LEFT, which is what makes the two share a
-         right edge as well as a left one. */
+      /**
+       * EACH CARD SPANS ITS OWN PANEL. That is the whole rule, and the grid is
+       * what makes it true without anyone counting panels.
+       *
+       * The row is sized from the store to the box the panels occupy, and
+       * margin-left: auto right-docks it, so its edges ARE the panel area's
+       * edges. auto-fit then collapses every empty track and hands the space
+       * to the cards that exist: one card takes the whole row and therefore
+       * spans the solo panel edge to edge; two cards take half each, which is
+       * the same split the two panels below them take.
+       *
+       * There is no card-count branch and no half-width variant. There was
+       * one, and it is what left a lone widget stopping short in the middle of
+       * the panel it sat on - a right edge shared and a left edge that was not.
+       *
+       * The min() floor matters: a fixed 260px track whose floor exceeds the
+       * container overflows it rather than collapsing to one column.
+       */
       .widgets {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-        gap: 12px;
+        /* The PANEL gap, published by the host from MODAL_GAP_PX - not a 12px
+           that merely looked close. Two cards over two panels only share their
+           inner edges if the two gaps are the same number, and at 12 against
+           16 they were 2px out on each side. */
+        gap: var(--widget-gap);
         margin-left: auto;
-      }
-      /**
-       * Solo: the card takes half the row, not all of it.
-       *
-       * The ROW keeps the panel's full width and its shared edges - only the
-       * track inside it halves, so the card still starts on the panel's left
-       * edge. Sizing the row instead would have moved that edge and broken the
-       * alignment the panel below depends on.
-       *
-       * Dual is untouched: two cards over two panels, each above its own.
-       */
-      .widgets--half {
-        grid-template-columns: minmax(0, 50%);
-        /* The spare half goes on the LEFT, so the card's right edge meets the
-           panel's right edge rather than its left one. justify-content moves
-           the track within the row; the row itself still spans the panel, so
-           the shared edge is preserved - it is just the other side now. */
-        justify-content: end;
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */
@@ -252,9 +304,24 @@ import { PillComponent } from './ui-pill.component';
        * COMPLIANCE was not in the brief; it takes its own foreground token by
        * the same rule, rather than being the only tile left on --ink.
        */
+      /**
+       * SG is amber, not blue.
+       *
+       * The requested pair - FEF3C7 behind 78350F - is exactly --warn-bg and
+       * --warn, so it goes in by name like every tile below it rather than as
+       * two hex literals. The old background WAS a literal, which is how it
+       * ended up paired with a token foreground and free to drift from it.
+       *
+       * --warn rather than --sev-aml, which carries the identical values
+       * today: this tile marks an alert surface, not an AML severity, so if
+       * the severity palette ever moves this must not move with it.
+       *
+       * Contrast is already established at 12px for this pair - see the note
+       * on --sev-aml in styles.scss.
+       */
       .w__type--sg {
-        background: #e6f1fb;
-        color: var(--color-foreground-on-info);
+        background: var(--warn-bg);
+        color: var(--warn);
       }
       .w__type[data-sev='AML'] {
         background: var(--sev-aml-bg);
@@ -344,7 +411,6 @@ import { PillComponent } from './ui-pill.component';
         flex: 0 1 auto;
         min-width: 0;
         padding: 2px 8px;
-        border: 1px solid var(--line);
         border-radius: 100px;
         background: var(--page);
         font-size: 12px;
@@ -417,6 +483,36 @@ import { PillComponent } from './ui-pill.component';
        * below the content, is what keeps that true when two buttons will not fit
        * side by side: they stack in the corner, still starting at the title.
        */
+      /**
+       * Controls handed back, not snapped back.
+       *
+       * A card regains its lock line and its buttons the instant its panel
+       * closes - which is the instant the panel STARTS leaving, with 300ms of
+       * it still on screen. At full opacity from the first frame they arrived
+       * before the thing they replace had gone, and the eye read it as a pop
+       * rather than a handover.
+       *
+       * A CSS animation rather than an Angular one, because the trigger is
+       * exactly "this element was created": the actions block is behind
+       * @if (!isOpen), so it exists only in the state that should fade it in,
+       * and there is nothing to bind or tear down. Same 300ms ease-out as the
+       * panel's exit, so the two are one movement.
+       */
+      @keyframes widget-restore {
+        from {
+          opacity: 0;
+        }
+      }
+      .w__actions,
+      .w__lock {
+        animation: widget-restore 300ms ease-out;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .w__actions,
+        .w__lock {
+          animation: none;
+        }
+      }
       .w__actions {
         display: flex;
         flex-wrap: wrap;
@@ -565,6 +661,9 @@ import { PillComponent } from './ui-pill.component';
        * 13px/16px.
        */
       @media (max-width: 719.98px) {
+        /* One card per line. Below this the panel is full-bleed and there is
+           no side-by-side left to align to, so the auto-fit split is dropped
+           rather than shrunk. */
         .widgets {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -605,12 +704,8 @@ export class BackOfficeWidgetsComponent {
   readonly ws = inject(WorkspaceStore);
   readonly store = inject(CaseStore);
 
-  /**
-   * Both panels on the stage. Not "both open" - a minimised panel is
-   * represented by its dock bar, and a widget standing in for it as well would
-   * be two controls for one thing.
-   */
-  readonly dual = computed(() => this.ws.visibleCount() === 2);
+  /** The stage's gap, handed to the row so the two split at the same points. */
+  readonly gap = MODAL_GAP_PX;
 
   /**
    * Always. The row sits above the panel in every state, sharing its width,

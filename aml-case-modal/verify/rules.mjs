@@ -115,22 +115,39 @@ await page.waitForTimeout(250);
 check('snapshot flagged out of sync', (await page.locator('workflow-panel .resync').count()) === 1);
 check('recording blocked', await page.locator('action-placeholder button').first().isDisabled());
 /**
- * Rule 11's guarantee survives the reordering, by a different route: the list
- * is oldest-first, so the arrival is the NEWEST and therefore the last row -
- * and the collapsed preview takes the two ENDS of the history rather than the
- * top two, which is what keeps it on screen.
+ * Rule 11 holds by construction again.
+ *
+ * The collapsed preview is five rows that SPAN the history - the oldest four
+ * and then the most recent - so an arrival, being by definition the most
+ * recent trigger, is always its last row and can never be one of the rows the
+ * preview drops. Five rows off the top would have buried it.
  */
 check('collapsed: the count chip carries the arrival',
   (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 1);
 check('collapsed: the arrival is the last preview row',
   (await page.locator('trigger-strip .trigger').last().getAttribute('class')).includes('trigger--new'));
-check('collapsed: it is inside the preview, not behind the badge',
+check('collapsed: exactly one row is marked',
   (await page.locator('trigger-strip .trigger--new').count()) === 1);
-// The preview is the two ends, so it must NOT be two adjacent rows.
-check('collapsed: the preview spans the whole history', await page.evaluate(() => {
+check('collapsed: five rows, oldest first and most recent last', await page.evaluate(() => {
   const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
-  return at.length === 2 && at[0] < at[1];
+  const ascending = at.every((v, i) => i === 0 || at[i - 1] <= v);
+  return at.length === 5 && ascending;
 }));
+// It SPANS rather than samples: the last preview row must be the newest
+// trigger in the case, not merely the newest of the five shown.
+check('collapsed: the last row is the newest trigger in the case', await page.evaluate(() => {
+  const shown = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
+  const total = Number(document.querySelector('trigger-strip .strip__bar ui-pill').textContent.trim().split(' ')[0]);
+  // A gap between row 4 and row 5 is the proof it skipped the middle.
+  const gap = shown[4] - shown[3];
+  const step = shown[1] - shown[0];
+  return total > 5 && gap > step;
+}));
+check('collapsed: it does not scroll - what it drops is absent, not hidden',
+  await page.evaluate(() => {
+    const el = document.querySelector('trigger-strip .strip__list');
+    return el.scrollHeight <= el.clientHeight + 1 && el.getAttribute('tabindex') === null;
+  }));
 await page.locator('trigger-strip .strip__verb').click();
 await page.waitForTimeout(300);
 check('expanded: oldest first, arrival last', await page.evaluate(() => {

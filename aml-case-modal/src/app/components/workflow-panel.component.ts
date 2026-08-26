@@ -219,7 +219,8 @@ import { RequiredChipsComponent } from './required-chips.component';
         grid-template-columns: minmax(0, 1fr);
         gap: 12px;
         align-content: start;
-        background: var(--page);
+        /* The recessed well, not the page ground - see --stream-bg. */
+        background: var(--stream-bg);
       }
       /* Grid items default to min-width: auto, which is what lets content push
          them wider than their track. */

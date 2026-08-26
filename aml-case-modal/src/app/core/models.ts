@@ -103,13 +103,18 @@ export type AttachmentKind = 'pdf' | 'image' | 'other';
 export const ALLOWED_ATTACHMENT_KINDS: readonly AttachmentKind[] = ['pdf', 'image'] as const;
 
 /**
- * Collapsed strip: at or below this many triggers there is nothing worth
- * hiding, so every row shows and no overflow badge appears.
+ * Collapsed strip: how many rows are visible before it scrolls internally.
+ *
+ * ONE number, doing two jobs that must agree. It is the height of the collapsed
+ * window, and it is also the point at which a Show all toggle starts being
+ * worth offering - at or below it every trigger is already on screen, so a
+ * control that reveals nothing would be worse than no control.
+ *
+ * It replaced a pair, a collapse threshold of 3 and a preview of 2, which could
+ * be set to disagree: the collapsed list no longer previews a slice, it holds
+ * the whole history and scrolls.
  */
-export const TRIGGER_COLLAPSE_THRESHOLD = 3;
-
-/** Above the threshold, the collapsed strip previews this many rows. */
-export const TRIGGER_PREVIEW_ROWS = 2;
+export const TRIGGER_PREVIEW_ROWS = 5;
 
 /** Expanded strip shows at most this many rows before it scrolls internally. */
 export const TRIGGER_EXPANDED_ROWS = 10;

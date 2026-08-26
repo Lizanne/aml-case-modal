@@ -24,14 +24,31 @@ const TIME_ONLY = new Intl.DateTimeFormat('en-GB', {
   timeZone: ZONE,
 });
 
+/**
+ * Same day/month/year as DATE_TIME, without the clock.
+ *
+ * For facts where the time of day is not information: the day a case was
+ * opened is a date, and "09:12" on the end of it is precision nobody asked
+ * for. Built from the same parts as the full stamp, so the two cannot
+ * disagree about how a date is written.
+ */
+const DATE_ONLY = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: ZONE,
+});
+
 /** "11 Aug 2026, 12:15" - UK format, sentence case, used everywhere a stamp appears. */
 @Pipe({ name: 'stamp', standalone: true })
 export class StampPipe implements PipeTransform {
-  transform(iso: string | null | undefined, mode: 'full' | 'time' = 'full'): string {
+  transform(iso: string | null | undefined, mode: 'full' | 'time' | 'date' = 'full'): string {
     if (!iso) return '-';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '-';
-    return mode === 'time' ? TIME_ONLY.format(d) : DATE_TIME.format(d);
+    if (mode === 'time') return TIME_ONLY.format(d);
+    if (mode === 'date') return DATE_ONLY.format(d);
+    return DATE_TIME.format(d);
   }
 }
 
