@@ -75,7 +75,18 @@ const body = await page.locator(`${dialog} .lead, ${dialog} .danger-note`).allIn
 const text = body.join(' ').replace(/\s+/g, ' ');
 check('names the lock owner', /M\. Torres/.test(text), text);
 check('says how long they have held it', /has held the lock since \S/.test(text), text);
-check('warns they may be mid investigation', /may be mid investigation/.test(text), text);
+/**
+ * The lead is the FACT only - who holds it, since when - and stops there.
+ *
+ * Read on its own, not off the joined lead-plus-note above: the consequence
+ * belongs to the red note, so a test that lets the two run together cannot
+ * tell which of them is carrying what. The lead used to end "and may be mid
+ * investigation", making the note's case first and more weakly.
+ */
+const lead = (await page.locator(`${dialog} .lead`).innerText()).replace(/\s+/g, ' ').trim();
+check('the lead states the fact and stops',
+  /^M\. Torres has held the lock since .+\.$/.test(lead) && !/mid investigation/i.test(lead),
+  lead);
 check(
   'states the consequence',
   /Unlocking removes their lock and interrupts any action they.{0,3}re recording/.test(text),

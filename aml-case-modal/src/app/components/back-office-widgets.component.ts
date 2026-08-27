@@ -4,7 +4,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
-import { MODAL_GAP_PX, lockStatusLine } from '../core/models';
+import { MODAL_GAP_PX, WIDGET_SOLO_MAX_PX, lockStatusLine } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { PillComponent } from './ui-pill.component';
 
@@ -66,6 +66,8 @@ import { PillComponent } from './ui-pill.component';
     // The panels' own gap, so the row and the stage below it split their
     // width at exactly the same two points. One constant, two layouts.
     '[style.--widget-gap.px]': 'gap',
+    // The lone card's cap, from the constant rather than a literal in the CSS.
+    '[style.--widget-solo-max.px]': 'soloMax',
     // display: none, not an empty host. .page is a flex column with a 16px
     // gap, and a zero-height flex item still claims its share of it - the row
     // would be gone and its gap would not, leaving the panel pushed down by a
@@ -88,7 +90,7 @@ import { PillComponent } from './ui-pill.component';
       what keeps it from reading as a strip floating over the page.
     -->
     @if (showRow()) {
-    <div class="widgets" [style.width]="ws.rowCss()">
+    <div class="widgets" [class.widgets--single]="cardIds().length === 1" [style.width]="ws.rowCss()">
       @for (id of cardIds(); track id) {
       @if (id === 'sg') {
       <!-- ------------------------------------------------------- SG alerts -->
@@ -234,19 +236,14 @@ import { PillComponent } from './ui-pill.component';
         display: block;
       }
       /**
-       * EACH CARD SPANS ITS OWN PANEL. That is the whole rule, and the grid is
-       * what makes it true without anyone counting panels.
-       *
        * The row is sized from the store to the box the panels occupy, and
        * margin-left: auto right-docks it, so its edges ARE the panel area's
-       * edges. auto-fit then collapses every empty track and hands the space
-       * to the cards that exist: one card takes the whole row and therefore
-       * spans the solo panel edge to edge; two cards take half each, which is
-       * the same split the two panels below them take.
+       * edges. What happens inside it depends on how many cards there are:
        *
-       * There is no card-count branch and no half-width variant. There was
-       * one, and it is what left a lone widget stopping short in the middle of
-       * the panel it sat on - a right edge shared and a left edge that was not.
+       *   two    auto-fit splits the row in half, which is the same split the
+       *          two panels take - so each card sits over its own. Unchanged.
+       *   one    capped at WIDGET_SOLO_MAX_PX and pushed to the right edge.
+       *          See .widgets--single.
        *
        * The min() floor matters: a fixed 260px track whose floor exceeds the
        * container overflows it rather than collapsing to one column.
@@ -260,6 +257,29 @@ import { PillComponent } from './ui-pill.component';
            16 they were 2px out on each side. */
         gap: var(--widget-gap);
         margin-left: auto;
+      }
+      /**
+       * A lone card: 640px at most, hard against the panel's right edge.
+       *
+       * The ROW still spans the panel area - only the track inside it is
+       * capped - so the right edge the card lands on is the panel's own,
+       * measured rather than guessed at. justify-content moves the track
+       * within the row; sizing the row instead would move the edge the card is
+       * supposed to be meeting.
+       *
+       * min(100%, 640px), so below 640px of row there is no cap left to apply
+       * and the card fills the content area between the gutters. One
+       * expression covering both halves of the rule, rather than a second
+       * breakpoint that could be set to disagree with the first.
+       *
+       * A cap, because a single card stretched across 1080px is a 32px icon,
+       * two short lines and then several hundred pixels of nothing before the
+       * buttons. Right-aligned rather than left, because the panel it stands
+       * in for arrives from that edge.
+       */
+      .widgets--single {
+        grid-template-columns: min(100%, var(--widget-solo-max));
+        justify-content: end;
       }
 
       /* ---- card: 22263:21085 ------------------------------------------- */
@@ -667,6 +687,19 @@ import { PillComponent } from './ui-pill.component';
         .widgets {
           grid-template-columns: minmax(0, 1fr);
         }
+        /**
+         * The cap is NOT dropped with it. Restated here because the rule above
+         * is a later single-class selector and would otherwise win on order -
+         * which is what put a 668px card on a 700px viewport, 28px over a cap
+         * that was still meant to be in force.
+         *
+         * The stack rule is about two cards not sharing a line. A lone card
+         * was never sharing one, so nothing about it changes at this width:
+         * 640 until the row is narrower than 640, then the row.
+         */
+        .widgets--single {
+          grid-template-columns: min(100%, var(--widget-solo-max));
+        }
         .w {
           gap: 10px;
           padding: 16px;
@@ -706,6 +739,9 @@ export class BackOfficeWidgetsComponent {
 
   /** The stage's gap, handed to the row so the two split at the same points. */
   readonly gap = MODAL_GAP_PX;
+
+  /** The lone card's cap - see .widgets--single. */
+  readonly soloMax = WIDGET_SOLO_MAX_PX;
 
   /**
    * The cards, in slot order: on the surface, and panel down.

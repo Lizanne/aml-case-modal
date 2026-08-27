@@ -11,7 +11,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { CaseStore } from '../core/case-store';
 import { focusPanelHeader } from './sg-alert-modal.component';
-import { NARROW_BREAKPOINT_PX } from '../core/models';
+import { MIN_DUAL_PANEL_PX, NARROW_BREAKPOINT_PX } from '../core/models';
 import { WorkspaceStore } from '../core/workspace-store';
 import { CaseHeaderComponent } from './case-header.component';
 import { DecisionDialogComponent } from './decision-dialog.component';
@@ -50,7 +50,6 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
   template: `
     <div class="modal" [class.modal--narrow]="isNarrow()" [class.modal--dual]="ws.visibleCount() === 2">
       <case-header (minimise)="ws.minimise('aml')" (close)="ws.close('aml')" />
-      <trigger-strip />
 
       @if (isNarrow()) {
         <div class="segments">
@@ -68,19 +67,40 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
 
       <!-- focusin marks which panel the agent is working in, so a reflow into
            the segmented layout lands on the one they were already using. -->
+      <!--
+        THE TRIGGER STRIP IS PART OF THE LEFT COLUMN, not a band across the
+        panel. It used to sit between the header and the body, spanning both
+        columns, which cost the workflow that height for a list the workflow
+        never reads. The workflow now starts at the top of the body, directly
+        under the header, and the triggers sit above the tabs whose content
+        they belong with - the snapshot, the timeline, the case's history.
+
+        It travels with the left column in BOTH layouts. Narrow has no columns,
+        so "the left column" there is the Player info segment: the strip is on
+        that segment and not on Workflow, which is the same division by another
+        name. Consequence worth stating: at narrow the triggers are one tap
+        away rather than always on screen, and the workflow segment gets the
+        whole panel.
+      -->
       <div class="body">
         @if (isNarrow()) {
           @if (store.activeSegment() === 'workflow') {
             <workflow-panel (focusin)="store.lastActivePanel.set('workflow')" />
           } @else {
-            <player-info-panel (focusin)="store.lastActivePanel.set('player-info')" />
+            <div class="body__left" (focusin)="store.lastActivePanel.set('player-info')">
+              <trigger-strip />
+              <player-info-panel />
+            </div>
           }
         } @else {
-          <player-info-panel
+          <div
             class="body__left"
             (focusin)="store.lastActivePanel.set('player-info')"
             (pointerdown)="store.lastActivePanel.set('player-info')"
-          />
+          >
+            <trigger-strip />
+            <player-info-panel />
+          </div>
           <workflow-panel
             class="body__right"
             (focusin)="store.lastActivePanel.set('workflow')"
@@ -235,10 +255,37 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         min-height: 0;
         display: flex;
       }
+      /**
+       * A COLUMN now, not a single component: the trigger strip above, the
+       * tabs and their content below.
+       *
+       * The strip is flex: none and the info panel takes what is left, so the
+       * strip's own two heights - a collapsed pair, or five rows expanded -
+       * are what move, and they move the tab content rather than anything in
+       * the workflow beside it. min-height: 0 on both, or the info panel's
+       * internal scroller cannot shrink and the column grows past the body.
+       */
       .body__left {
         flex: 0 0 420px;
         width: 420px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
         border-right: 1px solid var(--line);
+      }
+      .body__left trigger-strip {
+        flex: none;
+      }
+      .body__left player-info-panel {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      /* Narrow: the column IS the segment, so it takes the whole body. */
+      .modal--narrow .body__left {
+        flex: 1 1 auto;
+        width: auto;
+        border-right: 0;
       }
       .body__right {
         flex: 1 1 auto;
@@ -268,6 +315,9 @@ export class AmlCaseModalComponent implements AfterViewInit {
 
   readonly isNarrow = computed(() => this.ws.modalWidth() < NARROW_BREAKPOINT_PX);
 
+  /** See CaseStore.layoutStacked. MIN_DUAL_PANEL_PX is the dual-fit width. */
+  readonly isStacked = computed(() => this.ws.modalWidth() < MIN_DUAL_PANEL_PX);
+
   private wasNarrow = false;
 
   constructor() {
@@ -278,6 +328,7 @@ export class AmlCaseModalComponent implements AfterViewInit {
         // Published because the compact treatment reaches components that are
         // not children of this template.
         this.store.layoutNarrow.set(narrow);
+        this.store.layoutStacked.set(this.isStacked());
 
         // On the reflow into segmented, land on whichever panel the agent was
         // actually working in. Only on the transition - never override their

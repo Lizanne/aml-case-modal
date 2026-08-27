@@ -159,9 +159,12 @@ check('expanded: the whole history is rendered, five rows shown', await page.eva
   const el = document.querySelector('trigger-strip .strip__list');
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
   const total = Number(document.querySelector('trigger-strip .strip__bar ui-pill').textContent.trim().split(' ')[0]);
-  const rowH = rows[0].querySelector('.cell').getBoundingClientRect().height;
+  // Average row, not .cell: .trigger has no box in the grid layout and .cell
+  // is a single line once the strip stacks in its column, so only the average
+  // is a row height in both.
+  const rowH = el.scrollHeight / rows.length;
   return rows.length === total &&
-    Math.round(el.getBoundingClientRect().height / rowH) === 5 &&
+    Math.round(el.clientHeight / rowH) === 5 &&
     el.scrollHeight > el.clientHeight + 1;
 }));
 await page.locator('trigger-strip .strip__verb').click();
@@ -244,7 +247,15 @@ check('header pill now Compliance',
 check('lock was lifted', (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
 check('re-lock is one click away', await page.locator('case-header button:has-text("Lock to me")').isEnabled());
 check('event row logged', (await page.locator('event-row .row').count()) === 2);
-check('adjust severity still enabled while open',
+// Rule 8 takes the lock like everything else now. The severity save above
+// lifted the lock, so the control that opened the dialog is disabled the
+// moment the case is no longer yours - which is the point, and is exactly how
+// Record behaves beside it.
+check('adjust severity follows the lock, and the lock was just lifted',
+  await page.locator('.footer button:has-text("Adjust severity")').isDisabled());
+await page.locator('case-header button:has-text("Lock to me")').click();
+await page.waitForTimeout(300);
+check('and comes back with the lock',
   await page.locator('.footer button:has-text("Adjust severity")').isEnabled());
 
 console.log('\nStream carries outcomes and severity changes only');
@@ -389,6 +400,37 @@ for (const vw of [1440, 1200]) {
   check(`${vw}: the row and the panel share both edges`, mixed.sameLeft && mixed.sameRight,
     `left ${mixed.sameLeft}, right ${mixed.sameRight}`);
   check(`${vw}: the row sits above the panel`, mixed.rowAbove);
+  /**
+   * A LONE CARD IS CAPPED AND RIGHT-DOCKED. 640px at most, hard against the
+   * panel's right edge; below 640px of row it fills the row instead.
+   *
+   * The ROW still spans the panel area - the checks above measure that - and
+   * only the track inside it is capped, which is what makes the right edge the
+   * card lands on the panel's own rather than one computed twice.
+   *
+   * Expected is derived from the row rather than written as 640, so this tests
+   * the rule at whatever width the sweep is at rather than only where the cap
+   * happens to bind.
+   */
+  const solo = await page.evaluate(() => {
+    const row = document.querySelector('.widgets').getBoundingClientRect();
+    const card = document.querySelector('.w').getBoundingClientRect();
+    const cap = parseFloat(
+      getComputedStyle(document.querySelector('back-office-widgets')).getPropertyValue('--widget-solo-max'),
+    );
+    return {
+      cap,
+      rowW: Math.round(row.width),
+      cardW: Math.round(card.width),
+      sharesRightEdge: Math.round(card.right) === Math.round(row.right),
+      single: document.querySelector('.widgets').classList.contains('widgets--single'),
+    };
+  });
+  check(`${vw}: one card - capped at ${solo.cap} or the row, whichever is smaller`,
+    solo.single && solo.cardW === Math.min(solo.rowW, solo.cap),
+    `${solo.cardW} vs min(${solo.rowW}, ${solo.cap})`);
+  check(`${vw}: and docked to the panel's right edge`, solo.sharesRightEdge,
+    JSON.stringify(solo));
 
   // Now the alert too. The row goes entirely - and the panel must not move.
   await page.locator('back-office-widgets button:has-text("Open alert")').click();

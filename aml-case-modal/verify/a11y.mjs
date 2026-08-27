@@ -103,10 +103,16 @@ await go('01');
 const stripState = () =>
   page.evaluate(() => {
     const el = document.querySelector('trigger-strip .strip__list');
-    const row = document.querySelector('trigger-strip .cell').getBoundingClientRect().height;
+    // The row height, in BOTH layouts. .trigger is display: contents in the
+    // three-column grid so it has no box to measure, and .cell is one LINE
+    // rather than one row once the layout stacks - so neither works on its
+    // own. scrollHeight over the row count is the average row: the same
+    // number in the grid, and the honest one when a stacked row wraps.
+    const rows = document.querySelectorAll('trigger-strip .trigger').length;
+    const row = el.scrollHeight / rows;
     return {
       expanded: document.querySelector('trigger-strip .strip__verb').getAttribute('aria-expanded'),
-      rowsVisible: Math.round(el.getBoundingClientRect().height / row),
+      rowsVisible: Math.round(el.clientHeight / row),
     };
   });
 await page.locator('trigger-strip .strip__verb').focus();

@@ -365,7 +365,7 @@ const rowView = () =>
       rowDisplay: getComputedStyle(document.querySelector('back-office-widgets')).display,
       open: [...document.querySelectorAll('.stage > *')]
         .map((e) => (e.tagName === 'AML-CASE-MODAL' ? 'AML Case' : 'SG Alerts')),
-      panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
+      panelLock: document.querySelector('case-header .head__lockline > button')?.textContent.trim() ?? null,
     };
   });
 const card = (v, name) => v.cards.find((c) => c.name === name) ?? null;
@@ -419,7 +419,7 @@ check('closing it from the bar brings the card back in full',
 
 // State change on the panel reaches the card - after the close, because that
 // is now the only moment the two can be compared at all.
-await page.locator('aml-case-modal .head__lock button').click();
+await page.locator('aml-case-modal .head__lockline > button').click();
 await settle(400);
 await page.locator('aml-case-modal button[aria-label="Close case"]').click();
 await settle(600);

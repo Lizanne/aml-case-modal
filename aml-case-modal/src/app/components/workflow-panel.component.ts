@@ -65,7 +65,17 @@ import { RequiredChipsComponent } from './required-chips.component';
               A new trigger arrived after this snapshot was taken. Resync before recording outcomes.
             </p>
           </div>
-          <button mat-flat-button color="primary" type="button" (click)="store.resync()">
+          <!-- The same gate as the snapshot tab's Resync and as Record:
+               resyncing is acting on the case, so it belongs to whoever holds
+               the lock. Disabled rather than hidden, so an agent who does not
+               hold it can still see what the case is waiting for. -->
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            [disabled]="!store.canAct()"
+            (click)="store.resync()"
+          >
             Resync
           </button>
         </div>

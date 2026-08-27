@@ -18,7 +18,7 @@ export interface Scenario {
   apply: (store: CaseStore, ws: WorkspaceStore) => void;
 }
 
-function attachment(name: string, kind: 'pdf' | 'image', sizeKb: number): Attachment {
+function attachment(name: string, kind: 'image', sizeKb: number): Attachment {
   // Resolved by name, through the same function mapAttachment and addFiles
   // use - a seeded chip and a fixture chip of the same filename must open the
   // same document, or the dev harness would be demonstrating something the
@@ -28,7 +28,7 @@ function attachment(name: string, kind: 'pdf' | 'image', sizeKb: number): Attach
     name,
     kind,
     sizeKb,
-    url: sampleUrlFor(name, kind),
+    url: sampleUrlFor(name),
   };
 }
 
@@ -94,10 +94,11 @@ export const SCENARIOS: Scenario[] = [
           actionType: 'open-source-searches',
           title: 'Open source searches',
           note: 'Adverse media check complete. Two hits reviewed, both false positives relating to a namesake.',
-          attachments: [
-            attachment('adverse-media-results.pdf', 'pdf', 2150),
-            attachment('promo-catch-a-triple-wave.png', 'image', 188),
-          ],
+          // One image, because there is one image fixture. The PDFs that used
+          // to sit beside it went with PDF support; duplicating the single
+          // sample to keep the count up would put two chips on screen that
+          // open the same file under two names.
+          attachments: [attachment('promo-catch-a-triple-wave.png', 'image', 188)],
           errors: s.fixtureAttachmentErrors(),
         }),
       });
@@ -114,7 +115,7 @@ export const SCENARIOS: Scenario[] = [
           actionType: 'player-contact',
           title: 'Player contact',
           note: 'Called player on verified number. Confirmed source of funds as property sale, documentation promised within 5 days.',
-          attachments: [attachment('call-log-2026-08-11.pdf', 'pdf', 1200)],
+          attachments: [],
           lockAfter: 'keep',
         }),
       });

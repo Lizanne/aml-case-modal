@@ -72,7 +72,7 @@
     {
       "id": "t18",
       "name": "HVP withdrawal",
-      "detail": "HVP 50£ withdrawal request.",
+      "detail": "HVP 50\u00a3 withdrawal request.",
       "at": "2026-08-11T10:35:00Z"
     },
     {
@@ -126,7 +126,7 @@
     {
       "id": "t09",
       "name": "HVP withdrawal",
-      "detail": "HVP 120£ withdrawal request.",
+      "detail": "HVP 120\u00a3 withdrawal request.",
       "at": "2025-10-02T13:25:00Z"
     },
     {
@@ -150,7 +150,7 @@
     {
       "id": "t05",
       "name": "HVP withdrawal",
-      "detail": "HVP 75£ withdrawal request.",
+      "detail": "HVP 75\u00a3 withdrawal request.",
       "at": "2025-08-19T12:40:00Z"
     },
     {
@@ -189,19 +189,9 @@
       "note": "Adverse media check complete. Two hits reviewed, both false positives relating to a namesake. Full results attached.",
       "attachments": [
         {
-          "name": "adverse-media-results.pdf",
-          "type": "pdf",
-          "sizeKb": 2150
-        },
-        {
           "name": "promo-catch-a-triple-wave.png",
           "type": "image",
           "sizeKb": 188
-        },
-        {
-          "name": "companies-house-extract.pdf",
-          "type": "pdf",
-          "sizeKb": 900
         }
       ],
       "snapshotAt": "2026-08-11T10:42:00Z"
@@ -225,13 +215,7 @@
       "actor": "A. Kowalski",
       "at": "2026-08-11T12:15:00Z",
       "note": "Called player on verified number. Confirmed source of funds as property sale, documentation promised within 5 days.",
-      "attachments": [
-        {
-          "name": "call-log-2026-08-11.pdf",
-          "type": "pdf",
-          "sizeKb": 1200
-        }
-      ],
+      "attachments": [],
       "snapshotAt": "2026-08-11T12:15:00Z"
     },
     {
@@ -303,14 +287,14 @@
       "caseId": "3310",
       "status": "RESOLVED",
       "severity": "COMPLIANCE",
-      "reason": "£30,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
+      "reason": "\u00a330,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
       "dateCreated": "2025-11-02T10:00:00Z"
     },
     {
       "caseId": "2984",
       "status": "RESOLVED",
       "severity": "EDD",
-      "reason": "£30,000 Lifetime Net Loss Checkpoint.",
+      "reason": "\u00a330,000 Lifetime Net Loss Checkpoint.",
       "dateCreated": "2025-06-18T14:30:00Z"
     }
   ],

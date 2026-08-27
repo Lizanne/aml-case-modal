@@ -49,9 +49,11 @@ import { Attachment, AttachmentError } from '../core/models';
               [attr.title]="file.name"
               (click)="preview.open(file)"
             >
-              <mat-icon class="file__icon" fontSet="material-icons-outlined" aria-hidden="true">{{
-                file.kind === 'pdf' ? 'picture_as_pdf' : 'image'
-              }}</mat-icon>
+              <!-- One glyph: attachments are images. This was a ternary
+                   against file.kind while PDFs were accepted too. -->
+              <mat-icon class="file__icon" fontSet="material-icons-outlined" aria-hidden="true">
+                image
+              </mat-icon>
               <span class="file__name">{{ file.name }}</span>
               <span class="file__size">{{ file.sizeKb | fileSize }}</span>
             </button>

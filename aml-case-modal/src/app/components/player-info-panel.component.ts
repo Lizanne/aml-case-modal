@@ -107,8 +107,22 @@ const TAB_LABEL: Record<InfoTab, string> = {
                      two-panel layout both are on screen at once, so leaving
                      this one visible put two Resync buttons in front of the
                      agent. -->
+                <!--
+                  Enabled for the lock owner, whether or not anything has gone
+                  out of sync: taking a fresh snapshot is something you may
+                  simply want to do. It was hardcoded disabled, which made it a
+                  label shaped like a button.
+
+                  Still hidden while the workflow panel's out-of-sync notice is
+                  up - see the note above - so the two never appear together.
+                -->
                 @if (!store.snapshotOutOfSync()) {
-                  <button mat-stroked-button type="button" disabled>
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    [disabled]="!store.canAct()"
+                    (click)="store.resync()"
+                  >
                     <mat-icon>sync</mat-icon>
                     Resync
                   </button>

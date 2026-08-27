@@ -92,6 +92,23 @@ import { PillComponent } from './ui-pill.component';
        * background-clip: content-box with 6px of padding is what insets the
        * tint: the padding is transparent to the eye and solid to the pointer.
        */
+      /**
+       * THE HOVER SQUARE IS THE HIT AREA. Not a smaller square inside it.
+       *
+       * Two things were shrinking it. The browser's own stylesheet gives every
+       * <button> padding - 1px 6px in Chrome - and this never reset it; and
+       * background-clip: content-box then painted the tint INSIDE that
+       * padding, so the square came out 28x38 in a 40x40 target. Hovering the
+       * outer edge left the cursor somewhere that clicked but did not light
+       * up, which reads as the button ending before it does.
+       *
+       * The clip was correct once: the button carried its own 6px of padding
+       * deliberately, and content-box was what kept the tint off it. That
+       * padding is gone, and the clip outlived it.
+       *
+       * padding: 0 rather than trusting the reset, because the UA value is
+       * what got in last time.
+       */
       .bar__icon-btn {
         display: inline-flex;
         align-items: center;
@@ -99,10 +116,10 @@ import { PillComponent } from './ui-pill.component';
         flex: none;
         width: 40px;
         height: 40px;
+        padding: 0;
         border: 0;
         border-radius: 10px;
         background: transparent;
-        background-clip: content-box;
         color: var(--ink-3);
         cursor: pointer;
       }

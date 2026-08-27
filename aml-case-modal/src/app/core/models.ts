@@ -47,7 +47,28 @@ export function relativeAge(iso: string, now: number = Date.now()): string {
 export function lockStatusLine(
   state: LockState,
   ownerName: string | null | undefined,
-  options: { since?: string; sinceIso?: string; resolved?: boolean } = {},
+  options: {
+    since?: string;
+    sinceIso?: string;
+    resolved?: boolean;
+    /**
+     * Drop the words the lock GLYPH already carries.
+     *
+     * For the narrow header, where the lock shares one row with the title, two
+     * pills, a button and two window controls, and "Locked to M. Torres · 15d"
+     * is 40px more than the row has. Compact keeps every fact - who holds it,
+     * for how long - and drops only "Locked to", which the icon beside it says
+     * in 20px instead of 60.
+     *
+     * An option on THIS function rather than a second string built in the
+     * header: rule 5 is that there is one source for the lock sentence, and a
+     * shorter one composed elsewhere is exactly the drift that rule exists to
+     * stop. Only the state that overflows is shortened; the other two are
+     * already inside the row and stay as they are, so compact never changes a
+     * line that had room.
+     */
+    compact?: boolean;
+  } = {},
 ): string {
   if (options.resolved) return 'Resolved - read-only';
   switch (state) {
@@ -63,7 +84,8 @@ export function lockStatusLine(
        * cannot show two different ages for one lock.
        */
       const age = options.sinceIso ? relativeAge(options.sinceIso) : '';
-      return `Locked to ${ownerName ?? 'another agent'}${age ? ` · ${age}` : ''}`;
+      const who = ownerName ?? 'another agent';
+      return `${options.compact ? '' : 'Locked to '}${who}${age ? ` · ${age}` : ''}`;
     }
     default:
       return 'Not locked';
@@ -98,9 +120,16 @@ export const REQUIRED_ACTIONS: readonly ActionTypeId[] = [
 export const ATTACHMENT_MAX_MB = 10;
 export const ATTACHMENT_MAX_KB = ATTACHMENT_MAX_MB * 1024;
 
-/** Rule 5. PDF and images only. */
-export type AttachmentKind = 'pdf' | 'image' | 'other';
-export const ALLOWED_ATTACHMENT_KINDS: readonly AttachmentKind[] = ['pdf', 'image'] as const;
+/**
+ * Rule 5. IMAGES ONLY.
+ *
+ * PDFs were accepted until they were not: the type, the accept attribute, the
+ * error copy, the fixtures and the preview's iframe viewer all went together.
+ * 'other' stays, because it is what an unacceptable file IS - the kind the
+ * error is raised about - and removing it would leave nothing to reject.
+ */
+export type AttachmentKind = 'image' | 'other';
+export const ALLOWED_ATTACHMENT_KINDS: readonly AttachmentKind[] = ['image'] as const;
 
 /**
  * Collapsed strip: exactly this many rows, always. Two, and it is not a cap.
@@ -144,6 +173,20 @@ export const NARROW_BREAKPOINT_PX = 720;
 export const MODAL_GAP_PX = 16;
 /** A single open panel stops here; two still split the whole row. */
 export const SOLO_MAX_PX = 1080;
+
+/**
+ * A lone widget card stops here, and docks to the panel's right edge.
+ *
+ * Separate from SOLO_MAX_PX and much smaller, because they are capping
+ * different things. A panel at 1080 is full of content; a card at 1080 is an
+ * icon, two short lines and several hundred pixels of nothing before the
+ * buttons. Below this width there is no cap to apply and the card fills the
+ * content area between the gutters.
+ *
+ * It does NOT apply to two cards sharing the row - there the split is the
+ * panels' own, and each card stands over the one it belongs to.
+ */
+export const WIDGET_SOLO_MAX_PX = 640;
 
 /**
  * The width a right-docked solo element takes: the panel when one is open, and

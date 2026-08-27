@@ -194,6 +194,20 @@ let stripSeq = 0;
     `
       :host {
         display: block;
+        /**
+         * The strip measures ITSELF, not the window.
+         *
+         * It lives in the left column now, which is 420px on a 1078px panel -
+         * so the viewport is wide while the strip is not, and a viewport query
+         * cannot see the difference. Keyed to the window, the three-column
+         * grid stayed on in a 420px column and squeezed the detail cell to
+         * about eight characters: "Case opened: unusual deposit pattern"
+         * rendered as "Case op...".
+         *
+         * Same reasoning as the widget row, which had the same problem for the
+         * same reason: two cards sharing a wide screen are each narrow.
+         */
+        container-type: inline-size;
       }
       .strip {
         background: var(--panel);
@@ -384,19 +398,47 @@ let stripSeq = 0;
        * to live on the cells there. Here the row has a box again and takes
        * them back.
        */
-      @media (max-width: 719.98px) {
+      /**
+       * Below this the three columns cannot all be readable, so the row stacks:
+       * name and timestamp on one line, the detail sentence on its own beneath.
+       *
+       * 520, derived rather than picked. The grid is
+       * minmax(140px, 220px) / minmax(0, 1fr) / auto, and its parts need
+       * 140 for the name, about 180 before a trigger detail stops being a
+       * sentence, 135 for the timestamp, 24 of column gaps and 40 of padding -
+       * 519. Above it the detail has a readable share; below it, whatever the
+       * grid gives it is an ellipsis.
+       *
+       * A CONTAINER query, not a media query. See the note on :host.
+       */
+      @container (max-width: 519.98px) {
         .strip__bar {
           padding: 0 16px;
         }
         .strip__list {
           display: block;
         }
+        /**
+         * STILL FIVE ROWS, not a slice of the viewport.
+         *
+         * This used to cap against 50vh, on the argument that stacked rows are
+         * taller and no longer uniform so a row count is meaningless. The
+         * height it produced was ~8 rows on a 1000px window and ~4 on a short
+         * one - a strip whose length depended on the browser, in a column
+         * whose neighbour is a scrolling workflow. Five is the contract in
+         * both layouts; only the row height it multiplies changes.
+         *
+         * 62px: 10px of padding either side, two 20px lines, and the 2px
+         * row-gap between them. A row whose detail wraps to a second line is
+         * taller, so the window then holds a little under five - which is the
+         * honest reading of "five rows" for rows that are not all one height,
+         * and much closer to it than a fraction of the window.
+         */
         .strip__list--expanded {
-          /* Rows are taller and no longer uniform here, so a row-count height
-             is meaningless. Cap against the screen instead. Collapsed still
-             needs nothing: two rows are two rows at any width. */
-          max-height: 50vh;
+          max-height: calc(var(--trigger-row-height-stacked) * var(--trigger-expanded-rows));
         }
+        /* The bar is the strip's own header and stays above its scroll region
+           at every width - the stacked layout changes the rows, not that. */
         .trigger {
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
@@ -447,6 +489,11 @@ let stripSeq = 0;
   ],
   host: {
     '[style.--trigger-row-height]': '"40px"',
+    // The stacked row, added up rather than measured: 10px of padding either
+    // side, two 20px lines, the 2px row-gap between them, and the 1px rule
+    // under the row. Miss the border and the five-row window comes out 5px
+    // short of five rows.
+    '[style.--trigger-row-height-stacked]': '"63px"',
     '[style.--trigger-collapsed-rows]': 'collapsedRows',
     '[style.--trigger-expanded-rows]': 'expandedRows',
   },

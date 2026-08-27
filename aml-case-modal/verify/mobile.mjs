@@ -158,8 +158,15 @@ for (const width of MOBILE) {
 
   console.log('\nStrip, chips, cards and footer fill the modal and wrap');
   await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });
+  await page.waitForSelector('aml-case-modal .modal', { timeout: 15000 });
   await page.waitForTimeout(500);
+  // The trigger strip moved into the left column, and mobile has no columns -
+  // so it lives on the Player info segment, which is not the one the panel
+  // opens on. The chips and the footer below are on Workflow, so the strip is
+  // measured here and the segment handed back afterwards.
+  await page.locator('mat-button-toggle:has-text("Player info")').click();
+  await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });
+  await page.waitForTimeout(400);
   const fill = await page.evaluate(() => {
     const modalW = document.querySelector('aml-case-modal .modal').getBoundingClientRect().width;
     const widthOf = (s) => {
@@ -205,7 +212,22 @@ for (const width of MOBILE) {
   // placement put it on a row of its own until the cells were placed by hand.
   check('the row is two grid rows', fill.rowLines === 2, `${fill.rowLines}`);
   check('the timestamp shares the first row with the name', fill.metaSharesNameRow);
-  check('chip bar fills and wraps', fill.chipsWrap === 'wrap');
+  // Back to Workflow: the chips and the footer are on that segment, and the
+  // strip measured above is on the other one.
+  await page.locator('mat-button-toggle:has-text("Workflow")').click();
+  await page.waitForSelector('required-chips', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const chipBar = await page.evaluate(() => {
+    const chips = document.querySelector('required-chips');
+    return {
+      wrap: getComputedStyle(chips.firstElementChild).flexWrap,
+      width: Math.round(chips.getBoundingClientRect().width),
+      modalW: Math.round(document.querySelector('aml-case-modal .modal').getBoundingClientRect().width),
+    };
+  });
+  check('chip bar fills and wraps',
+    chipBar.wrap === 'wrap' && chipBar.width > chipBar.modalW * 0.8,
+    JSON.stringify(chipBar));
 
   await page.goto(`${BASE}/?state=07`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('outcome-card .card', { timeout: 15000 });
@@ -431,21 +453,44 @@ console.log('\nDesktop is untouched');
   // that desktop still matches the SHEET's own head rather than a stale literal.
   check('head padding is the shared 16px 20px', d.headPad === '16px 20px', d.headPad);
 
+  /**
+   * The trigger strip is the ONE thing desktop no longer shares with a wide
+   * panel, and it is not the viewport that changed.
+   *
+   * It moved into the left column, which is 420px whatever the window is
+   * doing, and its layout is keyed to its own width now rather than the
+   * screen's. So the stacked row - name and timestamp on one line, the detail
+   * sentence full-width beneath - is what desktop gets too. Keyed to the
+   * viewport it kept the three-column grid in that column and squeezed the
+   * detail to about eight characters.
+   *
+   * Asserted against the CONTAINER rather than restated as "mobile now": the
+   * claim is that the strip follows the box it is in, which is what makes the
+   * same rule right on a phone and in a 420px column on a 1440px screen.
+   */
   await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });
   await page.waitForTimeout(450);
   const strip = await page.evaluate(() => {
     const list = document.querySelector('trigger-strip .strip__list');
     const row = document.querySelector('trigger-strip .trigger');
+    const detail = document.querySelector('trigger-strip .cell--detail');
     return {
-      cols: getComputedStyle(list).gridTemplateColumns.split(' ').length,
+      stripW: Math.round(document.querySelector('trigger-strip').getBoundingClientRect().width),
       rowDisplay: getComputedStyle(row).display,
-      detailWrap: getComputedStyle(document.querySelector('trigger-strip .cell--detail')).whiteSpace,
+      detailWrap: getComputedStyle(detail).whiteSpace,
+      detailW: Math.round(detail.getBoundingClientRect().width),
+      clipped: detail.scrollWidth > detail.clientWidth + 1,
     };
   });
-  check('trigger strip is still one three-column grid', strip.cols === 3, `${strip.cols}`);
-  check('rows are still display: contents', strip.rowDisplay === 'contents', strip.rowDisplay);
-  check('the detail still ellipsises on one line', strip.detailWrap === 'nowrap', strip.detailWrap);
+  check('desktop: the strip sits in the left column, not across the panel',
+    strip.stripW > 300 && strip.stripW < 500, `${strip.stripW}`);
+  check('desktop: the narrow column stacks the row', strip.rowDisplay === 'grid',
+    strip.rowDisplay);
+  check('desktop: the detail gets a full line and wraps rather than ellipsising',
+    strip.detailWrap === 'normal' && !strip.clipped &&
+      strip.detailW > strip.stripW * 0.8,
+    `${strip.detailW} of ${strip.stripW}, clipped=${strip.clipped}`);
   await page.close();
 }
 

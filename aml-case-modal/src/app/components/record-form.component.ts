@@ -76,7 +76,7 @@ import { AttachmentListComponent } from './attachment-list.component';
               #picker
               type="file"
               multiple
-              accept="application/pdf,image/*"
+              accept="image/*"
               hidden
               (change)="onFiles($event)"
             />
@@ -241,9 +241,11 @@ export class RecordFormComponent {
   }
 
   private toCandidate(file: File): CandidateFile {
-    let kind: AttachmentKind = 'other';
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) kind = 'pdf';
-    else if (file.type.startsWith('image/')) kind = 'image';
+    // Anything that is not an image is 'other', which is the kind addFiles
+    // rejects. The PDF branch went with PDF support - a file the picker cannot
+    // offer any more, since accept is image/* - but accept is a hint, not a
+    // guarantee, and a dragged PDF still has to land somewhere.
+    const kind: AttachmentKind = file.type.startsWith('image/') ? 'image' : 'other';
     return { name: file.name, sizeKb: Math.round(file.size / 1024), kind };
   }
 }

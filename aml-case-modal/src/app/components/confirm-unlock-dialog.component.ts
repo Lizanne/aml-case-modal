@@ -25,13 +25,17 @@ import { DialogShellComponent } from './dialog-shell.component';
          button in the footer", which would silently follow a reorder. -->
     <dialog-shell heading="Force unlock this case?" initialFocus=".cancel" (dismiss)="close()">
       <!--
-        Names the owner and when they took it, then says what breaking it
-        costs THEM. "may be mid investigation" is the point of the sentence:
-        the lock is not an obstacle, it is a colleague working.
+        Names the owner and when they took it. The fact, and nothing else.
+
+        It used to end "and may be mid investigation", carrying the argument as
+        well as the fact. The red note directly below already says what
+        breaking the lock costs them, and in stronger words - so the lead was
+        making the same case first, more weakly, and softening the warning by
+        pre-empting it. Two sentences, one job each: this one says who and
+        since when, the note says what happens.
       -->
       <p class="lead">
-        <strong>{{ owner() }}</strong> has held the lock since {{ since() }} and may be mid
-        investigation.
+        <strong>{{ owner() }}</strong> has held the lock since {{ since() }}.
       </p>
 
       <p class="danger-note">

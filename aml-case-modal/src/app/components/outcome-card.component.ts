@@ -41,8 +41,19 @@ import { AttachmentListComponent } from './attachment-list.component';
 
       <p class="card__note">{{ outcome.note }}</p>
 
-      <!-- Narrow: attachments and View snapshot share one row instead of a
-           separate divided footer, which costs two lines per card. -->
+      <!--
+        TWO ROWS, ALWAYS: the attachments, then View snapshot beneath them.
+        Never side by side, at any width.
+
+        They used to share one wrapping flex row, which made the button's place
+        a function of how many chips preceded it and how wide the card was - it
+        sat to the right of a single chip, dropped below two, and moved again
+        the moment the column resized. The one control on the card was the
+        hardest thing on it to find twice.
+
+        Stacked, its place is the same in every card in the stream: hard left,
+        directly under whatever the attachments came to, including nothing.
+      -->
       <footer class="card__foot">
         @if (outcome.attachments.length) {
           <attachment-list class="card__files" [attachments]="outcome.attachments" [removable]="false" />
@@ -164,26 +175,41 @@ import { AttachmentListComponent } from './attachment-list.component';
         color: var(--ink-2);
         white-space: pre-wrap;
       }
+      /**
+       * A column, so the button is on its own row under the attachments.
+       *
+       * align-items is left at its stretch default deliberately: both children
+       * take the card's width, which is what lets the chips wrap inside the
+       * list rather than the list itself shrinking to its content and pushing
+       * a long row of them past the card's edge.
+       *
+       * The gap only applies BETWEEN rows, so a card with no attachments gets
+       * no empty band above its button - the footer is simply the button, at
+       * the same left edge and the same distance below the rule as always.
+       */
       .card__foot {
         display: flex;
-        align-items: center;
-        flex-wrap: wrap;
+        flex-direction: column;
         min-width: 0;
         gap: 12px;
         margin-top: 16px;
         padding-top: 16px;
         border-top: 1px solid var(--line);
       }
+      /* Its own row. flex-start rather than stretch, so the button keeps its
+         natural width instead of spanning the card. */
       .card__actions {
         display: flex;
         align-items: center;
+        justify-content: flex-start;
         flex-wrap: wrap;
         min-width: 0;
         gap: 12px;
       }
 
-      /* Narrow: tighter card, and the footer loses its rule - the attachment
-         chips and View snapshot sit on one line with the note. */
+      /* Narrow: tighter card, and the footer loses its rule. The two rows
+         stay two rows - a narrow column is where a shared line went wrong
+         soonest, so it is the last place to put one back. */
       .card--narrow {
         padding: 16px;
       }

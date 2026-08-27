@@ -11,7 +11,6 @@ import {
   inject,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { FileSizePipe } from '../core/format';
 import { Attachment } from '../core/models';
@@ -19,23 +18,24 @@ import { Attachment } from '../core/models';
 let previewSeq = 0;
 
 /**
- * The attachment preview. One overlay, two sizes.
+ * The attachment preview. One overlay, one size rule - attachments are images.
  *
- * Images are WINDOWED TO THE IMAGE: the panel hugs whatever the image measures,
- * up to a viewport cap. A 600px screenshot in a 90% box would be a small
- * picture marooned in a large empty frame, and the frame would read as the
- * thing that failed to load.
+ * WINDOWED TO THE IMAGE: the panel hugs whatever the image measures, up to a
+ * viewport cap. A 600px screenshot in a 90% box would be a small picture
+ * marooned in a large empty frame, and the frame would read as the thing that
+ * failed to load.
  *
- * PDFs take ~90% of the viewport in an <iframe>, which hands the file to the
- * browser's own PDF viewer - paging, zoom, search and print, none of which we
- * write, and all of which a four-page adverse-media report needs. That size is
- * not a preference: a PDF page at anything smaller is a page you cannot read.
- * If the iframe ever proves unreliable the fallback is a new tab, NOT a
- * bundled PDF library.
+ * The PDF half of this component is gone with PDF support. It sized itself to
+ * ~90% of the viewport and handed the file to the browser's own viewer in an
+ * iframe - paging, zoom, search and print, none of which we wrote - and it is
+ * why the header used to be two headers: a PDF got filename, size and Close
+ * because the viewer beneath it already offered Download.
  *
- * That difference is why the header is not the same header twice: a PDF gets
- * filename, size and Close, because the viewer beneath it already offers
- * Download; an image gets Download as well, because nothing else will.
+ * The header now carries BOTH ways out of the overlay and into the file:
+ * Download saves it, Open in new tab hands it to the browser at full size.
+ * They are different acts, not two spellings of one - saving a file you may
+ * not want to keep, against looking at it larger than an overlay allows - and
+ * an image viewer offering neither would be a dead end.
  *
  * Same accessibility debt as dialog-shell, paid the same way: a real focus
  * trap behind the aria-modal claim, focus captured on open and handed back to
@@ -60,7 +60,6 @@ let previewSeq = 0;
 
     <div
       class="panel"
-      [class.panel--pdf]="file.kind === 'pdf'"
       role="dialog"
       aria-modal="true"
       [attr.aria-labelledby]="headingId"
@@ -69,32 +68,47 @@ let previewSeq = 0;
       [cdkTrapFocusAutoCapture]="false"
     >
       <div class="panel__head">
-        <mat-icon class="panel__icon" fontSet="material-icons-outlined" aria-hidden="true">{{
-          file.kind === 'pdf' ? 'picture_as_pdf' : 'image'
-        }}</mat-icon>
+        <mat-icon class="panel__icon" fontSet="material-icons-outlined" aria-hidden="true">
+          image
+        </mat-icon>
         <h2 class="panel__title" [id]="headingId" [attr.title]="file.name">{{ file.name }}</h2>
         <span class="panel__size">{{ file.sizeKb | fileSize }}</span>
         <!--
-          Images only. The PDF path hands the file to the browser's own viewer,
-          whose toolbar already carries download, print and paging - a second
-          Download drawn directly above it is the same control twice, and ours
-          is the weaker of the two. An image gets no such toolbar, so there
-          this is the only way to save the file.
+          Two anchors, not buttons. Both are things the browser does natively -
+          save under the file's own name, open in a tab - and an <a> gets the
+          middle-click, the context menu and the keyboard for free. A button
+          would have to reimplement all three and would still lose the first
+          two.
 
-          An <a download>, not a button: the browser's own save, under the
-          file's own name, and it still works from the keyboard.
+          Order: Download, then Open in new tab, then Close. The destructive
+          -ish one is not here at all, so the run is simply least to most
+          final - keep it, look at it elsewhere, dismiss it.
         -->
-        @if (file.kind !== 'pdf') {
-          <a
-            class="panel__action"
-            [href]="file.url"
-            [attr.download]="file.name"
-            [attr.aria-label]="'Download ' + file.name"
-            title="Download"
-          >
-            <mat-icon aria-hidden="true">download</mat-icon>
-          </a>
-        }
+        <a
+          class="panel__action"
+          [href]="file.url"
+          [attr.download]="file.name"
+          [attr.aria-label]="'Download ' + file.name"
+          title="Download"
+        >
+          <mat-icon aria-hidden="true">download</mat-icon>
+        </a>
+        <!--
+          rel="noopener": a new tab opened from here gets no window.opener back
+          into this document. The target is our own asset today, so nothing is
+          reachable through it - but the href is attachment data, and the day
+          it points somewhere else this is the line that has to already be here.
+        -->
+        <a
+          class="panel__action"
+          [href]="file.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          [attr.aria-label]="'Open ' + file.name + ' in a new tab'"
+          title="Open in new tab"
+        >
+          <mat-icon aria-hidden="true">open_in_new</mat-icon>
+        </a>
         <button
           type="button"
           class="panel__action"
@@ -107,11 +121,7 @@ let previewSeq = 0;
       </div>
 
       <div class="panel__body">
-        @if (file.kind === 'pdf') {
-          <iframe class="viewer" [src]="safeUrl" [title]="file.name"></iframe>
-        } @else {
-          <img class="image" [src]="file.url" [alt]="file.name" />
-        }
+        <img class="image" [src]="file.url" [alt]="file.name" />
       </div>
     </div>
   `,
@@ -145,13 +155,6 @@ let previewSeq = 0;
         border-radius: 14px;
         box-shadow: 0 18px 48px rgba(24, 24, 27, 0.32);
         overflow: hidden;
-      }
-      /* The 90% size. Both dimensions are clamped by the :host padding above,
-         so this is a target rather than a promise - which is the right way
-         round on a short viewport, where 90vh plus chrome would not fit. */
-      .panel--pdf {
-        width: min(1400px, 90vw);
-        height: 90vh;
       }
       .panel__head {
         flex: none;
@@ -223,16 +226,6 @@ let previewSeq = 0;
         min-height: 0;
         background: var(--page);
       }
-      .panel--pdf .panel__body {
-        flex: 1 1 auto;
-      }
-      .viewer {
-        flex: 1 1 auto;
-        width: 100%;
-        height: 100%;
-        min-height: 0;
-        border: 0;
-      }
       /* The window. Capped against the viewport less the :host padding and the
          header, so a large screenshot stops at the screen and a small one
          keeps its own size. */
@@ -244,19 +237,17 @@ let previewSeq = 0;
       }
 
       /**
-       * Mobile: full screen, both kinds.
+       * Mobile: full screen.
        *
        * There is no useful "windowed" size on a phone - an image windowed to
-       * itself is either the whole screen already or too small to read, and a
-       * PDF page at less than full width is unreadable outright. So the panel
-       * takes the viewport and drops its radius, the way the modal does.
+       * itself is either the whole screen already or too small to read. So the
+       * panel takes the viewport and drops its radius, the way the modal does.
        */
       @media (max-width: 719.98px) {
         :host {
           padding: 0;
         }
-        .panel,
-        .panel--pdf {
+        .panel {
           width: 100%;
           height: 100%;
           max-width: none;
@@ -276,27 +267,16 @@ let previewSeq = 0;
 })
 export class AttachmentPreviewComponent implements AfterViewInit, OnDestroy {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
-  private readonly sanitizer = inject(DomSanitizer);
 
-  private _file!: Attachment;
-  private _safeUrl!: SafeResourceUrl;
-
-  @Input({ required: true })
-  set file(value: Attachment) {
-    this._file = value;
-    // Sanitised ONCE per file, in the setter. A getter that sanitised on
-    // demand would hand [src] a new SafeResourceUrl object on every change
-    // detection run, and the iframe would reload the PDF each time - losing
-    // the page you had scrolled to, which is the whole point of the viewer.
-    this._safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(value.url);
-  }
-  get file(): Attachment {
-    return this._file;
-  }
-
-  get safeUrl(): SafeResourceUrl {
-    return this._safeUrl;
-  }
+  /**
+   * A plain @Input again. The setter existed to sanitise the URL once per file
+   * for the iframe's [src] - sanitising on demand handed it a new
+   * SafeResourceUrl every change-detection run and reloaded the PDF, losing
+   * the page you had scrolled to. An <img> src and an <a> href need no
+   * bypass at all, so the setter, the cached value and DomSanitizer go with
+   * the viewer they were for.
+   */
+  @Input({ required: true }) file!: Attachment;
 
   @Output() dismiss = new EventEmitter<void>();
 

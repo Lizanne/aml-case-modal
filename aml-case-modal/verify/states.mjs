@@ -43,7 +43,10 @@ const CHECKS = {
   '02': async (p) => ({
     'record form open': (await p.locator('record-form form').count()) === 1,
     'two attachment errors': (await p.locator('record-form .error').count()) === 2,
-    'valid files kept': (await p.locator('record-form .file').count()) === 2,
+    // One, not two: the PDF that used to sit beside the image went with PDF
+    // support. What this frame proves is unchanged - the seeded errors do not
+    // take the valid file down with them.
+    'valid files kept': (await p.locator('record-form .file').count()) === 1,
     'save disabled (no lock choice)': await p.locator('record-form button:has-text("Save outcome")').isDisabled(),
   }),
   '02b': async (p) => ({
@@ -148,7 +151,18 @@ const CHECKS = {
     })(),
     'segmented control shown': (await p.locator('mat-button-toggle-group').count()) === 1,
     'only one panel rendered': (await p.locator('workflow-panel').count()) + (await p.locator('player-info-panel').count()) === 1,
-    'trigger strip shows the same single control': (await p.locator('trigger-strip .strip__verb').count()) === 1,
+    // The strip moved into the left column, and narrow has no columns - so it
+    // is on the Player info segment, not the Workflow one this frame opens on.
+    // Selected here rather than asserted absent: the claim is that the control
+    // is the SAME one at this width, which needs the strip on screen to test.
+    'trigger strip shows the same single control': await (async () => {
+      await p.locator('mat-button-toggle:has-text("Player info")').click();
+      await p.waitForTimeout(500);
+      const n = await p.locator('trigger-strip .strip__verb').count();
+      await p.locator('mat-button-toggle:has-text("Workflow")').click();
+      await p.waitForTimeout(500);
+      return n === 1;
+    })(),
     'chips use short labels': (await p.locator('required-chips ui-pill').first().innerText()).includes('Searches'),
     // The narrow footer no longer splits into two full-width halves - it is
     // the same right-aligned pair as every other footer.

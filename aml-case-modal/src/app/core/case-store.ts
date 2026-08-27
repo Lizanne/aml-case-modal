@@ -79,44 +79,31 @@ const nowIso = () => new Date().toISOString();
  * bytes behind it: the picker hands over a name and a size, and the File
  * itself is dropped before it reaches the store.
  */
-export const SAMPLE_PDF = 'assets/samples/adverse-media-results.pdf';
 export const SAMPLE_IMAGE = 'assets/samples/promo-catch-a-triple-wave.png';
 
 /**
- * Each named fixture, mapped to its OWN document.
+ * Each named fixture, mapped to its own document. One entry, now that
+ * attachments are images only.
  *
- * These all used to point at the two files above. That was invisible until the
- * preview opened them, and then it was not: our header names the attachment
- * that was clicked, while the browser's PDF toolbar names the file actually
- * loaded, so a preview of call-log-2026-08-11.pdf was captioned
+ * The three PDF fixtures went with PDF support. They existed to solve a
+ * problem that no longer exists: they had all pointed at one shared sample, so
+ * our header named the attachment that was clicked while the browser's PDF
+ * toolbar named the file actually loaded - a preview captioned
  * "call-log-2026-08-11.pdf" above a viewer reading "adverse-media-results.pdf".
  *
- * Copying the same bytes under each name would have quietened the toolbar and
- * left the same contradiction inside the document, whose own footer says which
- * file it is. So each fixture has its own document, written by
- * tools/make-sample-pdfs.py.
+ * The map stays for the one image, and stays a map: it is where a real upload
+ * service would hand back a per-file URL, and the next fixture goes in here
+ * rather than beside the fallback.
  *
- * Resolved here rather than written into mock-case.json against every entry:
- * this is the one place raw fixture data becomes an Attachment, so it is the
- * one place a real upload service would hand back a per-file URL instead.
+ * The image is the only REAL file in this list. It replaced sanctions-screen.png,
+ * which was a drawn-up screening export - plausible, but built to flatter the
+ * preview it was displayed in. This is an actual campaign creative, so the
+ * image path is exercised against real dimensions, real colour and real text
+ * at real sizes rather than against a mock-up sized to fit. Quantised to a
+ * 256-colour palette on the way in: 188KB rather than the 912KB a straight PNG
+ * costs, and at 1340x1000 the two are indistinguishable.
  */
 const SAMPLE_BY_NAME: Readonly<Record<string, string>> = {
-  'adverse-media-results.pdf': 'assets/samples/adverse-media-results.pdf',
-  'call-log-2026-08-11.pdf': 'assets/samples/call-log-2026-08-11.pdf',
-  'companies-house-extract.pdf': 'assets/samples/companies-house-extract.pdf',
-  /**
-   * The only image fixture, and the only REAL file in this list.
-   *
-   * It replaced sanctions-screen.png, which was a drawn-up screening export -
-   * plausible, but built to flatter the preview it was displayed in. This is an
-   * actual campaign creative, so the image path is exercised against real
-   * dimensions, real colour and real text at real sizes rather than against a
-   * mock-up sized to fit.
-   *
-   * Quantised to a 256-colour palette on the way in: 188KB rather than the
-   * 912KB a straight PNG of the same image costs, and at 1340x1000 the two are
-   * indistinguishable. Flat illustration is what makes that free.
-   */
   'promo-catch-a-triple-wave.png': 'assets/samples/promo-catch-a-triple-wave.png',
 };
 
@@ -127,8 +114,8 @@ const SAMPLE_BY_NAME: Readonly<Record<string, string>> = {
  * here, addFiles below, and the attachment() seed helper in scenarios.ts - and
  * a preview is only honest if all three resolve identically.
  */
-export function sampleUrlFor(name: string, kind: AttachmentKind): string {
-  return SAMPLE_BY_NAME[name] ?? (kind === 'pdf' ? SAMPLE_PDF : SAMPLE_IMAGE);
+export function sampleUrlFor(name: string): string {
+  return SAMPLE_BY_NAME[name] ?? SAMPLE_IMAGE;
 }
 
 function mapAttachment(raw: {
@@ -143,7 +130,7 @@ function mapAttachment(raw: {
     name: raw.name,
     kind,
     sizeKb: raw.sizeKb,
-    url: raw.url ?? sampleUrlFor(raw.name, kind),
+    url: raw.url ?? sampleUrlFor(raw.name),
   };
 }
 
@@ -210,6 +197,21 @@ export class CaseStore {
    * chips, placeholders and footer all take a compact form (Figma frame 09).
    */
   readonly layoutNarrow = signal(false);
+  /**
+   * Narrower still: below the width at which two panels fit side by side.
+   *
+   * A SECOND step, not a rename of the first. layoutNarrow is "one panel's
+   * worth of width" - the segmented layout, the compact densities. This is
+   * "less width than a dual panel gets", which is where the header stops
+   * fitting on one row and has to stack.
+   *
+   * Published rather than left to a CSS container query, because the threshold
+   * now decides COPY as well as layout: the header's lock line drops "Locked
+   * to" only while it is fighting for a single row, and gets it back the
+   * moment the lock has a row of its own. A query in the stylesheet and a
+   * computed in TypeScript would be two thresholds to keep in step.
+   */
+  readonly layoutStacked = signal(false);
 
   // ---------------------------------------------------------------- reflow survival
   //
@@ -295,8 +297,20 @@ export class CaseStore {
   /** What to call that draft in the warning. */
   readonly draftLabel = computed(() => this.draft()?.title ?? '');
 
-  /** Rule 8. Adjust severity is always enabled while the case is open. */
-  readonly canAdjustSeverity = computed(() => !this.isResolved());
+  /**
+   * Rule 8, now gated on the lock like every other act on this case.
+   *
+   * It was "enabled while the case is open", which let anyone looking at a
+   * case someone else held change its severity - the one thing on the panel
+   * that could be done without the lock. Adjusting severity IS acting on the
+   * case, so it takes the same gate Record takes: canAct.
+   *
+   * canAct rather than canRecord, deliberately. Recording carries the extra
+   * rule 11 block - a snapshot out of sync makes an OUTCOME unsound, because
+   * the outcome is a statement about what the triggers said. A severity is a
+   * judgement about the case itself and does not go stale with the snapshot.
+   */
+  readonly canAdjustSeverity = computed(() => this.canAct());
 
   /** Rule 10. Footer disappears entirely once resolved. */
   readonly showFooter = computed(() => !this.isResolved());
@@ -516,7 +530,7 @@ export class CaseStore {
           id: nextId('err'),
           file: f.name,
           reason: 'type',
-          message: `${f.name} was not added. PDF and images only.`,
+          message: `${f.name} was not added. Images only.`,
         });
         continue;
       }
@@ -540,7 +554,7 @@ export class CaseStore {
         name: f.name,
         kind: f.kind,
         sizeKb: f.sizeKb,
-        url: sampleUrlFor(f.name, f.kind),
+        url: sampleUrlFor(f.name),
       });
     }
 

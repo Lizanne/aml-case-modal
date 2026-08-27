@@ -370,30 +370,44 @@ for (const [state, width] of [['01', 1440], ['03', 1440], ['09', 1500]]) {
     `${f.used} of ${f.spanned}px`);
 }
 
+/**
+ * The header names the CASE. The bar above it names the player.
+ *
+ * The identity line under the title is gone - it read "Howard Williams · Player
+ * 88213" directly below a black player bar already carrying that name, the
+ * same words twice a few pixels apart. So this no longer checks where the line
+ * sits and what it drops at narrow; it checks that the line is gone, that the
+ * header is the one row it was folded into, and that the name it used to carry
+ * is still on screen somewhere - which is the reason it could be dropped.
+ */
 console.log('\nThe header keeps one structure at both widths');
-for (const [state, width, expectName] of [['01', 1440, true], ['09', 1500, false]]) {
+for (const [state, width] of [['01', 1440], ['09', 1500]]) {
   await page.setViewportSize({ width, height: 1040 });
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('case-header .head__sub', { timeout: 15000 });
+  await page.waitForSelector('case-header .head__title', { timeout: 15000 });
   await page.waitForTimeout(500);
   const h = await page.evaluate(() => {
-    const sub = document.querySelector('case-header .head__sub');
-    const titles = document.querySelector('case-header .head__titles');
-    const lock = document.querySelector('case-header .head__lock');
+    const head = document.querySelector('case-header');
+    const row = head.querySelector('.head__title-row');
+    const rows = [...head.querySelectorAll('.head__titles > *')];
     return {
-      text: sub.textContent.trim(),
-      inTitles: titles.contains(sub),
-      // The identity used to fold into the lock band in narrow. That band now
-      // carries lock state only, at both widths.
-      strayInLock: lock.textContent.includes('Player'),
-      lockText: document.querySelector('.head__lock-text').textContent.trim(),
+      hasSub: !!head.querySelector('.head__sub'),
+      namesPlayerAnywhere: /Howard Williams/.test(head.textContent),
+      titleRows: rows.length,
+      // A wrap would show up as two distinct centres among the row's children.
+      centres: [...row.children]
+        .filter((k) => k.getBoundingClientRect().width > 0)
+        .map((k) => { const r = k.getBoundingClientRect(); return Math.round(r.top + r.height / 2); }),
+      playerBarNames: /Howard Williams/.test(
+        document.querySelector('player-header')?.textContent ?? '',
+      ),
     };
   });
-  check(`${state}: identity sits in head__titles`, h.inTitles);
-  check(`${state}: nothing player-shaped left in the lock band`, !h.strayInLock, h.lockText);
-  check(`${state}: identity reads "${h.text}"`, /^Player 88213$|Player 88213$/.test(h.text));
-  check(`${state}: name ${expectName ? 'present' : 'dropped'}`,
-    h.text.includes('Howard Williams') === expectName, h.text);
+  check(`${state}: no identity line under the title`, !h.hasSub);
+  check(`${state}: and the header does not name the player at all`, !h.namesPlayerAnywhere);
+  check(`${state}: the player bar above still does`, h.playerBarNames);
+  check(`${state}: the header is one row`, h.titleRows === 1, `${h.titleRows}`);
+  check(`${state}: which does not wrap`, new Set(h.centres).size === 1, h.centres.join(','));
 }
 
 console.log('\nOne Resync on screen while the out-of-sync notice is up');
@@ -441,8 +455,12 @@ for (const [state, noticeExpected] of [['10', true], ['01', false]]) {
       `${r.iconBox} ${r.iconFont}`);
     check(`${state}: and uses the outlined set`, /Outlined/.test(r.iconFont ?? ''), r.iconFont);
   } else {
-    check(`${state}: the snapshot Resync is back, and disabled`,
-      r.inNotice === 0 && r.enabled === 0);
+    // In sync, so the notice is away and the snapshot tab owns the control.
+    // Enabled, not disabled: it follows the LOCK now, and these states are
+    // locked to you. What still holds either way is that there is exactly one
+    // Resync on screen, which the check above this asserts.
+    check(`${state}: the snapshot Resync is back, and live for the lock owner`,
+      r.inNotice === 0 && r.enabled === 1, `inNotice=${r.inNotice} enabled=${r.enabled}`);
   }
 }
 
@@ -757,6 +775,22 @@ check('the force-unlock dialog names the same lock holder as the band',
   agree.namesOwner, `${agree.owner} | ${agree.band} | ${agree.lead}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
+/**
+ * Put the trigger strip on screen, whatever layout the panel is in.
+ *
+ * It lives in the left column now. A segmented panel has no columns, so the
+ * strip is on the Player info segment - which is not the one the panel opens
+ * on. Wide panels show both columns and need nothing.
+ */
+const showStrip = async () => {
+  if (await page.locator('trigger-strip').count()) return;
+  const seg = page.locator('mat-button-toggle:has-text("Player info")');
+  if (!(await seg.count())) return;
+  await seg.click();
+  await page.waitForSelector('trigger-strip', { timeout: 15000 });
+  await page.waitForTimeout(400);
+};
+
 console.log('\nEvery time-ordered list runs newest first');
 const descending = (times) => times.every((v, i) => i === 0 || times[i - 1] >= v);
 const openTab = async (label) => {
@@ -788,6 +822,7 @@ for (const state of ['00a', '01', '03', '07', '10', '11', '09']) {
    * now. Asserting descending across both modes was asserting that the pair
    * does not exist.
    */
+  await showStrip();
   const strip = await page.evaluate(() => ({
     at: [...document.querySelectorAll('trigger-strip .cell__at')]
       .map((e) => Date.parse(e.getAttribute('datetime'))),
@@ -887,11 +922,27 @@ const strip = await page.evaluate(() => {
   const list = document.querySelector('trigger-strip .strip__list');
   const modal = document.querySelector('aml-case-modal .modal');
   const rows = document.querySelectorAll('trigger-strip .trigger').length;
-  const rowH = document.querySelector('trigger-strip .cell').getBoundingClientRect().height;
+  /**
+   * The window is five NOMINAL rows, taken from the token that sizes it.
+   *
+   * Not five average rows: a stacked row whose detail wraps to a second line
+   * is 20px taller than one that does not, so in a fixture with a couple of
+   * long details the average is about a pixel over and five of them overshoot
+   * the cap by six. That is the cap being right and the arithmetic being
+   * wrong - the CSS multiplies a fixed row height, so that is what this has to
+   * compare against.
+   */
+  const cs = getComputedStyle(document.querySelector('trigger-strip'));
+  const stacked = getComputedStyle(list).display === 'block';
+  const nominal = parseFloat(
+    cs.getPropertyValue(stacked ? '--trigger-row-height-stacked' : '--trigger-row-height'),
+  );
   return {
     rows,
-    listH: Math.round(list.getBoundingClientRect().height),
-    cap: Math.round(rowH * 5),
+    stacked,
+    nominal,
+    listH: Math.round(list.clientHeight),
+    cap: Math.round(nominal * 5),
     scrolls: list.scrollHeight > list.clientHeight + 1,
     // The strip must never be what makes the panel taller than its stage.
     panelWithinStage:
@@ -903,7 +954,7 @@ check('more rows than fit', strip.rows > 5, `${strip.rows}`);
 // Five, not ten: the expanded window holds every trigger in the DOM and shows
 // five of them, which is what keeps the strip off the workflow below it.
 check('the list is capped at five rows', Math.abs(strip.listH - strip.cap) <= 1,
-  `${strip.listH} vs ${strip.cap}`);
+  `${strip.listH} vs ${strip.cap} (${strip.stacked ? 'stacked' : 'grid'} @ ${strip.nominal}px)`);
 check('and scrolls rather than growing', strip.scrolls);
 check('the panel is not pushed past its stage', strip.panelWithinStage);
 
@@ -1415,7 +1466,12 @@ check('current: label over a bold timestamp',
     current.valueSize === '14px' && current.valueWeight === '600',
   `${current.label} / ${current.value} ${current.valueSize} w${current.valueWeight}`);
 check('current: the control is Resync', /Resync/.test(current.control ?? ''), current.control);
-check('current: Resync is disabled while in sync', current.controlDisabled === true);
+// Resync belongs to the lock owner, not to the snapshot being stale. It was
+// hardcoded disabled here, which made it a label shaped like a button - taking
+// a fresh snapshot is something you may simply want to do. State 01 is locked
+// to you, so it is live.
+check('current: Resync is enabled for the lock owner', current.controlDisabled === false,
+  String(current.controlDisabled));
 
 check('historical: label names the source action',
   historical.label === 'Snapshot from Open source searches', historical.label);
@@ -1504,20 +1560,29 @@ const chromeSizes = async (label) => {
     if (!g) return null;
     const b = [...g.querySelectorAll('button')].map((e) => e.getBoundingClientRect());
     const title = document.querySelector('case-header .head__title').getBoundingClientRect();
+    // Centres, not tops. The controls are IN the title row now and it is
+    // centre-aligned, so a 32px button and a 30px title line never share a top
+    // edge - the old check would only have passed by their happening to be the
+    // same height. What the rule actually means is that they sit on one line,
+    // which is what comparing centres says.
+    const centre = (r) => Math.round(r.top + r.height / 2);
     return {
       css: getComputedStyle(g).gap,
       measured: Math.round(b[1].left - b[0].right),
-      topOffset: Math.round(b[0].top - title.top),
+      centreOffset: Math.abs(centre(b[0]) - centre(title)),
+      inTitleRow: !!g.closest('.head__title-row'),
     };
   });
   if (pair) {
     check(`${label}: 12px between minimise and close`,
       pair.css === '12px' && pair.measured === 12, `${pair.css} / ${pair.measured}px`);
-    // Level with the title, at BOTH widths. Narrow used to centre the row,
-    // which measured the buttons against the whole title block - title plus
-    // the identity line - and dropped them below the title they belong to.
-    check(`${label}: top-aligned with the title`, pair.topOffset === 0,
-      `${pair.topOffset}px below the title`);
+    // On the title's line, at BOTH widths. Narrow used to centre the whole
+    // header block, which measured the buttons against title PLUS the identity
+    // line and dropped them below the title they belong to. They are inside
+    // the title row itself now, so the claim is that they share its centre.
+    check(`${label}: the controls sit in the title row`, pair.inTitleRow);
+    check(`${label}: centred on the title's line`, pair.centreOffset <= 1,
+      `${pair.centreOffset}px off the title's centre`);
   }
 };
 for (const state of ['01', '07', '10', '00b', '05', '06']) {
@@ -1571,15 +1636,28 @@ check('bar close is vertically centred', await page.evaluate(() => {
   });
 }));
 
-console.log('\nThe lock band holds its height across every lock state');
+/**
+ * The lock is IN THE TITLE ROW now, per 22377:2084 - there is no band.
+ *
+ * The height claim survives the move and matters more, not less: the row it
+ * joined also holds the title and the window controls, so a lock state that
+ * changed its height would move those too. What is measured is the same thing
+ * by a different element - the row rather than the strip under it.
+ *
+ * The button is no longer inside .head__lock, which is a status span now. It
+ * sits in .head__lockline beside the lock it belongs to, held 24px from
+ * the window controls.
+ */
+console.log('\nThe lock holds its height across every lock state');
 const bandState = () =>
   page.evaluate(() => {
     const el = document.querySelector('case-header .head__lock');
+    const row = document.querySelector('case-header .head__title-row');
     const strip = document.querySelector('trigger-strip .strip');
-    const btn = el.querySelector('button');
+    const btn = document.querySelector('case-header .head__lockline > button');
     const text = el.querySelector('.head__lock-text');
     return {
-      h: Math.round(el.getBoundingClientRect().height),
+      h: Math.round(row.getBoundingClientRect().height),
       // Relative to the modal, NOT the viewport. Measured absolutely this
       // tracked the height of the dev harness sitting above the modal - whose
       // hint text wraps differently per state - so it failed for a reason that
@@ -1593,6 +1671,14 @@ const bandState = () =>
       iconColour: getComputedStyle(el.querySelector('.head__lock-icon')).color,
       button: btn ? btn.textContent.trim() : null,
       btnColour: btn ? getComputedStyle(btn).color : null,
+      title: el.getAttribute('title'),
+      // The gap holding a destructive action away from the close button.
+      gapToControls: btn
+        ? Math.round(
+            document.querySelector('case-header .head__actions').getBoundingClientRect().left -
+              btn.getBoundingClientRect().right,
+          )
+        : null,
     };
   });
 
@@ -1614,16 +1700,18 @@ await page.waitForTimeout(450);
 bands.push(['resolved', await bandState()]);
 
 const byName = Object.fromEntries(bands);
-check('band height is identical in every state',
+check('the title row height is identical in every lock state',
   new Set(bands.map(([, b]) => b.h)).size === 1,
   bands.map(([n, b]) => `${n}:${b.h}`).join(' '));
-check('nothing below the band ever moves',
+check('nothing below the header ever moves',
   new Set(bands.map(([, b]) => b.stripTop)).size === 1,
   bands.map(([n, b]) => `${n}:${b.stripTop}`).join(' '));
 
+// "Not locked", full stop. The band used to add "Lock the case to record
+// outcomes" - in a row beside the button that does exactly that, the hint was
+// the button saying itself twice, and the longest string in the state.
 check('unassigned offers a primary "Lock to me"',
-  byName['unassigned'].button === 'Lock to me' &&
-    byName['unassigned'].text === 'Not locked. Lock the case to record outcomes.',
+  byName['unassigned'].button === 'Lock to me' && byName['unassigned'].text === 'Not locked',
   byName['unassigned'].text);
 // Green is the only "you can act here" signal, so it must appear here and
 // NOWHERE else in this band.
@@ -1636,10 +1724,12 @@ check('locked to you is the only green state', await (async () => {
     others.every((o) => o.textColour !== BAND_SUCCESS && o.iconColour !== BAND_SUCCESS)
   );
 })());
-check('locked to you says only the fact',
-  /^Locked to you since /.test(byName['locked to you'].text) &&
-    !/record outcomes/i.test(byName['locked to you'].text),
-  byName['locked to you'].text);
+// The stamp moved to a hover title: you took the lock, so when is a detail you
+// can ask for rather than one this row spends its width on.
+check('locked to you says only the fact, stamp on hover',
+  byName['locked to you'].text === 'Locked to you' &&
+    /^Locked to you since /.test(byName['locked to you'].title ?? ''),
+  `${byName['locked to you'].text} | title=${byName['locked to you'].title}`);
 check('locked to you offers Unlock', byName['locked to you'].button === 'Unlock');
 // Tokens again, not hexes: what matters is that the neutral row uses --ink-2
 // and the destructive button uses --danger, whatever those hold.
@@ -1826,6 +1916,7 @@ for (const [state, width] of [
   await page.setViewportSize({ width, height: 1000 });
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
+  await showStrip();
   const s = await controlShape();
   check(`${state}: exactly one control, at the top, full width`, !!s && s.atTopOfStrip && s.fullWidth);
   check(`${state}: same anatomy (badge + control)`, !!s && s.hasChip && s.hasVerb);
@@ -1874,6 +1965,9 @@ for (const width of [1180, 700]) {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
+  // 700 is below the panel's narrow threshold, so the strip is on the Player
+  // info segment rather than in a column of its own.
+  await showStrip();
   const rows = () => page.locator('trigger-strip .trigger').count();
   // With more than the collapse threshold, collapsed previews two rows and the
   // verb becomes the overflow badge.
@@ -2030,27 +2124,78 @@ await page.setViewportSize({ width: 1180, height: 1000 });
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
+/**
+ * What "aligned" means depends on which layout the strip is in, and the answer
+ * is different for a good reason.
+ *
+ * GRID - one grid for the whole list, rows are display: contents - so every
+ * row's three cells share one set of column edges. That is the claim, and the
+ * regression it guards is a row that sizes its own columns.
+ *
+ * STACKED - each row is its own two-line grid, so a timestamp column sized to
+ * its own row's text is CORRECT, not a bug. What must still hold is the left
+ * gutter: every row's name and every row's detail start on the same edge, and
+ * the detail runs the width of the row. Asserting shared right-hand edges
+ * there would be asserting the grid layout in a layout that is not it.
+ */
 const cols = await page.evaluate(() => {
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
-  return rows.map((r) => [...r.querySelectorAll('.cell')].map((c) => Math.round(c.getBoundingClientRect().left)));
+  const stacked = getComputedStyle(document.querySelector('trigger-strip .strip__list')).display === 'block';
+  const L = (e) => Math.round(e.getBoundingClientRect().left);
+  return {
+    stacked,
+    cellCounts: rows.map((r) => r.querySelectorAll('.cell').length),
+    edges: rows.map((r) => [...r.querySelectorAll('.cell')].map(L).join(',')),
+    nameLefts: rows.map((r) => L(r.querySelector('.cell--name'))),
+    detailLefts: rows.map((r) => L(r.querySelector('.cell--detail'))),
+    detailSpans: rows.map((r) => {
+      const d = r.querySelector('.cell--detail').getBoundingClientRect();
+      return Math.round(d.width / r.getBoundingClientRect().width * 100);
+    }),
+  };
 });
-check('every row rendered three cells', cols.length > 2 && cols.every((c) => c.length === 3));
-check('all rows share the same column edges', new Set(cols.map((c) => c.join(','))).size === 1);
+check('every row rendered three cells',
+  cols.cellCounts.length > 2 && cols.cellCounts.every((n) => n === 3));
+if (cols.stacked) {
+  check('stacked: every row starts on the same left gutter',
+    new Set(cols.nameLefts).size === 1 && new Set(cols.detailLefts).size === 1,
+    `${[...new Set(cols.nameLefts)]} / ${[...new Set(cols.detailLefts)]}`);
+  check('stacked: the detail runs the width of the row',
+    cols.detailSpans.every((pct) => pct > 80), cols.detailSpans.join(','));
+} else {
+  check('all rows share the same column edges', new Set(cols.edges).size === 1);
+}
 check('the NEW row is one of them', (await page.locator('trigger-strip .trigger--new').count()) === 1);
-check('the NEW row aligns with the rest', await (async () => {
-  const newRow = await page.evaluate(() => {
-    const r = document.querySelector('trigger-strip .trigger--new');
-    return [...r.querySelectorAll('.cell')].map((c) => Math.round(c.getBoundingClientRect().left));
-  });
-  return newRow.join(',') === cols[0].join(',');
-})());
+check('the NEW row aligns with the rest', await page.evaluate((expect) => {
+  const r = document.querySelector('trigger-strip .trigger--new');
+  const L = (e) => Math.round(e.getBoundingClientRect().left);
+  return expect.stacked
+    ? L(r.querySelector('.cell--name')) === expect.nameLeft &&
+        L(r.querySelector('.cell--detail')) === expect.detailLeft
+    : [...r.querySelectorAll('.cell')].map(L).join(',') === expect.edges;
+}, { stacked: cols.stacked, nameLeft: cols.nameLefts[0], detailLeft: cols.detailLefts[0], edges: cols.edges[0] }));
+/**
+ * The highlight covers the row with no seams in it, however the row is built.
+ *
+ * Grid rows have no box of their own - display: contents - so the tint has to
+ * be painted on each of the three cells, and the check is that all three carry
+ * it and butt up against each other. A stacked row IS a box, so the tint goes
+ * on the row and the cells stay transparent; there are no seams to look for,
+ * and requiring tinted cells there would fail on the layout that cannot have
+ * the bug.
+ */
 check('the highlight paints the full row width, no gaps', await page.evaluate(() => {
-  const cells = [...document.querySelectorAll('trigger-strip .trigger--new .cell')];
+  const row = document.querySelector('trigger-strip .trigger--new');
+  const opaque = (e) => getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)';
+  if (getComputedStyle(document.querySelector('trigger-strip .strip__list')).display === 'block') {
+    return opaque(row) && Math.round(row.getBoundingClientRect().width) ===
+      Math.round(row.parentElement.getBoundingClientRect().width);
+  }
+  const cells = [...row.querySelectorAll('.cell')];
   if (cells.length !== 3) return false;
-  const tinted = cells.every((c) => getComputedStyle(c).backgroundColor !== 'rgba(0, 0, 0, 0)');
   const boxes = cells.map((c) => c.getBoundingClientRect());
-  const contiguous = boxes.every((b, i) => i === 0 || Math.abs(b.left - (boxes[i - 1].left + boxes[i - 1].width)) < 1);
-  return tinted && contiguous;
+  return cells.every(opaque) &&
+    boxes.every((b, i) => i === 0 || Math.abs(b.left - (boxes[i - 1].left + boxes[i - 1].width)) < 1);
 }));
 
 console.log('\nThe NEW badge sits with the name, not the timestamp');
@@ -2238,12 +2383,12 @@ if (await page.locator('confirm-unlock-dialog').count()) {
   await page.locator('confirm-unlock-dialog button:has-text("Cancel")').click();
   await page.waitForTimeout(350);
 }
-const forceBtn = page.locator('case-header .head__lock .danger-button');
+const forceBtn = page.locator('case-header .head__lockline .danger-button');
 check('the button is Force unlock', (await forceBtn.innerText()).trim() === 'Force unlock');
 await forceBtn.hover();
 await page.waitForTimeout(300);
 const unlockHover = await page.evaluate(() => {
-  const e = document.querySelector('case-header .head__lock .danger-button');
+  const e = document.querySelector('case-header .head__lockline .danger-button');
   const cs = getComputedStyle(e);
   const layer = e.querySelector('.mat-mdc-button-persistent-ripple');
   const lcs = layer ? getComputedStyle(layer, '::before') : null;

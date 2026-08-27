@@ -256,9 +256,14 @@ check('closing the panel brings the card back',
 console.log('\nDraft attachments are removable; saved ones are not');
 const dir = join(tmpdir(), 'aml-verify-files');
 mkdirSync(dir, { recursive: true });
+// Attachments are IMAGES ONLY, so the accepted file is a png and report.pdf
+// has moved from the accepted column to the rejected one - which is worth
+// uploading rather than deleting, because "a PDF is refused" is the new rule
+// and nothing else here tests it.
+writeFileSync(join(dir, 'screenshot.png'), 'not really a png, and it does not need to be');
 writeFileSync(join(dir, 'report.pdf'), '%PDF-1.4 fake');
 writeFileSync(join(dir, 'notes.docx'), 'x');
-writeFileSync(join(dir, 'oversize.pdf'), Buffer.concat([Buffer.from('%PDF-1.4'), Buffer.alloc(11 * 1024 * 1024)]));
+writeFileSync(join(dir, 'oversize.png'), Buffer.alloc(11 * 1024 * 1024));
 
 await go('02'); // a draft carrying two valid files and two errors
 check('draft chips each have a remove control',
@@ -286,12 +291,25 @@ await page.locator('record-form textarea').fill('Note is the only required field
 await page.locator('record-form mat-radio-button:has-text("Keep the case locked") input').check({ force: true });
 await page.waitForTimeout(200);
 await page.locator('record-form input[type=file]').setInputFiles([
-  join(dir, 'report.pdf'), join(dir, 'notes.docx'), join(dir, 'oversize.pdf'),
+  join(dir, 'screenshot.png'), join(dir, 'report.pdf'),
+  join(dir, 'notes.docx'), join(dir, 'oversize.png'),
 ]);
 await page.waitForTimeout(400);
-check('one file accepted, two rejected',
+check('one file accepted, three rejected',
   (await page.locator('record-form .file').count()) === 1 &&
-    (await page.locator('record-form .error').count()) === 2);
+    (await page.locator('record-form .error').count()) === 3);
+// Rule 5 is images only now. The type errors must say so, and the oversize
+// image must fail on SIZE rather than being swept up by the type rule.
+const uploadErrors = await page.locator('record-form .error').allInnerTexts();
+check('a PDF is refused on type, in the new words',
+  uploadErrors.some((t) => /report\.pdf/.test(t) && /Images only/i.test(t)),
+  uploadErrors.join(' | '));
+check('and so is anything else that is not an image',
+  uploadErrors.some((t) => /notes\.docx/.test(t) && /Images only/i.test(t)),
+  uploadErrors.join(' | '));
+check('an oversize IMAGE still fails on size, not on type',
+  uploadErrors.some((t) => /oversize\.png/.test(t) && /under/i.test(t)),
+  uploadErrors.join(' | '));
 check('Save is enabled with an attachment',
   await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 await page.locator('record-form .file__remove').click();

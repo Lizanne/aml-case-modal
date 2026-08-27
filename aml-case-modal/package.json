@@ -16,7 +16,6 @@
     "verify:a11y": "node verify/a11y.mjs",
     "verify:mobile": "node verify/mobile.mjs",
     "verify:preview": "node verify/preview.mjs",
-    "verify:preview-pdf": "node verify/preview-pdf.mjs",
     "verify:force-unlock": "node verify/force-unlock.mjs",
     "verify:widget-actions": "node verify/widget-actions.mjs"
   },
