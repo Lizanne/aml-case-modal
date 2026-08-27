@@ -94,9 +94,10 @@ check('a focusable path exists through the page', reachable > 10, String(reachab
 /**
  * The trigger control is a real button, so Enter and Space must both work.
  *
- * Measured by aria-expanded and the height of the window, NOT by counting
- * rendered rows: both modes now render the whole history and differ only in
- * how many rows are visible at once, so a row count cannot tell them apart.
+ * Measured by aria-expanded AND the height of the window. The row count alone
+ * would do it now - collapsed renders exactly two - but the window is the
+ * property that matters: expanded holds every trigger in the DOM and shows
+ * five, and it is the showing-five that keeps the workflow on screen.
  */
 await go('01');
 const stripState = () =>
@@ -114,7 +115,7 @@ await page.waitForTimeout(300);
 const afterEnter = await stripState();
 check(
   'Enter expands the trigger strip',
-  afterEnter.expanded === 'true' && afterEnter.rowsVisible === 10,
+  afterEnter.expanded === 'true' && afterEnter.rowsVisible === 5,
   JSON.stringify(afterEnter),
 );
 await page.keyboard.press('Space');
@@ -122,7 +123,7 @@ await page.waitForTimeout(300);
 const afterSpace = await stripState();
 check(
   'Space collapses it again',
-  afterSpace.expanded === 'false' && afterSpace.rowsVisible === 5,
+  afterSpace.expanded === 'false' && afterSpace.rowsVisible === 2,
   JSON.stringify(afterSpace),
 );
 

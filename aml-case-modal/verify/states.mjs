@@ -166,9 +166,10 @@ const CHECKS = {
     // than off the scroll note, which only exists while expanded.
     '20 triggers total': (await p.locator('trigger-strip .strip__bar ui-pill').innerText()).trim() === '20 triggers',
     'new marker present': (await p.locator('trigger-strip .trigger--new').count()) === 1,
-    // Oldest first now, so the arrival is the LAST row - and still on screen,
-    // which is the guarantee rule 11 actually needs.
-    'new row is last': (await p.locator('trigger-strip .trigger').last().getAttribute('class')).includes('trigger--new'),
+    // 10 seeds the strip EXPANDED, and expanded reads newest first - so the
+    // arrival is the FIRST row. Collapsed it would be the second of two. Either
+    // way it is on screen, which is the guarantee rule 11 actually needs.
+    'new row is first': (await p.locator('trigger-strip .trigger').first().getAttribute('class')).includes('trigger--new'),
     'resync banner shown': (await p.locator('workflow-panel .resync').count()) === 1,
     'recording blocked': await p.locator('action-placeholder button').first().isDisabled(),
   }),

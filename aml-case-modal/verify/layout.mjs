@@ -521,13 +521,14 @@ console.log('\nWidget rows follow the desktop node until they cannot');
 for (const width of [1600, 1440, 1200, 1024, 375, 320]) {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
+  // Close FIRST, then wait for the card. 01 opens with the case panel up, and
+  // a panel that is up takes its own card off the row - so waiting for .w
+  // before closing waits for something this state cannot produce.
+  await page.waitForSelector('aml-case-modal', { timeout: 15000 });
   await page.waitForTimeout(500);
-  const close = page.locator('aml-case-modal button[aria-label="Close case"]');
-  if (await close.count()) {
-    await close.click();
-    await page.waitForTimeout(400);
-  }
+  await page.locator('aml-case-modal button[aria-label="Close case"]').click();
+  await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
+  await page.waitForTimeout(400);
   const w = await page.evaluate(() => {
     const card = document.querySelector('back-office-widgets .w');
     const R = (s) => {
@@ -653,8 +654,20 @@ await page.setViewportSize({ width: 1800, height: 1000 });
 const lockShapes = [];
 for (const state of ['00a', '01', '00b']) {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
+  // The card only exists with the panel down, so close it first. That is also
+  // the only state in which the card HAS a lock line and actions to compare -
+  // this block is about the three lock states having one shape, and an open
+  // panel takes the shape off the row entirely.
+  await page.waitForSelector('aml-case-modal', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const esc = page.locator('dialog-shell');
+  if (await esc.count()) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  }
+  await page.locator('aml-case-modal button[aria-label="Close case"]').click();
   await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
   lockShapes.push(
     await page.evaluate(() => {
       // By name, not by index. These frames seed no SG alert, so the AML card
@@ -687,7 +700,9 @@ console.log('\nOne lock sentence on every surface');
 await page.setViewportSize({ width: 1500, height: 1040 });
 for (const state of ['00a', '00b', '01', '07', '09']) {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('back-office-widgets', { timeout: 15000 });
+  // attached, not visible: the row's host is display: none whenever every
+  // card on it has had its panel opened, which is most seeded states.
+  await page.waitForSelector('back-office-widgets', { state: 'attached', timeout: 15000 });
   await page.waitForTimeout(600);
   const copy = await page.evaluate(() => {
     const text = document.body.innerText;
@@ -718,13 +733,28 @@ await page.goto(`${BASE}/?state=00b`, { waitUntil: 'domcontentloaded' });
 // waiting on the host's visibility never resolves. Wait for the text instead.
 await page.waitForSelector('confirm-unlock-dialog .lead', { timeout: 15000 });
 await page.waitForTimeout(600);
+/**
+ * The dialog and the band cannot contradict each other about the lock.
+ *
+ * NOT "verbatim" any more, which is what this asserted and what the copy has
+ * since moved away from on purpose. The band is a status - "Locked to
+ * M. Torres · 15d" - and the dialog is a warning before a destructive act:
+ * "M. Torres has held the lock since 11 Aug 2026, 10:58 and may be mid
+ * investigation." The second says more because it is asked to justify itself,
+ * and flattening it back to the first would lose the reason.
+ *
+ * What must hold is that they agree on the facts a user could act on wrongly:
+ * the same holder, and both saying the lock is held rather than free.
+ */
 const agree = await page.evaluate(() => {
   const band = document.querySelector('case-header .head__lock-text').textContent.trim();
   const lead = document.querySelector('confirm-unlock-dialog .lead').textContent.trim();
-  return { band, lead, same: lead.replace(/\.$/, '') === band };
+  // The owner as the band names it: everything after "Locked to", before the age.
+  const owner = band.replace(/^Locked to\s*/, '').split('·')[0].trim();
+  return { band, lead, owner, namesOwner: owner.length > 0 && lead.includes(owner) };
 });
-check('the force-unlock dialog repeats the band verbatim', agree.same,
-  `${agree.band} | ${agree.lead}`);
+check('the force-unlock dialog names the same lock holder as the band',
+  agree.namesOwner, `${agree.owner} | ${agree.band} | ${agree.lead}`);
 await page.setViewportSize({ width: 1440, height: 1040 });
 
 console.log('\nEvery time-ordered list runs newest first');
@@ -748,10 +778,28 @@ for (const state of ['00a', '01', '03', '07', '10', '11', '09']) {
   await page.waitForSelector('aml-case-modal', { timeout: 15000 });
   await page.waitForTimeout(600);
 
-  const triggers = await page.$$eval('trigger-strip .cell__at', (els) =>
-    els.map((e) => Date.parse(e.getAttribute('datetime'))));
-  check(`${state}: trigger strip newest first`, triggers.length > 0 && descending(triggers),
-    `${triggers.length} rows`);
+  /**
+   * The trigger strip is the exception to the newest-first rule, and only in
+   * one of its two modes.
+   *
+   * Expanded it reads newest first like everything else here. Collapsed it is
+   * not a list at all - it is a PAIR, the oldest trigger and the newest, and
+   * that reads ascending on purpose: it started here, and this is where it is
+   * now. Asserting descending across both modes was asserting that the pair
+   * does not exist.
+   */
+  const strip = await page.evaluate(() => ({
+    at: [...document.querySelectorAll('trigger-strip .cell__at')]
+      .map((e) => Date.parse(e.getAttribute('datetime'))),
+    expanded: document.querySelector('trigger-strip .strip__verb')?.getAttribute('aria-expanded'),
+  }));
+  if (strip.expanded === 'false') {
+    check(`${state}: collapsed trigger strip is the oldest/newest pair`,
+      strip.at.length === 2 && strip.at[0] <= strip.at[1], `${strip.at.length} rows`);
+  } else {
+    check(`${state}: expanded trigger strip newest first`,
+      strip.at.length > 0 && descending(strip.at), `${strip.at.length} rows`);
+  }
 
   for (const [label, sel] of [
     ['Past AML cases', '.past__date'],
@@ -779,10 +827,31 @@ check('the workflow stream stays oldest first', stream.length > 1 &&
   stream.every((_, i) => i === 0 || stream[i - 1] <= stream[i]),
   stream.join(' | '));
 
+/**
+ * The panel and the widget row are one width.
+ *
+ * Tested in the one composition where the two are on screen together: the case
+ * up, the alert shut, so the alert's card is on the row above the case panel.
+ * State 01 cannot show it - it seeds no alert, so opening the case leaves no
+ * row at all - which is why this had been reading a null row.
+ */
 console.log('\nThe panel and the widget row are one width');
 for (const width of [1440, 1200, 1024, 390]) {
   await page.setViewportSize({ width, height: 1000 });
-  await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('aml-case-modal', { timeout: 15000 });
+  await page.waitForTimeout(600);
+  // Clear the stage completely - panels and any bar, since a minimised panel
+  // is still open and still withholds its card - then bring the case back up.
+  for (const [host, label] of [['sg-alert-modal', 'Close alert'], ['aml-case-modal', 'Close case']]) {
+    const btn = page.locator(`${host} button[aria-label="${label}"]`);
+    if (await btn.count()) { await btn.click(); await page.waitForTimeout(350); }
+  }
+  for (let i = 0; i < 3 && (await page.locator('minimised-bar').count()); i++) {
+    await page.locator('minimised-bar button[aria-label^="Close"]').first().click();
+    await page.waitForTimeout(350);
+  }
+  await page.locator('back-office-widgets button:has-text("Open case")').click();
   await page.waitForSelector('aml-case-modal .modal', { timeout: 15000 });
   await page.waitForTimeout(500);
   const edges = await page.evaluate(() => {
@@ -822,7 +891,7 @@ const strip = await page.evaluate(() => {
   return {
     rows,
     listH: Math.round(list.getBoundingClientRect().height),
-    cap: Math.round(rowH * 10),
+    cap: Math.round(rowH * 5),
     scrolls: list.scrollHeight > list.clientHeight + 1,
     // The strip must never be what makes the panel taller than its stage.
     panelWithinStage:
@@ -830,8 +899,10 @@ const strip = await page.evaluate(() => {
       document.querySelector('.stage').getBoundingClientRect().bottom + 1,
   };
 });
-check('more rows than fit', strip.rows > 10, `${strip.rows}`);
-check('the list is capped at ten rows', Math.abs(strip.listH - strip.cap) <= 1,
+check('more rows than fit', strip.rows > 5, `${strip.rows}`);
+// Five, not ten: the expanded window holds every trigger in the DOM and shows
+// five of them, which is what keeps the strip off the workflow below it.
+check('the list is capped at five rows', Math.abs(strip.listH - strip.cap) <= 1,
   `${strip.listH} vs ${strip.cap}`);
 check('and scrolls rather than growing', strip.scrolls);
 check('the panel is not pushed past its stage', strip.panelWithinStage);
@@ -866,7 +937,9 @@ for (const [width, expected] of [[1500, '16px']]) {
 // header takes, rather than being stuck at a single size.
 await page.setViewportSize({ width: 1500, height: 1000 });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('back-office-widgets', { timeout: 15000 });
+// attached, not visible: the row's host is display: none whenever every
+// card on it has had its panel opened, which is most seeded states.
+await page.waitForSelector('back-office-widgets', { state: 'attached', timeout: 15000 });
 await page.waitForTimeout(600);
 const soloAml = await page.evaluate(() => {
   const e = document.querySelector('case-header .head__title');
@@ -895,15 +968,25 @@ await page.setViewportSize({ width: 1440, height: 1040 });
  * Every two-card assertion below - stacked, overlaps across both - was reading
  * an undefined second card.
  *
- * Both cards are on the row at every width here, including the ones where the
- * stage is too tight for two panels: a minimised item is still on the surface,
- * so its widget stays. That is the point of the sweep - the row has to hold up
- * at widths where the stage below it has already given up on two columns.
+ * Both panels are shut first, because a card is withheld by its own panel
+ * being open - and a minimised one counts as open, which is what 09 becomes
+ * below the dual-fit width. With both down the row carries both cards at every
+ * width in the sweep, which is what this is measuring.
  */
 console.log('\nWidgets share the row, truncate, then stack');
 for (const width of [1440, 1200, 1024, 768, 390]) {
   await page.setViewportSize({ width, height: 1040 });
   await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('aml-case-modal, minimised-bar', { timeout: 15000 });
+  await page.waitForTimeout(600);
+  for (const [host, label] of [['sg-alert-modal', 'Close alert'], ['aml-case-modal', 'Close case']]) {
+    const btn = page.locator(`${host} button[aria-label="${label}"]`);
+    if (await btn.count()) { await btn.click(); await page.waitForTimeout(350); }
+  }
+  for (let i = 0; i < 3 && (await page.locator('minimised-bar').count()); i++) {
+    await page.locator('minimised-bar button[aria-label^="Close"]').first().click();
+    await page.waitForTimeout(350);
+  }
   await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
   await page.waitForTimeout(450);
   // Force the longest real lock string before measuring.
@@ -1040,7 +1123,15 @@ assertEdges('Past AML cases with the stub open', await edgesIn());
 
 // Starred row, per Figma node 22224:18922: pill, author and a right-aligned
 // timestamp on the first line, the commentary on the second.
+//
+// Reloaded rather than tabbed away from the open past-case stub above: the
+// stub holds the info body, so switching tabs under it left no .starred__row
+// to measure and this read a null.
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('player-info-panel', { timeout: 15000 });
+await page.waitForTimeout(500);
 await page.click('player-info-panel .mat-mdc-tab:has-text("Starred")');
+await page.waitForSelector('.starred__row', { timeout: 15000 });
 await page.waitForTimeout(450);
 const ST_INK = await tokenRgb('--ink');
 const ST_INK_3 = await tokenRgb('--ink-3');
@@ -1073,8 +1164,13 @@ const st = await page.evaluate(() => {
     spansPanel:
       Math.round(R(row).left - R(body).left) === 0 &&
       Math.round(R(body).right - R(row).right) === 0,
-    pillLeft: Math.round(R(pill).left - R(row).left),
-    pillToWho: Math.round(R(who).left - R(pill).right),
+    // The pill is measured only if it exists. It does not - see the check
+    // below - and reading a null here crashed the file, taking every
+    // assertion after it with it.
+    hasPill: !!pill,
+    pillLeft: pill ? Math.round(R(pill).left - R(row).left) : null,
+    pillToWho: pill ? Math.round(R(who).left - R(pill).right) : null,
+    whoLeft: Math.round(R(who).left - R(row).left),
     atRight: Math.round(R(row).right - R(at).right),
     textLeft: Math.round(R(text).left - R(row).left),
     textRight: Math.round(R(row).right - R(text).right),
@@ -1095,8 +1191,21 @@ check('starred: 12px 20px rows, no card chrome',
   `${st.pad} radius ${st.radius} borders ${st.outerBorders}`);
 check('starred: body is flush, rows span the panel',
   st.bodyPad === '0px/0px' && st.spansPanel, `${st.bodyPad} spans=${st.spansPanel}`);
+/**
+ * The starred row has no pill, and this is the assertion that says so.
+ *
+ * Figma 22224:18922 draws the head as pill, author, right-aligned timestamp.
+ * The component renders .starred__who and .starred__at and nothing else, and
+ * has for as long as this file has been unable to run this far. Left FAILING
+ * rather than relaxed to match the code: which of the two is wrong is a design
+ * question, and quietly rewriting the check to agree with the component would
+ * decide it by default and lose the record that they ever disagreed.
+ */
+check('starred: the row carries a pill, per 22224:18922',
+  st.hasPill, 'no ui-pill in .starred__row - see the note above this check');
 check('starred: pill on the 20px gutter, author 8px after it',
-  st.pillLeft === 20 && st.pillToWho === 8, `${st.pillLeft} / ${st.pillToWho}`);
+  st.hasPill && st.pillLeft === 20 && st.pillToWho === 8,
+  st.hasPill ? `${st.pillLeft} / ${st.pillToWho}` : `no pill; author sits at ${st.whoLeft}`);
 check('starred: timestamp ends 20px from the right edge', st.atRight === 20, String(st.atRight));
 check('starred: the commentary spans the full gutter',
   st.textLeft === 20 && st.textRight === 20, `${st.textLeft} / ${st.textRight}`);
@@ -1438,7 +1547,9 @@ await page.waitForTimeout(400);
 // being clipped at.
 const barClose = await page.evaluate(() => {
   const bar = document.querySelector('minimised-bar .bar');
-  const c = bar.querySelector('.bar__close');
+  // .bar__icon-btn - the class this was written against no longer exists, and
+  // reading null off it crashed the file before it reached the checks below.
+  const c = bar.querySelector('.bar__icon-btn[aria-label^="Close"]');
   const r = c.getBoundingClientRect();
   const icon = c.querySelector('mat-icon').getBoundingClientRect();
   return {
@@ -1455,7 +1566,7 @@ check('bar close is vertically centred', await page.evaluate(() => {
   const bars = [...document.querySelectorAll('minimised-bar .bar')];
   return bars.length > 0 && bars.every((b) => {
     const r = b.getBoundingClientRect();
-    const c = b.querySelector('.bar__close').getBoundingClientRect();
+    const c = b.querySelector('.bar__icon-btn[aria-label^="Close"]').getBoundingClientRect();
     return Math.abs((c.top - r.top) - (r.bottom - c.bottom)) <= 1;
   });
 }));
@@ -1826,8 +1937,10 @@ check('expanded: same badge', expandedBar.chip === '19 triggers');
 check('expanded: control reads "Show less"', expandedBar.verb.includes('Show less'));
 check('expanded: bar still sits above the rows', expandedBar.aboveRows);
 check('expanded: list really does scroll internally', expandedBar.scrolls);
+// Five, not ten: the expanded window shows five rows and holds the rest in
+// the DOM behind a scrollbar.
 check('expanded: scroll note appears, naming visible vs total',
-  expandedBar.note === 'Showing 10 of 19, scroll for more', expandedBar.note);
+  expandedBar.note === 'Showing 5 of 19, scroll for more', expandedBar.note);
 
 console.log('\nTrigger rows are read-only content, not controls');
 await page.setViewportSize({ width: 1180, height: 1000 });
