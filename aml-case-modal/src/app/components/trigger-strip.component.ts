@@ -1,10 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  ViewChild,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { PillComponent } from './ui-pill.component';
-import { TRIGGER_EXPANDED_ROWS, TRIGGER_PREVIEW_ROWS } from '../core/models';
+import { TRIGGER_COLLAPSED_ROWS, TRIGGER_EXPANDED_ROWS } from '../core/models';
 
 /** Unique-id counter, so two strips on one page cannot collide on aria-controls. */
 let stripSeq = 0;
@@ -12,51 +22,67 @@ let stripSeq = 0;
 /**
  * One trigger control, identical in every state and at every width.
  *
- * The strip is a single toggle row - count chip, secondary text, verb - with
- * the trigger rows underneath it:
+ * The strip is a sticky header - count chip, secondary text, verb - with the
+ * trigger rows underneath it:
  *
- *   collapsed, <=5  (3 triggers)
- *                   [all 3 rows, no toggle]
- *   collapsed, 6+   (19 triggers)                              v Show all
- *                   [oldest 4, then the newest - 5 rows, no scroll]
- *   expanded        (19 triggers)  Showing 10 of 19, scroll...  ^ Show less
- *                   [all 19 rows, 10 visible, scrolling]
+ *   collapsed, <=2  (2 triggers)
+ *                   [both rows, no toggle, no gap]
+ *   collapsed, 3+   (19 triggers)                              v Show all
+ *                   [oldest] [newest]              exactly 2 rows, no scroll
+ *   expanded        (19 triggers)  Showing 5 of 19, scroll...  ^ Show less
+ *                   [all 19 rows NEWEST FIRST, 5 visible, scrolling]
  *
- * EVERY mode reads oldest first, most recent last. The collapsed preview is
- * five rows that SPAN the history - its first row is the oldest trigger and
- * its last is the most recent - and the expanded list is the same two anchors
- * with everything in between restored.
+ * COLLAPSED IS A PAIR, NOT A PREVIEW. Exactly two rows, always: the oldest
+ * trigger and the newest, with the whole middle withheld. The oldest is why
+ * the case exists and the newest is what just happened - the two questions a
+ * collapsed strip is asked. It reads ASCENDING, because that pairing is a
+ * sentence: it started here, and this is where it is now.
  *
- * Collapsed does not scroll. It renders exactly what it shows, so the rows it
- * drops are absent rather than below a fold, and Show all is the only way to
- * reach them. That is the difference the toggle is for.
+ * The two rows sit directly against each other, with nothing between them
+ * marking the gap. The header verb is the one control, and the badge saying
+ * "19 triggers" over two rows is already the whole of what a marker would say.
+ *
+ * EXPANDED IS NEWEST FIRST, like every other time-ordered list in the product
+ * bar the workflow stream. Once the whole history is on screen the question
+ * changes from "what are the ends of this" to "what has been happening", and
+ * that is read from the top down.
+ *
+ * So the newest trigger is the BOTTOM row collapsed and the TOP row expanded.
+ * That is deliberate: it moves because the reason it is on screen moves -
+ * anchoring the recent end of a two-row summary, then heading a list.
+ *
+ * Only the expanded list scrolls, and only it needs to: collapsed renders
+ * exactly the two rows it shows, so what it withholds is absent rather than
+ * below a fold. Expanded holds every trigger in the DOM and windows them to
+ * five, which is what keeps the strip from pushing the workflow down the page.
+ * The header stays sticky above that scroll region.
  *
  * The badge is the only place a count is rendered. It previously sat beside
  * both "Showing 2 of 19" and "+17 more triggers" - three restatements of one
- * number, two of them separately computed and free to drift apart. Showing-vs-
- * total is only information when the list is genuinely withholding rows behind
- * a scrollbar, so that is the only time it is said - which is now either mode.
+ * number, two of them separately computed and free to drift apart.
  *
  * Collapsing only pays for itself when it hides something: at or below
- * TRIGGER_PREVIEW_ROWS every row is already visible, so the toggle disappears
- * entirely - a control that reveals nothing is worse than no control.
+ * TRIGGER_COLLAPSED_ROWS the pair IS the whole history, so the toggle
+ * disappears - a control that reveals nothing is worse than no control.
  *
  * The bar is a LABEL STRIP, not a control. Only the Show all / Show less verb
  * is a button - the count chip and the scroll note are plain, selectable text.
  * Making the whole bar the hit target meant the strip's first row looked and
  * behaved like a clickable row, which is exactly what rows must not be.
  *
- * The control never moves and never changes shape: same place, every state,
- * both layout widths. Only its label and aria-expanded change.
+ * ONE control, in the header, in both directions - the strip has no second
+ * way to expand. The verb never moves and never changes shape: same place,
+ * every state, both layout widths. Only its label and aria-expanded change.
  *
- * Rule 11: an unresynced arrival is the NEWEST trigger, so it is the last row
- * in both modes - and because the collapsed preview ends on the most recent
- * rather than the fifth-oldest, it is always on screen, never one of the rows
- * the preview drops. The count chip carries the same amber as a second signal.
+ * Rule 11: an unresynced arrival is by definition the NEWEST trigger, so it is
+ * the second collapsed row and the first expanded one - on screen in both,
+ * never among the rows the pair withholds. Arriving while expanded, it lands at
+ * the top of a list the agent may have scrolled away from, so the strip scrolls
+ * back to it; the count chip carries the same amber as a second signal.
  *
- * The highlight persists until resync (open question 6). The count chip also
- * carries the amber, so the arrival stays visible if the row scrolls out of
- * view in the expanded list.
+ * The highlight persists until RESYNC, not until it is seen (open question 6).
+ * Several arrivals before a resync all stay highlighted, and the collapsed pair
+ * shows the newest of them.
  *
  * List layout: three columns - name, detail, timestamp. The list is a single
  * grid and each row is `display: contents`, so every row shares one set of
@@ -135,6 +161,7 @@ let stripSeq = 0;
              reach the rows below the fold. tabindex only when it scrolls. -->
         <div
           class="strip__list"
+          #list
           [id]="listId"
           [class.strip__list--expanded]="store.triggersExpanded()"
           role="list"
@@ -237,24 +264,24 @@ let stripSeq = 0;
       /**
        * One grid for the whole list, so all rows share column widths.
        *
-       * BOTH modes scroll, and the only difference between them is the height
-       * of the window: five rows collapsed, ten expanded. The strip must never
-       * push the workflow off screen, and a collapsed list holding twenty rows
-       * would do exactly that without a cap of its own.
+       * ONLY THE EXPANDED LIST SCROLLS. Collapsed renders exactly two rows, so
+       * it has nothing to scroll and needs no cap - a height limit there would
+       * be a promise about rows that are not in the DOM. Expanded holds the
+       * whole history and is windowed to five, which is what keeps the strip
+       * from pushing the workflow down the page.
        */
       .strip__list {
         display: grid;
         grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto;
         border-top: 1px solid var(--line);
-        max-height: calc(var(--trigger-row-height) * var(--trigger-preview-rows));
-        overflow-y: auto;
       }
       .strip__list--expanded {
         max-height: calc(var(--trigger-row-height) * var(--trigger-expanded-rows));
+        overflow-y: auto;
       }
-      /* On the list, not on --expanded: a collapsed list scrolls too, so a
-         keyboard user reaching it needs the same ring either way. */
-      .strip__list:focus-visible {
+      /* On --expanded, because that is the only one that scrolls: a focus ring
+         on a region with nothing below the fold is a control that does nothing. */
+      .strip__list--expanded:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: -2px;
       }
@@ -363,12 +390,11 @@ let stripSeq = 0;
         }
         .strip__list {
           display: block;
-          /* Rows are taller and no longer uniform, so a row-count height is
-             meaningless here. Cap against the screen instead, keeping the two
-             modes in the same proportion they have on desktop. */
-          max-height: 30vh;
         }
         .strip__list--expanded {
+          /* Rows are taller and no longer uniform here, so a row-count height
+             is meaningless. Cap against the screen instead. Collapsed still
+             needs nothing: two rows are two rows at any width. */
           max-height: 50vh;
         }
         .trigger {
@@ -421,13 +447,14 @@ let stripSeq = 0;
   ],
   host: {
     '[style.--trigger-row-height]': '"40px"',
-    '[style.--trigger-preview-rows]': 'previewRows',
+    '[style.--trigger-collapsed-rows]': 'collapsedRows',
     '[style.--trigger-expanded-rows]': 'expandedRows',
   },
 })
 export class TriggerStripComponent {
   readonly store = inject(CaseStore);
-  readonly previewRows = TRIGGER_PREVIEW_ROWS;
+  private readonly injector = inject(Injector);
+  readonly collapsedRows = TRIGGER_COLLAPSED_ROWS;
   readonly expandedRows = TRIGGER_EXPANDED_ROWS;
 
   /** Target of the toggle's aria-controls. Unique so two strips cannot collide. */
@@ -436,48 +463,57 @@ export class TriggerStripComponent {
   readonly total = computed(() => this.store.sortedTriggers().length);
 
   /**
-   * A toggle is only worth offering once the collapsed window cannot hold
-   * everything. At or below TRIGGER_PREVIEW_ROWS every trigger is already on
-   * screen, and Show all would reveal nothing.
+   * A toggle is only worth offering once there is a middle to reveal. At two
+   * triggers or fewer the collapsed pair IS the whole history, so Show all
+   * would reveal nothing and a control that reveals nothing is worse than no
+   * control.
    */
-  readonly canToggle = computed(() => this.total() > TRIGGER_PREVIEW_ROWS);
+  readonly canToggle = computed(() => this.total() > TRIGGER_COLLAPSED_ROWS);
+
 
   /**
-   * Collapsed: the oldest four, then the newest. Expanded: everything.
+   * THE TWO MODES READ IN OPPOSITE DIRECTIONS, and that is the design.
    *
-   * The preview SPANS the history rather than sampling the start of it. Its
-   * first row is the oldest trigger and its last row is the most recent, so
-   * both ends of the case are on screen at once and the five rows answer "when
-   * did this start, and what has just happened" without a scroll. Five rows off
-   * the top would answer only the first half of that, and the half that
-   * matters least.
+   * Collapsed is a PAIR: the oldest trigger, then the newest. Not a slice of
+   * the list - the two ends of it. The oldest is why the case exists and the
+   * newest is what just happened, so ascending is the only order in which the
+   * pair reads as a sentence: it started here, and this is where it is now.
    *
-   * It also keeps rule 11 true by construction: an unresynced arrival is by
-   * definition the most recent trigger, so it IS the last preview row and can
-   * never be one of the ones dropped.
+   * Expanded is the whole history NEWEST FIRST, like every other time-ordered
+   * list in the product. Once every row is on screen the question changes from
+   * "what are the ends of this" to "what has been happening", and the answer to
+   * that is read from the top down, most recent first.
    *
-   * The rows between three and eighteen are genuinely absent, not scrolled
-   * past - which is what Show all is for.
+   * The consequence is deliberate and worth stating: the newest trigger is the
+   * BOTTOM row collapsed and the TOP row expanded. It moves because the reason
+   * it is on screen moves - anchoring the recent end of a two-row summary, then
+   * heading a list.
+   *
+   * Rule 11 holds by construction either way: an unresynced arrival is by
+   * definition the newest trigger, so it is the second collapsed row and the
+   * first expanded one. It can never be among the rows the pair withholds.
    */
   readonly visible = computed(() => {
     const all = this.store.sortedTriggers();
-    if (this.store.triggersExpanded() || !this.canToggle()) return all;
-    return [...all.slice(0, TRIGGER_PREVIEW_ROWS - 1), all[all.length - 1]];
+    if (this.store.triggersExpanded()) return [...all].reverse();
+    // At or below two there is no middle, so the pair is the whole list - and
+    // taking both ends of a one-trigger list would render it twice.
+    if (!this.canToggle()) return all;
+    return [all[0], all[all.length - 1]];
   });
 
   /** How many rows the current window shows before it scrolls. */
   readonly visibleRows = computed(() =>
-    this.store.triggersExpanded() ? TRIGGER_EXPANDED_ROWS : TRIGGER_PREVIEW_ROWS,
+    this.store.triggersExpanded() ? TRIGGER_EXPANDED_ROWS : TRIGGER_COLLAPSED_ROWS,
   );
 
   /**
    * True only when EXPANDED and the list is taller than its window, so rows are
    * genuinely behind a scrollbar.
    *
-   * Collapsed never scrolls: it renders exactly the rows it shows, so there is
-   * nothing behind the fold to reach. What it withholds it withholds outright,
-   * and Show all is the control for that - which is why the collapsed bar says
-   * nothing about scrolling.
+   * Collapsed never scrolls: it renders exactly two rows and withholds the rest
+   * outright rather than putting them below a fold. Show all is the control for
+   * that, which is why the collapsed bar says nothing about scrolling.
    */
   readonly scrollsInternally = computed(
     () => this.store.triggersExpanded() && this.total() > TRIGGER_EXPANDED_ROWS,
@@ -493,12 +529,6 @@ export class TriggerStripComponent {
   );
 
   /**
-   * No scroll pinning anywhere. Both windows open at the top and read forward
-   * in time, and the collapsed one renders exactly five rows, so there is no
-   * scroll position to choose in the first place.
-   */
-
-  /**
    * Rule 11 arrivals are suppressed once the case is resolved. The amber is an
    * "act on this before recording" signal, and a resolved case cannot be acted
    * on (rule 10) - so state 07 shows neither the highlighted row nor the amber
@@ -511,4 +541,36 @@ export class TriggerStripComponent {
   isArrival(trigger: { isNew?: boolean }): boolean {
     return !!trigger.isNew && !this.store.isResolved();
   }
+
+  @ViewChild('list') private listEl?: ElementRef<HTMLElement>;
+
+  /**
+   * A new trigger arriving expanded is scrolled to.
+   *
+   * The expanded list is newest first, so the arrival is its FIRST row - which
+   * is off screen whenever the agent has scrolled down into the history. The
+   * amber is the signal, and a signal in a scroll region nobody is looking at
+   * is not one.
+   *
+   * Keyed on the arrival COUNT, so several landing before a resync each bring
+   * the list back rather than only the first. Not on the trigger list itself:
+   * that changes for reasons - a resync clearing the flags - that are the
+   * agent finishing with the strip, not something new to show them.
+   *
+   * Collapsed needs none of this. The pair renders the newest as its second
+   * row, and two rows do not scroll.
+   */
+  private lastArrivalCount = 0;
+  private readonly revealArrival = effect(() => {
+    const arrivals = this.store.newTriggerCount();
+    const expanded = this.store.triggersExpanded();
+    const grew = arrivals > this.lastArrivalCount;
+    this.lastArrivalCount = arrivals;
+    if (!grew || !expanded) return;
+    // After the row it is scrolling to has been rendered.
+    afterNextRender(
+      () => this.listEl?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' }),
+      { injector: this.injector },
+    );
+  });
 }

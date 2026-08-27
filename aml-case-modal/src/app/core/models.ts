@@ -103,21 +103,32 @@ export type AttachmentKind = 'pdf' | 'image' | 'other';
 export const ALLOWED_ATTACHMENT_KINDS: readonly AttachmentKind[] = ['pdf', 'image'] as const;
 
 /**
- * Collapsed strip: how many rows are visible before it scrolls internally.
+ * Collapsed strip: exactly this many rows, always. Two, and it is not a cap.
  *
- * ONE number, doing two jobs that must agree. It is the height of the collapsed
- * window, and it is also the point at which a Show all toggle starts being
- * worth offering - at or below it every trigger is already on screen, so a
- * control that reveals nothing would be worse than no control.
+ * The collapsed strip is a PAIR, not a preview of the top of the list: the
+ * oldest trigger and the newest one, with everything between them withheld.
+ * The oldest is why the case exists and the newest is what just happened, and
+ * those are the two questions a collapsed strip is asked. A slice off either
+ * end answers one of them and pads the rest.
  *
- * It replaced a pair, a collapse threshold of 3 and a preview of 2, which could
- * be set to disagree: the collapsed list no longer previews a slice, it holds
- * the whole history and scrolls.
+ * It is also the point at which a toggle starts being worth offering: at or
+ * below two rows the pair IS the whole history, so there is no middle to
+ * reveal and no control to offer.
+ *
+ * Not a max-height, unlike the expanded number below. The collapsed strip
+ * renders exactly two rows and never scrolls - what it withholds is absent,
+ * not below a fold, which is the difference the toggle is for.
  */
-export const TRIGGER_PREVIEW_ROWS = 5;
+export const TRIGGER_COLLAPSED_ROWS = 2;
 
-/** Expanded strip shows at most this many rows before it scrolls internally. */
-export const TRIGGER_EXPANDED_ROWS = 10;
+/**
+ * Expanded strip: every trigger is in the DOM, this many are on screen.
+ *
+ * A window, not a limit on what is rendered. The strip sits above the workflow
+ * and must never push it down the page, so past five rows it scrolls inside
+ * itself and the header stays put above the scroll region.
+ */
+export const TRIGGER_EXPANDED_ROWS = 5;
 
 /**
  * Below this MODAL width the two-panel split becomes a segmented control.
