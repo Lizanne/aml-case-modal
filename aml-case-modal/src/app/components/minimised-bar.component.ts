@@ -97,9 +97,8 @@ import { PillComponent } from './ui-pill.component';
         align-items: center;
         justify-content: center;
         flex: none;
-        width: 44px;
-        height: 44px;
-        padding: 6px;
+        width: 40px;
+        height: 40px;
         border: 0;
         border-radius: 10px;
         background: transparent;
@@ -116,10 +115,10 @@ import { PillComponent } from './ui-pill.component';
         outline-offset: -4px;
       }
       .bar__icon-btn mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        line-height: 18px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
       }
 
       /* One pulse, then done. Purely decorative, so it is dropped entirely

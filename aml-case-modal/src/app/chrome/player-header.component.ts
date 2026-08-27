@@ -48,7 +48,7 @@ import { CaseStore } from '../core/case-store';
         align-items: center;
         gap: 8px;
         height: 64px;
-        padding: 0 12px 0 4px;
+        padding: 0 12px 0 16px;
         background: var(--player-bar);
         color: var(--player-bar-ink);
       }
