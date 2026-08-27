@@ -226,7 +226,11 @@ let stripSeq = 0;
         align-items: center;
         gap: 10px;
         width: 100%;
-        min-height: var(--trigger-row-height);
+        /* The chip bar's height, not the trigger row's. The two bars stack in
+           the same column and read as one piece of chrome; --trigger-row-height
+           is what the ROWS below this are, and it happened to be the number
+           here as well. */
+        min-height: var(--panel-bar-h);
         padding: 0 20px 0 20px;
         box-sizing: border-box;
         background: var(--panel);

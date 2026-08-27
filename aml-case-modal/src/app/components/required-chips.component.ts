@@ -53,6 +53,11 @@ import { PillComponent } from './ui-pill.component';
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
+        /* The height its padding and a 24px pill already came to, stated so
+           the trigger strip's header can be held to the same number rather
+           than to a copy of it. Still free to grow when the chips wrap. */
+        min-height: var(--panel-bar-h);
+        box-sizing: border-box;
         padding: 12px 20px;
         border-bottom: 1px solid var(--line);
         background: var(--panel);

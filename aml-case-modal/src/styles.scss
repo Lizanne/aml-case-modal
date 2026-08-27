@@ -47,6 +47,20 @@
   --brand-bar-accent: #1D4ED8;
   --player-bar: #09090B;
   --player-bar-ink: #ffffff;
+  /**
+   * The resting height of a panel's own bars - the required-chips bar and the
+   * trigger strip's header.
+   *
+   * They sit one above the other in the workflow column and read as one piece
+   * of chrome, so a 40px strip header under a 48px chip bar was two bars
+   * pretending to be a set. 48 is what the chip bar already came to: 12px of
+   * padding either side of a 24px pill.
+   *
+   * A MINIMUM, not a height. The chip bar wraps when the labels are long and
+   * has to be able to grow; this pins where the two agree at rest without
+   * capping either.
+   */
+  --panel-bar-h: 48px;
   --nav-w: 256px;
   --top-bar-h: 56px;
   --player-bar-h: 64px;
