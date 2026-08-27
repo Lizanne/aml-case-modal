@@ -315,41 +315,135 @@ check('resolved: the strip still expands', await (async () => {
 })());
 
 /**
- * The widget row sits ABOVE the panel and shares its edges, and there is no
- * scrim in any state.
+ * No card while its own panel is open, and the panel does not move because of
+ * it: same box in the content area, no dock to the right, no scrim.
  *
- * Edges compared between the two elements rather than to the viewport: they
- * are driven from one width string, and the claim is that they agree - which a
- * pair of viewport measurements would not actually test.
+ * The row and the panel no longer coexist for the SAME item, so the old
+ * edge-sharing comparison had nothing to measure - it looked for a row that
+ * the open panel had already taken off the page. The claim is split in two,
+ * and each half is now testable:
+ *
+ *   panel open   no row at all, and the panel's box is exactly the box it has
+ *                when it is the only thing in the content area.
+ *   mixed        the case up, the alert shut - the one composition where a
+ *                card and a panel are on screen together. The row is sized to
+ *                the panel area, so THAT is where the shared edges are proved.
+ *
+ * The panel's box is captured with the row up and compared after it goes,
+ * rather than against a number: the claim is that removing the row does not
+ * move it, which a literal would not actually test.
  */
-console.log('\nWidget row above the panel, sharing its edges, no scrim');
+console.log('\nNo card over its own panel; the panel does not move for it');
 for (const vw of [1440, 1200]) {
   await page.setViewportSize({ width: vw, height: 900 });
-  await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+  // 09 with both shut is the one state that has a row AND no panel, so the
+  // panel's own geometry can be read before and after it opens.
+  await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(450);
-  const comp = await page.evaluate(() => {
-    const row = document.querySelector('.widgets');
-    const panel = document.querySelector('.stage > *');
-    if (!row || !panel) return null;
-    const r = row.getBoundingClientRect();
-    const p = panel.getBoundingClientRect();
+  for (const [host, label] of [['sg-alert-modal', 'Close alert'], ['aml-case-modal', 'Close case']]) {
+    const btn = page.locator(`${host} button[aria-label="${label}"]`);
+    if (await btn.count()) { await btn.click(); await page.waitForTimeout(400); }
+  }
+  // And any bar. Below the dual-fit width, seeding 09 auto-minimises the
+  // incumbent rather than putting it on the stage - and a minimised panel is
+  // still OPEN, so its card is still withheld and no panel X can reach it.
+  for (let i = 0; i < 3 && (await page.locator('minimised-bar').count()); i++) {
+    await page.locator('minimised-bar button[aria-label^="Close"]').first().click();
+    await page.waitForTimeout(400);
+  }
+  const shut = await page.evaluate(() => ({
+    cards: document.querySelectorAll('.w').length,
+    rowRight: Math.round(document.querySelector('.widgets').getBoundingClientRect().right),
+  }));
+  check(`${vw}: both shut - both cards on the row`, shut.cards === 2, `${shut.cards}`);
+
+  // Open the case. Its own card must go; the alert's must stay, in full.
+  await page.locator('back-office-widgets button:has-text("Open case")').click();
+  await page.waitForTimeout(600);
+  const mixed = await page.evaluate(() => {
+    const row = document.querySelector('.widgets').getBoundingClientRect();
+    const panel = document.querySelector('.stage > *').getBoundingClientRect();
+    const names = [...document.querySelectorAll('.w__name')].map((e) => e.textContent.trim());
     return {
+      names,
+      buttons: document.querySelectorAll('.w__btn').length,
       scrim: !!document.querySelector('.page__scrim'),
-      sameLeft: Math.round(r.left) === Math.round(p.left),
-      sameRight: Math.round(r.right) === Math.round(p.right),
-      rowAbove: Math.round(r.bottom) <= Math.round(p.top),
-      widgetButtons: document.querySelectorAll('.w__btn').length,
+      sameLeft: Math.round(row.left) === Math.round(panel.left),
+      sameRight: Math.round(row.right) === Math.round(panel.right),
+      rowAbove: Math.round(row.bottom) <= Math.round(panel.top),
+      panel: [Math.round(panel.left), Math.round(panel.right)],
     };
   });
-  check(`${vw}: no scrim anywhere`, comp.scrim === false);
-  check(`${vw}: the row and the panel share both edges`, comp.sameLeft && comp.sameRight,
-    `left ${comp.sameLeft}, right ${comp.sameRight}`);
-  check(`${vw}: the row sits above the panel`, comp.rowAbove);
-  // Solo: the panel header owns the lock and its own X closes it, so the
-  // widget has nothing left to offer.
-  check(`${vw}: no widget buttons while its panel is open`, comp.widgetButtons === 0,
-    `${comp.widgetButtons}`);
+  check(`${vw}: the open panel's own card is gone, the other stays`,
+    mixed.names.join() === 'SG Alerts', mixed.names.join());
+  check(`${vw}: and it keeps its actions`, mixed.buttons > 0, `${mixed.buttons}`);
+  check(`${vw}: no scrim anywhere`, mixed.scrim === false);
+  check(`${vw}: the row and the panel share both edges`, mixed.sameLeft && mixed.sameRight,
+    `left ${mixed.sameLeft}, right ${mixed.sameRight}`);
+  check(`${vw}: the row sits above the panel`, mixed.rowAbove);
+
+  // Now the alert too. The row goes entirely - and the panel must not move.
+  await page.locator('back-office-widgets button:has-text("Open alert")').click();
+  await page.waitForTimeout(600);
+  // Both are up now, so close the alert again to get back to one panel and no
+  // row: the same panel as the mixed step, with the row gone from above it.
+  await page.locator('sg-alert-modal button[aria-label="Close alert"]').click();
+  await page.waitForTimeout(600);
+  await page.locator('back-office-widgets button:has-text("Open alert")').click();
+  await page.waitForTimeout(600);
+  const dual = await page.evaluate(() => ({
+    row: document.querySelector('.widgets'),
+    cards: document.querySelectorAll('.w').length,
+    hostDisplay: getComputedStyle(document.querySelector('back-office-widgets')).display,
+    scrim: !!document.querySelector('.page__scrim'),
+  })).then((d) => ({ ...d, row: undefined }));
+  check(`${vw}: dual - neither card renders`, dual.cards === 0, `${dual.cards}`);
+  check(`${vw}: and the row's host collapses rather than keeping its gap`,
+    dual.hostDisplay === 'none', dual.hostDisplay);
+  check(`${vw}: still no scrim`, dual.scrim === false);
 }
+
+/**
+ * The row going does not move the panel.
+ *
+ * Two states that differ ONLY in whether a row is above the case panel:
+ *
+ *   09, alert shut   the case is up and the alert is not, so the alert's card
+ *                    is on the row above it.
+ *   03               no alert on the surface at all, so no card and no row.
+ *
+ * Both have exactly one panel on the stage, so both hand the case the same
+ * width rule - and the claim is that the box it actually gets is the same box.
+ * Comparing the two states rather than either against a literal is what makes
+ * this a test of the row's influence rather than of the width constant.
+ */
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+await page.locator('sg-alert-modal button[aria-label="Close alert"]').click();
+await page.waitForTimeout(600);
+const withRow = await page.evaluate(() => {
+  const r = document.querySelector('aml-case-modal').getBoundingClientRect();
+  return {
+    l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width),
+    row: getComputedStyle(document.querySelector('back-office-widgets')).display,
+  };
+});
+await page.goto(`${BASE}/?state=03`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const noRow = await page.evaluate(() => {
+  const r = document.querySelector('aml-case-modal').getBoundingClientRect();
+  return {
+    l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width),
+    row: getComputedStyle(document.querySelector('back-office-widgets')).display,
+  };
+});
+check('the two states really do differ in whether there is a row',
+  withRow.row === 'block' && noRow.row === 'none', `${withRow.row} vs ${noRow.row}`);
+check('the panel keeps the same box either way - no re-dock, no resize',
+  withRow.l === noRow.l && withRow.r === noRow.r && withRow.w === noRow.w,
+  `${JSON.stringify(withRow)} vs ${JSON.stringify(noRow)}`);
+
 // ...and the dual pair keeps its radius, because those two ARE cards on a page.
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
@@ -407,12 +501,16 @@ const minState = await page.evaluate(() => {
 });
 check('minimised: the bar exists and carries both controls',
   minState.bars === 1 && minState.barHasRestore && minState.barHasClose, JSON.stringify(minState));
-// The row is present again, so the guarantee moves: the widget for a panel
-// that is OPEN - minimised included - offers no Close, so the bar's is the
-// only one. Two controls for one panel is the thing being prevented, not the
-// row itself.
-check('minimised: the row is there but offers no second Close',
-  minState.widgets > 0 && minState.widgetCloses === 0,
+// A MINIMISED PANEL IS STILL OPEN, so its card is withheld exactly as it is
+// while the panel is on the stage - the bar is its control surface and the bar
+// is the only one. This is the state the rule is really for: with a card on
+// the row as well, the panel would have two homes at once, one of them a strip
+// at the bottom of the screen and the other a card at the top.
+//
+// Both halves asserted, because "no second Close" is satisfied trivially by a
+// row that is not there; the card being absent is the actual claim.
+check('minimised: the panel keeps no card on the row',
+  minState.widgets === 0 && minState.widgetCloses === 0,
   `${minState.widgets} widgets, ${minState.widgetCloses} closes`);
 check('the bar hugs its content, under the 400 cap',
   minState.barWidth > 0 && minState.barWidth <= 400, `${minState.barWidth}px`);
@@ -423,9 +521,17 @@ check('the bar hugs the right corner', minState.hugsRight);
 
 await page.locator('.bar__icon-btn[aria-label^="Restore"]').click();
 await page.waitForTimeout(700);
-check('restoring brings the panel and the row back', await page.evaluate(() =>
-  document.querySelectorAll('minimised-bar').length === 0
-  && document.querySelectorAll('.w').length === 2));
+// Restoring returns the panel to the stage. It does NOT bring a card back:
+// minimised and docked are two shapes of the same open panel, and the card is
+// withheld the whole way through. State 09 has both items up here, so the row
+// is empty in both halves of the minimise-restore round trip - which is the
+// property worth pinning, since a card appearing at either end would mean the
+// panel briefly had two homes.
+check('restoring returns the panel, and still no card', await page.evaluate(() => ({
+  bars: document.querySelectorAll('minimised-bar').length,
+  panels: document.querySelectorAll('.stage > *').length,
+  cards: document.querySelectorAll('.w').length,
+})).then((r) => r.bars === 0 && r.panels === 2 && r.cards === 0));
 
 /**
  * Someone else's lock carries its age, and the band and the widget carry the

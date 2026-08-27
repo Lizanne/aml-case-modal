@@ -230,9 +230,17 @@ check('the timeline entry names the direction', await (async () => {
  * so the old side-by-side comparison is no longer a thing the composition can
  * show. Closing first still proves the point that matters: the badge is driven
  * by the store, not by anything the panel was holding open.
+ *
+ * The comment above was already true and the check under it was not: it looked
+ * for a card while the panel it belongs to was still up, which is exactly the
+ * state that has no card. So the close it describes is now actually performed.
  */
-check('the row stays above the panel',
-  (await page.locator('back-office-widgets .w').count()) > 0);
+check('no card while the panel is up',
+  (await page.locator('back-office-widgets .w').count()) === 0);
+await page.locator('aml-case-modal button[aria-label="Close case"]').click();
+await page.waitForTimeout(500);
+check('closing the panel brings the card back',
+  (await page.locator('back-office-widgets .w').count()) === 1);
 /**
  * The widget's own view of the escalation is checked at the END of this file,
  * with the panel CLOSED.

@@ -86,36 +86,35 @@ console.log('\nSlot docking: a panel opens under its own widget, in either order
  * has to produce the SAME sides rather than swapped ones, and the widget row
  * has to agree with the stage in both.
  */
-const sideBySide = () => page.evaluate(() => {
-  const mid = (e) => { const r = e.getBoundingClientRect(); return Math.round(r.left + r.width / 2); };
-  const cardEls = [...document.querySelectorAll('back-office-widgets .w')];
-  const panelFor = (name) =>
-    document.querySelector(name === 'SG Alerts' ? 'sg-alert-modal' : 'aml-case-modal');
-  return {
-    panels: [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()).join(),
-    cards: cardEls.map((e) => e.querySelector('.w__name').textContent.trim()).join(),
-    spans: cardEls.every((card) => {
-      const panel = panelFor(card.querySelector('.w__name').textContent.trim());
-      return panel ? Math.abs(mid(card) - mid(panel)) <= 1 : true;
-    }),
-  };
-});
+const sideBySide = () => page.evaluate(() => ({
+  panels: [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()).join(),
+  cards: [...document.querySelectorAll('back-office-widgets .w__name')]
+    .map((e) => e.textContent.trim()).join(),
+  rowDisplay: getComputedStyle(document.querySelector('back-office-widgets')).display,
+}));
 const openedSgFirst = await sideBySide();
 check('SG opened first docks into the SG slot, on the left',
   openedSgFirst.panels === 'sg-alert-modal,aml-case-modal', openedSgFirst.panels);
-check('and each card sits over its own panel', openedSgFirst.spans, JSON.stringify(openedSgFirst));
-// The other order. The sides must NOT swap: the slots are the widgets'.
+// Both panels up means both cards withheld, so there is no row to line up
+// with. The card-over-its-own-panel check that used to sit here could not
+// survive that: the two never share the screen for the same item any more.
+check('with both up, the row is gone entirely',
+  openedSgFirst.cards === '' && openedSgFirst.rowDisplay === 'none',
+  JSON.stringify(openedSgFirst));
+// The other order. The sides must NOT swap: the slots outlive the panels.
 await fresh();
 await page.locator('back-office-widgets button:has-text("Open case")').click();
 await settle();
+const oneUp = await sideBySide();
+check('with the case up, only the alert keeps a card',
+  oneUp.cards === 'SG Alerts', oneUp.cards);
 await page.locator('back-office-widgets button:has-text("Open alert")').click();
 await settle();
 const openedAmlFirst = await sideBySide();
 check('opening AML first lands both panels in the same slots',
   openedAmlFirst.panels === openedSgFirst.panels, openedAmlFirst.panels);
-check('the row order matches the stage order',
-  openedAmlFirst.cards === 'SG Alerts,AML Case', openedAmlFirst.cards);
-check('and each card still sits over its own panel', openedAmlFirst.spans,
+check('and the row is gone in this order too',
+  openedAmlFirst.cards === '' && openedAmlFirst.rowDisplay === 'none',
   JSON.stringify(openedAmlFirst));
 
 console.log('\nA solo panel fills the stage, flush to both edges');
@@ -333,103 +332,113 @@ const clickable = await page.evaluate(() => {
 check('the reflowing modal still receives pointer events', clickable);
 await settle(400);
 
-console.log('\nAn open panel owns its own controls; its widget owns none');
+console.log('\nAn open panel owns its card, by taking it off the row');
 /**
- * Two rules, tested per card rather than per row.
+ * Two rules, tested per item rather than per row.
  *
- * 1. A widget has NO actions at all while its OWN panel is up - not fewer,
- *    none. The panel header holds the lock and its X closes it, so anything
- *    the widget offered would be a second control for a job already spoken
- *    for. There is no dual exception: opening one panel must leave the other
- *    card's buttons exactly where they were.
- * 2. A widget is not tied to its panel's lifetime. Closing a panel puts its
- *    card back into its full state - lock line and actions - which is what
- *    makes closing reversible.
+ * 1. A card does not render while ITS OWN panel is open - minimised included.
+ *    Not a reduced card: none. The panel already carries the identity, the
+ *    lock and the controls, so a card beside it is a second statement of all
+ *    three, sitting further from the thing it describes.
+ * 2. A card is not tied to its panel's lifetime. Closing the panel puts it
+ *    back in FULL - lock line and actions - which is what makes closing
+ *    reversible.
  *
- * The SG card carries no lock control in any state, and that is not an
- * omission: the SG alert has no lock. Its panel is the existing production
- * modal with no lock band, so a lock on its widget would be the row asserting
- * state the panel itself would contradict.
+ * Per item, so the two are independent: with the case up and the alert shut,
+ * the alert's card is on the row in full and is still the way back into it.
+ *
+ * The SG card carries no lock line in any state, and that is not an omission:
+ * the SG alert has no lock. Its panel is the production modal with no lock
+ * band, so a lock on its card would assert state the panel would contradict.
  */
-const lockView = () =>
+const rowView = () =>
   page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.w')];
-    const labels = (i) =>
-      [...cards[i].querySelectorAll('.w__actions button')].map((b) =>
-        b.textContent.replace(/\s+/g, ' ').trim(),
-      );
-    const hasLockBtn = (list) => list.some((l) => /^(Lock case|Unlock|Force unlock)$/.test(l));
-    const hasOpen = (list) => list.some((l) => /Open case|Open alert/.test(l));
+    const cards = [...document.querySelectorAll('.w')].map((c) => ({
+      name: c.querySelector('.w__name').textContent.trim(),
+      buttons: [...c.querySelectorAll('.w__actions button')].map((b) =>
+        b.textContent.replace(/\s+/g, ' ').trim()),
+      lock: c.querySelector('.w__lock')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+    }));
     return {
-      order: cards.map((c) => c.querySelector('.w__name').textContent.trim()).join(),
-      sgOpen: !!document.querySelector('sg-alert-modal'),
-      amlOpen: !!document.querySelector('aml-case-modal'),
-      sgButtons: labels(0),
-      amlButtons: labels(1),
-      sgHasLock: hasLockBtn(labels(0)),
-      amlHasLock: hasLockBtn(labels(1)),
-      sgOpenAction: hasOpen(labels(0)),
-      amlOpenAction: hasOpen(labels(1)),
-      sgPill: !!cards[0].querySelector('.w__lock'),
-      amlPill: !!cards[1].querySelector('.w__lock'),
+      cards,
+      names: cards.map((c) => c.name).join(),
+      rowDisplay: getComputedStyle(document.querySelector('back-office-widgets')).display,
+      open: [...document.querySelectorAll('.stage > *')]
+        .map((e) => (e.tagName === 'AML-CASE-MODAL' ? 'AML Case' : 'SG Alerts')),
       panelLock: document.querySelector('case-header .head__lock button')?.textContent.trim() ?? null,
     };
   });
+const card = (v, name) => v.cards.find((c) => c.name === name) ?? null;
 
 await fresh();
-const bothClosed = await lockView();
-check('both closed: both cards are on the row', bothClosed.order === 'SG Alerts,AML Case',
-  bothClosed.order);
-check('both closed: each carries its own way back in',
-  bothClosed.sgOpenAction && bothClosed.amlOpenAction, JSON.stringify(bothClosed));
-check('both closed: the AML card carries the lock control and its status line',
-  bothClosed.amlHasLock && bothClosed.amlPill, JSON.stringify(bothClosed));
+const bothShut = await rowView();
+check('both shut: both cards are on the row', bothShut.names === 'SG Alerts,AML Case',
+  bothShut.names);
+check('both shut: each carries its own way back in',
+  card(bothShut, 'SG Alerts').buttons.some((b) => /Open alert/.test(b)) &&
+    card(bothShut, 'AML Case').buttons.some((b) => /Open case/.test(b)),
+  JSON.stringify(bothShut.cards));
+check('both shut: the AML card carries the lock control and its status line',
+  card(bothShut, 'AML Case').buttons.some((b) => /^(Lock case|Unlock|Force unlock)$/.test(b)) &&
+    !!card(bothShut, 'AML Case').lock,
+  JSON.stringify(card(bothShut, 'AML Case')));
 check('the SG card carries no lock, because the SG alert has none',
-  !bothClosed.sgHasLock && !bothClosed.sgPill, JSON.stringify(bothClosed.sgButtons));
+  card(bothShut, 'SG Alerts').lock === null,
+  JSON.stringify(card(bothShut, 'SG Alerts')));
 
 await page.locator('back-office-widgets button:has-text("Open case")').click();
-await settle(500);
-const amlUp = await lockView();
-// Per item, independently: opening the AML panel must not touch the SG card.
-check('AML open: its card drops every action',
-  amlUp.amlButtons.length === 0, JSON.stringify(amlUp.amlButtons));
-check('AML open: the SG card is untouched',
-  amlUp.sgOpenAction && amlUp.sgButtons.length === bothClosed.sgButtons.length,
-  JSON.stringify(amlUp.sgButtons));
-check('AML open: the lock line moves to the panel header',
-  !amlUp.amlPill && amlUp.panelLock !== null, String(amlUp.panelLock));
+await settle(600);
+const amlUp = await rowView();
+check('AML open: its card is gone from the row', card(amlUp, 'AML Case') === null, amlUp.names);
+check('AML open: the SG card is untouched, in full',
+  JSON.stringify(card(amlUp, 'SG Alerts')) === JSON.stringify(card(bothShut, 'SG Alerts')),
+  `${JSON.stringify(card(amlUp, 'SG Alerts'))} vs ${JSON.stringify(card(bothShut, 'SG Alerts'))}`);
+check('AML open: the lock lives on the panel header instead', amlUp.panelLock !== null,
+  String(amlUp.panelLock));
 
 await page.locator('back-office-widgets button:has-text("Open alert")').click();
-await settle(500);
-const bothUp = await lockView();
-check('both open: neither card carries an action - no dual exception',
-  bothUp.sgButtons.length === 0 && bothUp.amlButtons.length === 0,
-  JSON.stringify([bothUp.sgButtons, bothUp.amlButtons]));
+await settle(600);
+const bothUp = await rowView();
+check('both open: no cards, and no row - dual is not an exception',
+  bothUp.cards.length === 0 && bothUp.rowDisplay === 'none', JSON.stringify(bothUp));
 
-// State change on the panel reaches the widget with no reload. Closing first,
-// because a lock line on an open case's widget is exactly what rule 4 forbids.
+// Minimised is still OPEN, so the card stays withheld: the bar is the panel's
+// control surface and a card would be a second home for the same panel.
+await page.locator('sg-alert-modal button[aria-label="Minimise alert"]').click();
+await settle(600);
+const sgMinimised = await rowView();
+check('minimised: still no card for it', card(sgMinimised, 'SG Alerts') === null,
+  sgMinimised.names);
+check('minimised: its bar is the one control surface',
+  (await bars().count()) === 1);
+await page.locator('minimised-bar button[aria-label^="Close"]').first().click();
+await settle(600);
+check('closing it from the bar brings the card back in full',
+  JSON.stringify(card(await rowView(), 'SG Alerts')) ===
+    JSON.stringify(card(bothShut, 'SG Alerts')));
+
+// State change on the panel reaches the card - after the close, because that
+// is now the only moment the two can be compared at all.
 await page.locator('aml-case-modal .head__lock button').click();
 await settle(400);
 await page.locator('aml-case-modal button[aria-label="Close case"]').click();
-await settle(500);
-const amlGone = await lockView();
+await settle(600);
+const amlBack = await rowView();
 check('closing the panel gives the card its full state back',
-  amlGone.amlHasLock && amlGone.amlPill, JSON.stringify(amlGone));
-check('and the SG panel is untouched by it', amlGone.sgOpen && amlGone.sgButtons.length === 0,
-  JSON.stringify(amlGone));
+  !!card(amlBack, 'AML Case').lock &&
+    card(amlBack, 'AML Case').buttons.some((b) => /^(Lock case|Unlock|Force unlock)$/.test(b)),
+  JSON.stringify(card(amlBack, 'AML Case')));
 // Rule 3: the open action comes back only once the case is locked to you
-// again, which the panel unlock a moment ago undid. Closing gives back the
-// lock control; locking gives back the way in.
+// again, which the panel unlock a moment ago undid.
 check('but not the open action, because the case is no longer locked to you',
-  !amlGone.amlOpenAction, JSON.stringify(amlGone.amlButtons));
-check('and the lock line says so', (await page.evaluate(() =>
-  document.querySelectorAll('.w')[1].querySelector('.w__lock')?.textContent.trim() ?? '',
-)).length > 0);
+  !card(amlBack, 'AML Case').buttons.some((b) => /Open case/.test(b)),
+  JSON.stringify(card(amlBack, 'AML Case').buttons));
 await page.locator('.w:nth-of-type(2) .w__btn').first().click();
 await settle(400);
-const relocked = await lockView();
-check('locking it again restores the open action', relocked.amlOpenAction,
-  JSON.stringify(relocked.amlButtons));
+const relocked = await rowView();
+check('locking it again restores the open action',
+  card(relocked, 'AML Case').buttons.some((b) => /Open case/.test(b)),
+  JSON.stringify(card(relocked, 'AML Case').buttons));
 
 console.log('\nThe panels live inside the chrome, never over it');
 await fresh();
@@ -551,7 +560,22 @@ check('the incumbent is already compressed while the newcomer slides',
   JSON.stringify(during));
 await settle(500);
 
-// Escape closes the most recently opened panel - the one on the right.
+/**
+ * Escape closes the most recently opened panel - the one on the right.
+ *
+ * Pointer parked first. The panels above were opened from the widget row, and
+ * opening the last one takes the row away - which lifts the panel by the row's
+ * height, putting the panel's own minimise button under wherever the pointer
+ * was left. That button has a matTooltip, an open tooltip swallows the first
+ * Escape by design, and the panel would look like it had stopped responding to
+ * a key it does respond to.
+ *
+ * A test artefact, not a product bug: a real agent pressing Escape after a
+ * tooltip has opened is dismissing the tooltip, which is what Material's rule
+ * is for. But it has to be out of the way to test the panel's own handler.
+ */
+await page.mouse.move(0, 0);
+await settle(300);
 const beforeEsc = await page.evaluate(() =>
   [...document.querySelectorAll('.stage > *')].map((e) => e.tagName.toLowerCase()));
 await page.keyboard.press('Escape');

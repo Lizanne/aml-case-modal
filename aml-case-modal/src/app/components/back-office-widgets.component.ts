@@ -26,30 +26,36 @@ import { PillComponent } from './ui-pill.component';
  * because it was smaller than a pill; ui-pill has a size for that now, so it is
  * the shared component at size sm and the dot is gone.
  *
- * WHILE A PANEL IS OPEN ITS WIDGET HAS NO ACTIONS AT ALL. Not fewer actions,
- * none - in every state, dual included. An open panel owns its own controls:
- * its header holds the lock and its own X closes it, so anything the widget
- * offered would be a second control for a job already spoken for, sitting
- * further from the thing it acts on.
+ * WHILE A PANEL IS OPEN ITS WIDGET DOES NOT RENDER. Not a reduced card, no
+ * card - in every state, dual included, where the row disappears outright
+ * because both cards have gone.
  *
- * Dual used to be the exception, on the argument that two open panels need two
- * distinct close targets. They have two: each panel's own X, which is where a
- * user looks for it and which cannot be ambiguous about which panel it closes.
- * The exception bought nothing and cost the rule.
+ * This replaces an identity-only card, which was the same argument taken one
+ * step short. An open panel owns everything the card was for: its header holds
+ * the lock, its own X closes it, and its title says which case it is. What was
+ * left on the row restated the panel's own identity a few hundred pixels above
+ * it - a second reading of one thing, which can go stale, contradict the
+ * header, or simply be read instead of it. A card with nothing left to say is
+ * not a quieter card; it is a card that should not be there.
  *
- * So the widget is identity and lock status while a panel is up, and gains its
- * buttons back only when the panel is closed.
+ * THE RULE IS PER WIDGET, not per row. A card is hidden by ITS OWN panel being
+ * open and by nothing else, so with the case up and the alert shut the SG card
+ * is still on the row, in full, and is still the way back into the alert.
  *
- * A WIDGET IS NOT TIED TO ITS PANEL'S LIFETIME. It renders on the item being
- * PRESENT on the surface - see ModalState.present - not on the panel being
- * open, so closing a panel puts its widget back with its actions rather than
- * taking the item away. The two are opposite states of one control: panel up,
- * the widget is identity; panel down, the widget is how you bring it back.
+ * A WIDGET IS NOT TIED TO ITS PANEL'S LIFETIME, though. It renders on the item
+ * being PRESENT on the surface - see ModalState.present - so a closed panel
+ * leaves its widget behind rather than taking the item off the surface.
+ * Presence decides whether there is a card at all; the panel decides whether
+ * it is on screen. Two conditions, and both have to hold.
  *
- * The SG card used to render only in the dual state, which made closing the SG
- * panel a one-way door - the widget went with it and the alert could not be
- * reopened. It renders on presence now, like the AML card, and the two are the
- * same rule rather than two rules that happened to agree in one state.
+ * So there is only one kind of card now: full, with its lock status and its
+ * actions. The state that needed a reduced one no longer renders.
+ *
+ * THE PANEL IS UNTOUCHED BY ANY OF THIS. It keeps the same box in the content
+ * area whether or not the row is above it - it does not dock right and gains
+ * no scrim when the row goes. The row's host collapses to display: none so it
+ * cannot leave the page's 16px flex gap behind; that is the only thing that
+ * moves, and it moves the panel up, never sideways.
  */
 @Component({
   selector: 'back-office-widgets',
@@ -60,25 +66,30 @@ import { PillComponent } from './ui-pill.component';
     // The panels' own gap, so the row and the stage below it split their
     // width at exactly the same two points. One constant, two layouts.
     '[style.--widget-gap.px]': 'gap',
+    // display: none, not an empty host. .page is a flex column with a 16px
+    // gap, and a zero-height flex item still claims its share of it - the row
+    // would be gone and its gap would not, leaving the panel pushed down by a
+    // strip of nothing. null restores the stylesheet's display: block.
+    //
+    // The panel therefore starts higher whenever the row is away, by the
+    // row's height plus that gap. It is the only thing about the panel that
+    // moves: same left edge, same width, no scrim.
+    '[style.display]': 'showRow() ? null : "none"',
   },
   template: `
     <!--
-      One card per item on the surface, in SLOT order - the same order the
-      panels dock in, so each card sits over its own panel rather than over
-      whichever one the markup happened to list first.
+      One card per item that is on the surface AND whose panel is down, in slot
+      order. Both conditions live in cardIds(); nothing below re-tests either,
+      which is what lets the cards themselves be unconditional.
 
-      The row is sized from the store to the same box the panels occupy, and
-      the cards fill it - so a lone card spans its panel edge to edge, and two
-      cards over two panels each span their own. Nothing here knows which; the
-      grid below does it by construction.
-
-      Dual can now be driven to as well as staged: with the SG panel shut its
-      widget is on the row, so Open alert puts it back beside the case - and
-      back into the column its widget was already holding.
+      The row is still sized to the box the panels occupy, so it lines up with
+      whatever is beneath it. A card sitting above the OTHER item's panel is
+      the ordinary state now rather than an edge case, and sharing that box is
+      what keeps it from reading as a strip floating over the page.
     -->
     @if (showRow()) {
     <div class="widgets" [style.width]="ws.rowCss()">
-      @for (id of ws.presentIds(); track id) {
+      @for (id of cardIds(); track id) {
       @if (id === 'sg') {
       <!-- ------------------------------------------------------- SG alerts -->
       <article class="w">
@@ -100,31 +111,25 @@ import { PillComponent } from './ui-pill.component';
         </div>
 
         <!--
-          Rule 4, the same single condition the AML card uses: actions exist
-          only while this card's OWN panel is down. With the SG panel up its
-          header owns its controls, and the card is identity alone.
+          Unconditional. This card exists only while the SG panel is down, so a
+          guard here would be the same test written twice - and the copy free
+          to fall out of step with the one that actually decides.
 
           No lock line, because the SG alert has no lock: this panel is the
           existing production modal, carried in as a peer to prove the dual
           layout, and it has no lock band of its own to be a second reading of.
           Inventing one here would be the widget asserting state the panel
           itself would contradict the moment it was opened.
-
-          Outside .w__inner rather than in it, matching the AML card: an empty
-          .w__actions would still claim the flex gap and pad the card for
-          buttons that are not there.
         -->
-        @if (!ws.isOpen('sg')) {
-          <div class="w__actions">
-            <!-- "Open alert", naming its object the way "Open case" does
-                 beside it, so two Open buttons on one row cannot be mistaken
-                 for each other. -->
-            <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
-              <mat-icon aria-hidden="true">open_in_new</mat-icon>
-              Open alert
-            </button>
-          </div>
-        }
+        <div class="w__actions">
+          <!-- "Open alert", naming its object the way "Open case" does beside
+               it, so two Open buttons on one row cannot be mistaken for each
+               other. -->
+          <button class="w__btn w__btn--primary" type="button" (click)="ws.open('sg')">
+            <mat-icon aria-hidden="true">open_in_new</mat-icon>
+            Open alert
+          </button>
+        </div>
       </article>
       } @else {
 
@@ -157,70 +162,65 @@ import { PillComponent } from './ui-pill.component';
                 #AML-1042 · {{ stage() }} · {{ store.createdAt() | stamp: 'date' }}
               </p>
               <!--
-                Lock status belongs to the CLOSED widget only. While the panel
-                is open its header is the single source for lock state, and a
-                second reading of the same lock a few hundred pixels above it
-                is a thing that can be stale, contradict the header, or simply
-                be read instead of it. One statement of the lock, in the place
-                that also owns the controls for it.
+                Lock status, unguarded. It used to be gated on the panel being
+                shut, which is now the only way this card renders at all - one
+                statement of the lock, in the place that also owns the controls
+                for it, and never a second reading of the header's.
+
+                The remaining @if is about the lock itself: a resolved case has
+                no holder, and the design shows no chip rather than an
+                "Unassigned" one.
               -->
-              @if (!ws.isOpen('aml')) {
-                @if (lockChip(); as chip) {
-                  <span class="w__lock" [class.w__lock--mine]="chip.mine">
-                    <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
-                    {{ chip.label }}
-                  </span>
-                }
+              @if (lockChip(); as chip) {
+                <span class="w__lock" [class.w__lock--mine]="chip.mine">
+                  <mat-icon fontSet="material-icons-outlined" aria-hidden="true">lock</mat-icon>
+                  {{ chip.label }}
+                </span>
               }
             </div>
           </div>
 
           <!--
-            Rule 4, with the dual exception withdrawn. ONE condition wraps
-            every action: the panel is closed. Nested conditions inside it
-            choose between them, but none of them can put a button on screen
-            while the panel is up, which is the property that kept getting
-            lost when the rule was spread across two sibling blocks.
+            Unconditional, like the SG card's. The panel test that used to wrap
+            this block IS the test that decides whether the card exists, so
+            keeping it here would be one rule in two places.
 
-            The condition is OUTSIDE the container, not inside it. .w__inner is
-            a flex row with an 8px gap - 10px and a column on mobile - so an
-            empty .w__actions would still claim its gap and leave the card
-            padded on the right for buttons that are not there.
+            The branches inside are about the LOCK, not the panel: which lock
+            control the current state calls for, and whether rule 3 has been
+            satisfied well enough to offer a way in.
           -->
-          @if (!ws.isOpen('aml')) {
-            <div class="w__actions">
-              @if (!store.isResolved()) {
-                @switch (store.lockState()) {
-                  @case ('locked-to-me') {
-                    <button class="w__btn w__btn--compact" type="button" (click)="store.requestUnlock()">
-                      Unlock
-                    </button>
-                  }
-                  @case ('locked-to-other') {
-                    <button class="w__btn w__btn--danger" type="button" (click)="store.requestUnlock()">
-                      <mat-icon aria-hidden="true">lock</mat-icon>
-                      Force unlock
-                    </button>
-                  }
-                  @default {
-                    <!-- "Lock case", not "Lock": the widget names its object,
-                         the way Open case does beside it. The panel band can
-                         say "Lock to me" because the case it means is the one
-                         it is the header of. -->
-                    <button class="w__btn w__btn--primary" type="button" (click)="store.lock()">
-                      Lock case
-                    </button>
-                  }
+          <div class="w__actions">
+            @if (!store.isResolved()) {
+              @switch (store.lockState()) {
+                @case ('locked-to-me') {
+                  <button class="w__btn w__btn--compact" type="button" (click)="store.requestUnlock()">
+                    Unlock
+                  </button>
+                }
+                @case ('locked-to-other') {
+                  <button class="w__btn w__btn--danger" type="button" (click)="store.requestUnlock()">
+                    <mat-icon aria-hidden="true">lock</mat-icon>
+                    Force unlock
+                  </button>
+                }
+                @default {
+                  <!-- "Lock case", not "Lock": the widget names its object,
+                       the way Open case does beside it. The panel band can
+                       say "Lock to me" because the case it means is the one
+                       it is the header of. -->
+                  <button class="w__btn w__btn--primary" type="button" (click)="store.lock()">
+                    Lock case
+                  </button>
                 }
               }
-              @if (canOpen()) {
-                <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
-                  <mat-icon aria-hidden="true">open_in_new</mat-icon>
-                  Open case
-                </button>
-              }
-            </div>
-          }
+            }
+            @if (canOpen()) {
+              <button class="w__btn w__btn--primary" type="button" (click)="ws.open('aml')">
+                <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                Open case
+              </button>
+            }
+          </div>
         </div>
       </article>
       }
@@ -708,14 +708,23 @@ export class BackOfficeWidgetsComponent {
   readonly gap = MODAL_GAP_PX;
 
   /**
-   * Always. The row sits above the panel in every state, sharing its width,
-   * so the case identity stays on screen while the panel is worked in.
+   * The cards, in slot order: on the surface, and panel down.
    *
-   * A computed rather than a literal true in the template: the row's presence
-   * has been a rule three times over and will be again, and this is where that
-   * rule belongs when it comes back.
+   * BOTH conditions, in one place. They were previously split - presence chose
+   * the cards, and each card re-tested its own panel to decide what to show -
+   * which is how the same rule ended up written three times and how "identity
+   * only" survived as a state at all. There is nothing for a card to fall back
+   * to now, so the second condition belongs in the list rather than inside the
+   * things the list produces.
    */
-  readonly showRow = computed(() => true);
+  readonly cardIds = computed(() => this.ws.presentIds().filter((id) => !this.ws.isOpen(id)));
+
+  /**
+   * Whether there is a row at all. In dual there is not: both panels are up,
+   * both cards are gone, and an empty row would still take the page's flex gap
+   * - hence the display: none on the host rather than an empty div here.
+   */
+  readonly showRow = computed(() => this.cardIds().length > 0);
 
   /** "Open" / "In progress" / "Resolved", per the design's meta line. */
   readonly stage = computed(() => {

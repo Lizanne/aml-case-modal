@@ -42,7 +42,10 @@ const dialog = 'confirm-unlock-dialog';
  */
 const go = async (state) => {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('back-office-widgets');
+  // attached, not visible: the row's host is display: none whenever every
+  // card on it has had its panel opened, which is most seeded states. The
+  // component is always in the DOM; what it renders is the variable.
+  await page.waitForSelector('back-office-widgets', { state: 'attached' });
   await page.waitForTimeout(350);
   if (await page.locator(dialog).count()) {
     await page.keyboard.press('Escape');
@@ -185,6 +188,14 @@ check(
 console.log('\nthe widget button is demoted at rest, danger on intent');
 await go('00b');
 await closePanel();
+// Rest means REST: pointer off the button. Closing the panel is what puts the
+// row on screen, and the panel's header X sits where the row then appears - so
+// the pointer Playwright leaves at the click point lands on the widget, and
+// what got measured was the hover state. Nothing about the button changed; the
+// panel simply starts higher now that no row is above it.
+await page.mouse.move(0, 0);
+await page.waitForTimeout(150);
+
 // The claim is "this button rests on --ink", so --ink is what it is compared
 // against - resolved from the page, not spelled out again here. Written out as
 // a hex it was a second copy of the token, and it broke the moment --ink was

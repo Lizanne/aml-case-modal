@@ -24,7 +24,10 @@ const check = (label, ok, detail) => {
 
 const go = async (state) => {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('back-office-widgets');
+  // attached, not visible: the row's host is display: none whenever every
+  // card on it has had its panel opened, which is most seeded states. The
+  // component is always in the DOM; what it renders is the variable.
+  await page.waitForSelector('back-office-widgets', { state: 'attached' });
   await page.waitForTimeout(350);
 };
 
@@ -69,11 +72,15 @@ for (const state of STATES) {
   );
 }
 
-console.log('\ndual: two panels, two Xs, and no widget buttons at all');
+console.log('\ndual: two panels, two Xs, and no row at all');
 await go('09');
 check('two panels are up', await page.locator('aml-case-modal, sg-alert-modal').count().then((n) => n === 2));
-check('both widget cards are on the row', await page.locator('back-office-widgets .w').count().then((n) => n === 2));
-check('no widget buttons', await widgetButtons().then((b) => b.length === 0), (await widgetButtons()).join(' / '));
+// Both cards are hidden by their own panels, so there is no row left to carry
+// anything. Asserted as "no cards", not "no buttons": a row of button-less
+// cards would also satisfy the button count and is exactly what this replaced.
+check('neither widget card renders', await page.locator('back-office-widgets .w').count().then((n) => n === 0));
+check('so the row itself is gone',
+  await page.locator('back-office-widgets').evaluate((e) => getComputedStyle(e).display).then((d) => d === 'none'));
 check(
   'each panel carries its own close X',
   await page.evaluate(() => {
@@ -90,40 +97,38 @@ check('the AML X closes the AML panel', await page.locator('aml-case-modal').cou
 check('and leaves the other one alone', await page.locator('sg-alert-modal').count().then((n) => n === 1));
 
 /**
- * Identity ONLY while the panel is open: icon, name, severity badge, meta.
- * No lock line either - the panel header is the single source for lock state,
- * and a second reading of the same lock above it can only ever agree
- * redundantly or disagree wrongly.
+ * NOT identity-only - nothing at all.
+ *
+ * This block used to assert that a card whose panel is open kept its icon,
+ * name, badge and meta line while losing its lock line and its buttons. That
+ * reduced card is gone: an open panel already carries all four of those, a few
+ * hundred pixels below, so what was left on the row was a second statement of
+ * the panel's own identity. The card is withheld outright instead.
+ *
+ * So the sweep below asserts absence, per state and per item. It is keyed on
+ * the card COUNT rather than on any one part of it, because the parts are what
+ * the old rule kept and a check on those would pass on a card that should not
+ * be there at all.
  */
-console.log('\nno lock status line on a widget whose panel is open - every state');
+console.log('\nno card at all for a panel that is open - every state');
 for (const state of STATES) {
   await go(state);
-  const openPanels = await page.locator('aml-case-modal, sg-alert-modal').count();
-  const lockLines = await page.locator('back-office-widgets .w__lock').count();
+  const seen = await page.evaluate(() => ({
+    open: [...document.querySelectorAll('aml-case-modal, sg-alert-modal')]
+      .map((e) => (e.tagName === 'AML-CASE-MODAL' ? 'AML Case' : 'SG Alerts')),
+    cards: [...document.querySelectorAll('back-office-widgets .w__name')].map((e) => e.textContent.trim()),
+  }));
   check(
-    `${state}: ${openPanels} panel(s) open -> ${lockLines} lock line(s)`,
-    openPanels === 0 || lockLines === 0,
+    `${state}: open [${seen.open}] -> cards [${seen.cards}]`,
+    seen.open.every((name) => !seen.cards.includes(name)),
   );
+  // And nothing partial: whatever cards remain are whole ones.
+  const parts = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('back-office-widgets .w')];
+    return cards.map((c) => !!c.querySelector('.w__actions'));
+  });
+  check(`${state}: every card on the row is a full one`, parts.every(Boolean), JSON.stringify(parts));
 }
-
-console.log('\nbut identity survives - icon, name, badge, meta');
-await go('09');
-check('both cards keep their icon', await page.locator('back-office-widgets .w__type').count().then((n) => n === 2));
-check(
-  'both cards keep their name',
-  await page.locator('back-office-widgets .w__name').allInnerTexts().then((t) => t.length === 2),
-);
-check('the AML card keeps its severity badge', await page.locator('back-office-widgets ui-pill').count().then((n) => n === 1));
-check(
-  'both cards keep their meta line',
-  await page.locator('back-office-widgets .w__meta').allInnerTexts().then((t) => t.length === 2 && t.every((s) => s.trim())),
-);
-// The gap belongs to a container that is no longer there, so the card must not
-// be left padded for buttons it is not showing.
-check(
-  'no empty actions container left holding a flex gap',
-  await page.locator('back-office-widgets .w__actions').count().then((n) => n === 0),
-);
 
 console.log('\nand the lock line comes back when the panel is closed');
 await go('00a');
@@ -156,6 +161,11 @@ const modalStyle = await page.evaluate(() => {
 });
 await page.locator('case-header button[aria-label="Close case"]').click();
 await page.locator('aml-case-modal').waitFor({ state: 'detached' });
+// Off the button before reading its colours. The row appears where the panel
+// header just was - the panel starts higher now that no row sits above it - so
+// the pointer left at the click point lands on the widget, and both buttons
+// below would be measured in their hover state.
+await page.mouse.move(0, 0);
 await page.waitForTimeout(300);
 const widgetStyle = await page.evaluate(() => {
   const b = document.querySelector('back-office-widgets .w__btn--primary');

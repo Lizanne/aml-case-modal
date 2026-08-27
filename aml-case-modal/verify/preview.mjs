@@ -148,6 +148,15 @@ check(
 console.log('\nimage preview');
 await page.locator(imgChip).click();
 await page.waitForSelector('attachment-preview .panel');
+// The panel is measured against the image's RENDERED width, so the image has
+// to have decoded before any of it means anything. Waiting on .panel only says
+// the overlay exists; a 190KB fixture is routinely still decoding at that
+// point, and both checks below then compare against a zero-width img.
+await page.waitForFunction(() => {
+  const img = document.querySelector('attachment-preview img.image');
+  return !!img && img.complete && img.naturalWidth > 0;
+}, null, { timeout: 10000 });
+await page.waitForTimeout(100);
 check('renders an image, not an iframe', await page.locator('attachment-preview img.image').count().then((n) => n === 1));
 check(
   'windowed to the image, not to 90% of the screen',
