@@ -181,9 +181,12 @@ for (const width of MOBILE) {
       strip: widthOf('trigger-strip .strip__list'),
       chips: chips ? Math.round(chips.getBoundingClientRect().width) : null,
       chipsWrap: chips ? getComputedStyle(chips.firstElementChild).flexWrap : null,
-      // The detail was ellipsised into ~12px of a shared 3-column grid. It
-      // must now have its own full-width line and be allowed to wrap.
-      detailWraps: dcs ? dcs.whiteSpace === 'normal' : false,
+      // Its own full-width LINE - one line. It used to be ellipsised into
+      // ~12px of a shared 3-column grid, which is what the full width fixes;
+      // wrapping was the overcorrection, and made row height a function of how
+      // much the author wrote.
+      detailOneLine: dcs ? dcs.whiteSpace === 'nowrap' : false,
+      detailBreaksLongTokens: dcs ? dcs.overflowWrap === 'anywhere' : false,
       detailW: detail ? Math.round(detail.getBoundingClientRect().width) : null,
       rowIsGrid: detail ? getComputedStyle(detail.parentElement).display === 'grid' : false,
       // Count grid ROWS, not distinct element tops: the cells are baseline
@@ -205,7 +208,11 @@ for (const width of MOBILE) {
   check('trigger list fills the modal', fill.strip !== null && Math.abs(fill.strip - fill.modalW) <= 2,
     `${fill.strip} vs ${fill.modalW}`);
   check('trigger row owns its own grid', fill.rowIsGrid);
-  check('trigger detail wraps instead of ellipsising', fill.detailWraps);
+  check('trigger detail is one line, not a wrapped block', fill.detailOneLine);
+  // nowrap stops the wrapping; overflow-wrap: anywhere is what lowers the
+  // element's min-content to a character, so an unbroken token cannot force
+  // the row wider than the panel.
+  check('and an unbroken token cannot widen the row', fill.detailBreaksLongTokens);
   check('trigger detail gets a real line, not a sliver', fill.detailW > fill.modalW * 0.7,
     `${fill.detailW} of ${fill.modalW}`);
   // Two lines, not three: the timestamp shares row 1 with the name. Auto
@@ -487,10 +494,12 @@ console.log('\nDesktop is untouched');
     strip.stripW > 300 && strip.stripW < 500, `${strip.stripW}`);
   check('desktop: the narrow column stacks the row', strip.rowDisplay === 'grid',
     strip.rowDisplay);
-  check('desktop: the detail gets a full line and wraps rather than ellipsising',
-    strip.detailWrap === 'normal' && !strip.clipped &&
-      strip.detailW > strip.stripW * 0.8,
-    `${strip.detailW} of ${strip.stripW}, clipped=${strip.clipped}`);
+  // A full LINE, clamped to one. The width is the claim - the detail gets the
+  // row rather than a squeezed third of it - and the ellipsis is what keeps
+  // every row the same height whatever its author wrote.
+  check('desktop: the detail gets a full line, clamped to one',
+    strip.detailWrap === 'nowrap' && strip.detailW > strip.stripW * 0.8,
+    `${strip.detailW} of ${strip.stripW}, whiteSpace=${strip.detailWrap}`);
   await page.close();
 }
 

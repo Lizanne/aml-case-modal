@@ -180,7 +180,9 @@ let stripSeq = 0;
                   <ui-pill tone="warn-solid">New</ui-pill>
                 }
               </span>
-              <span class="cell cell--detail">{{ trigger.detail }}</span>
+              <!-- Clamped to one line; the title is where the rest of it
+                   still is. -->
+              <span class="cell cell--detail" [attr.title]="trigger.detail">{{ trigger.detail }}</span>
               <span class="cell cell--meta">
                 <time class="cell__at" [attr.datetime]="trigger.at">{{ trigger.at | stamp }}</time>
               </span>
@@ -330,9 +332,22 @@ let stripSeq = 0;
       .cell--detail {
         display: block;
         line-height: var(--trigger-row-height);
+        /**
+         * ONE LINE, ALWAYS - see the note on row height in this file.
+         *
+         * overflow-wrap: anywhere alongside nowrap is not a contradiction and
+         * not decoration. nowrap stops the wrapping; anywhere is what lowers
+         * the element's MIN-CONTENT size to a single character, so a 100-char
+         * unbroken string cannot force its flex or grid track wider than the
+         * row. Without it the track sizes to the whole token and the text
+         * escapes the row rather than ellipsising inside it - which is the
+         * failure mode nowrap alone does not cover.
+         */
+        min-width: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        overflow-wrap: anywhere;
       }
       /* Name cell is a flex row: name then badge, 6px apart. */
       .cell--name {
@@ -432,11 +447,10 @@ let stripSeq = 0;
          * whose neighbour is a scrolling workflow. Five is the contract in
          * both layouts; only the row height it multiplies changes.
          *
-         * 62px: 10px of padding either side, two 20px lines, and the 2px
-         * row-gap between them. A row whose detail wraps to a second line is
-         * taller, so the window then holds a little under five - which is the
-         * honest reading of "five rows" for rows that are not all one height,
-         * and much closer to it than a fraction of the window.
+         * 63px: 10px of padding either side, two 20px lines, the 2px row-gap
+         * between them and the 1px rule under the row. Every stacked row is
+         * exactly that now the detail is clamped to one line, so five rows is
+         * five rows rather than "about five".
          */
         .strip__list--expanded {
           max-height: calc(var(--trigger-row-height-stacked) * var(--trigger-expanded-rows));
@@ -473,14 +487,19 @@ let stripSeq = 0;
         .cell--meta {
           grid-area: 1 / 2;
         }
-        /* The whole point: full width on its own line, and allowed to wrap
-           instead of ellipsising a sentence down to nothing. */
+        /**
+         * Full width on its own line - and ONE line.
+         *
+         * It used to wrap here, on the argument that ellipsising a sentence
+         * down to nothing is worse than two lines. That was true of the
+         * ellipsis and false of the wrap: a row whose height depends on how
+         * much its author wrote makes the whole list unscannable, and made the
+         * five-row window hold a different number of rows per case. The
+         * sentence is still reachable - it is the row's title.
+         */
         .cell--detail {
           grid-area: 2 / 1 / 3 / -1;
           line-height: 20px;
-          white-space: normal;
-          overflow: visible;
-          text-overflow: clip;
         }
         .trigger--new {
           background: var(--warn-bg);

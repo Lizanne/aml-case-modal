@@ -215,7 +215,9 @@ const TAB_LABEL: Record<InfoTab, string> = {
                     <span class="starred__who">{{ star.who }}</span>
                     <time class="starred__at" [attr.datetime]="star.at">{{ star.at | stamp }}</time>
                   </div>
-                  <p class="starred__text">{{ star.text }}</p>
+                  <!-- Clamped to one line; the title is where the rest of it
+                       still is. -->
+                  <p class="starred__text" [attr.title]="star.text">{{ star.text }}</p>
                 </li>
               }
             </ul>
@@ -234,7 +236,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
                   <time class="timeline__at" [attr.datetime]="entry.at">
                     {{ entry.at | stamp }}
                   </time>
-                  <span class="timeline__what">{{ entry.what }}</span>
+                  <span class="timeline__what" [attr.title]="entry.what">{{ entry.what }}</span>
                   <span class="timeline__who">{{ entry.who }}</span>
                 </li>
               }
@@ -472,10 +474,26 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-variant-numeric: tabular-nums;
       }
       .starred__text {
-        margin: 6px 0 0;
+        margin: 2px 0 0;
         font-size: 14px;
         line-height: 20px;
         color: var(--ink-3);
+        /**
+         * ONE LINE, ALWAYS - see the note on row height in this file.
+         *
+         * overflow-wrap: anywhere alongside nowrap is not a contradiction and
+         * not decoration. nowrap stops the wrapping; anywhere is what lowers
+         * the element's MIN-CONTENT size to a single character, so a 100-char
+         * unbroken string cannot force its flex or grid track wider than the
+         * row. Without it the track sizes to the whole token and the text
+         * escapes the row rather than ellipsising inside it - which is the
+         * failure mode nowrap alone does not cover.
+         */
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
       }
       /**
        * Past AML cases: two lines, on the starred rows' rhythm - 12px/20px
@@ -597,10 +615,25 @@ const TAB_LABEL: Record<InfoTab, string> = {
       }
       .timeline__what {
         grid-area: 2 / 1;
-        min-width: 0;
         font-size: 14px;
         line-height: 20px;
         color: var(--ink);
+        /**
+         * ONE LINE, ALWAYS - see the note on row height in this file.
+         *
+         * overflow-wrap: anywhere alongside nowrap is not a contradiction and
+         * not decoration. nowrap stops the wrapping; anywhere is what lowers
+         * the element's MIN-CONTENT size to a single character, so a 100-char
+         * unbroken string cannot force its flex or grid track wider than the
+         * row. Without it the track sizes to the whole token and the text
+         * escapes the row rather than ellipsising inside it - which is the
+         * failure mode nowrap alone does not cover.
+         */
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
       }
       .timeline__who {
         grid-area: 2 / 2;
