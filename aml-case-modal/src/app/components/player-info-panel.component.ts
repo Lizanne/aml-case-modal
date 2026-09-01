@@ -414,8 +414,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: none;
       }
       .placeholder {
-        margin: 18px 0 0;
-        padding: 14px;
+        margin: 16px 0 0;
+        padding: 16px;
         border: 1px dashed var(--line-strong);
         border-radius: 10px;
         font-size: 14px;
