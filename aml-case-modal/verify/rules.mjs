@@ -117,14 +117,17 @@ check('recording blocked', await page.locator('action-placeholder button').first
 /**
  * Rule 11 holds by construction in BOTH modes, by opposite routes.
  *
- * Collapsed is a pair - the oldest trigger and the newest, ascending - so an
- * arrival, being by definition the most recent, IS the second row. Expanded is
- * the whole history newest first, so the same arrival is the FIRST row. Either
- * way it cannot be among the rows the pair withholds; there is no ordering in
- * which it goes missing.
+ * The strip reads oldest to newest in both modes, so an arrival - being by
+ * definition the most recent - is the LAST row either way. It cannot be among
+ * the rows the collapsed strip withholds; there is no mode in which it goes
+ * missing.
+ *
+ * The amber count chip that used to carry it as a second signal went with the
+ * header. The row's own highlight and its New badge are the whole of it here,
+ * so those are what this checks.
  */
-check('collapsed: the count chip carries the arrival',
-  (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 1);
+check('collapsed: the strip has no header to carry a count',
+  (await page.locator('trigger-strip .strip__bar').count()) === 0);
 check('collapsed: exactly two rows, oldest then newest', await page.evaluate(() => {
   const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
   return at.length === 2 && at[0] < at[1];
@@ -135,10 +138,14 @@ check('collapsed: exactly one row is marked',
   (await page.locator('trigger-strip .trigger--new').count()) === 1);
 // The pair spans the history rather than sampling the top of it: with the
 // middle withheld, the two rows must be the actual ends of the case.
+// The total is not rendered anywhere now, so it comes from the divider, which
+// names exactly what it is withholding: two anchors plus N remaining.
 check('collapsed: the two rows are the ends of the whole case', await page.evaluate(() => {
-  const shown = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
-  const total = Number(document.querySelector('trigger-strip .strip__bar ui-pill').textContent.trim().split(' ')[0]);
-  return total > 2 && shown.length === 2;
+  const shown = [...document.querySelectorAll('trigger-strip .cell__at')].length;
+  const hidden = Number(
+    document.querySelector('trigger-strip .strip__gap-count').textContent.trim(),
+  );
+  return shown === 2 && hidden > 0;
 }));
 check('collapsed: it does not scroll - what it withholds is absent, not hidden',
   await page.evaluate(() => {
@@ -174,7 +181,9 @@ check('expanded: the anchors are the ones the collapsed pair showed',
 check('expanded: the whole history is rendered, five rows shown', await page.evaluate(() => {
   const el = document.querySelector('trigger-strip .strip__list');
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
-  const total = Number(document.querySelector('trigger-strip .strip__bar ui-pill').textContent.trim().split(' ')[0]);
+  // Two anchors plus what the divider says it is hiding.
+  const total =
+    2 + Number(document.querySelector('trigger-strip .strip__gap-count').textContent.trim());
   // Average row, not .cell: .trigger has no box in the grid layout and .cell
   // is a single line once the strip stacks in its column, so only the average
   // is a row height in both.
@@ -190,8 +199,10 @@ await page.waitForTimeout(300);
 await page.locator('workflow-panel .resync button:has-text("Resync")').click();
 await page.waitForTimeout(250);
 check('after resync: recording allowed again', await page.locator('action-placeholder button').first().isEnabled());
-check('after resync: NEW highlight cleared on the chip',
-  (await page.locator('trigger-strip .strip__bar ui-pill[data-tone="warn"]').count()) === 0);
+// No chip to clear any more - the New BADGE on the row is the signal, and it
+// is what a resync has to take away.
+check('after resync: the New badge is gone from every row',
+  (await page.locator('trigger-strip ui-pill[tone="warn-solid"]').count()) === 0);
 check('after resync: NEW highlight cleared on the rows',
   (await page.locator('trigger-strip .trigger--new').count()) === 0);
 
@@ -315,13 +326,25 @@ check('an outcome card is still boxed and white', await page.evaluate(() => {
 }));
 
 console.log('\nRules 10 + 11 - a resolved case never advertises an arrival');
+/**
+ * The arrival's signals, and how many triggers there are.
+ *
+ * The amber COUNT CHIP is gone with the strip header, so the row highlight and
+ * its New badge are the whole signal now. The total is not rendered anywhere
+ * either: it is two anchors plus whatever the divider says it is hiding, which
+ * is also the only number that changes when a trigger lands on a collapsed
+ * strip.
+ */
 const arrival = () =>
-  page.evaluate(() => ({
-    chip: document.querySelectorAll('trigger-strip .strip__bar ui-pill[data-tone="warn"]').length,
-    rows: document.querySelectorAll('trigger-strip .trigger--new').length,
-    markers: document.querySelectorAll('trigger-strip ui-pill[data-tone="warn-solid"]').length,
-    count: document.querySelector('trigger-strip .strip__bar ui-pill')?.textContent.trim(),
-  }));
+  page.evaluate(() => {
+    const hidden = document.querySelector('trigger-strip .strip__gap-count');
+    const rows = document.querySelectorAll('trigger-strip .trigger').length;
+    return {
+      rows: document.querySelectorAll('trigger-strip .trigger--new').length,
+      markers: document.querySelectorAll('trigger-strip ui-pill[data-tone="warn-solid"]').length,
+      count: hidden ? rows + Number(hidden.textContent.trim()) : rows,
+    };
+  });
 
 // Control: an OPEN case must show the arrival, or the test below proves nothing.
 await go('01');
@@ -329,7 +352,7 @@ await page.locator('dev-state-switcher button:has-text("New trigger")').click();
 await page.waitForTimeout(400);
 const openArrival = await arrival();
 check('open case shows the arrival (control)',
-  openArrival.chip === 1 && openArrival.rows === 1 && openArrival.markers === 1);
+  openArrival.rows === 1 && openArrival.markers === 1, JSON.stringify(openArrival));
 
 // Force an arrival onto a RESOLVED case: the data changes, the signal must not.
 await go('07');
@@ -340,7 +363,6 @@ const resolvedAfter = await arrival();
 check('the trigger really was added to a resolved case',
   resolvedAfter.count !== resolvedBefore.count,
   `${resolvedBefore.count} -> ${resolvedAfter.count}`);
-check('resolved: no amber count', resolvedAfter.chip === 0);
 check('resolved: no highlighted row', resolvedAfter.rows === 0);
 check('resolved: no NEW marker', resolvedAfter.markers === 0);
 check('resolved: the strip still expands', await (async () => {

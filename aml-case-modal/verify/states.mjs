@@ -176,9 +176,10 @@ const CHECKS = {
     })(),
   }),
   '10': async (p) => ({
-    // The badge is the single source of the count; assert it there rather
-    // than off the scroll note, which only exists while expanded.
-    '20 triggers total': (await p.locator('trigger-strip .strip__bar ui-pill').innerText()).trim() === '20 triggers',
+    // No badge to read it from - the strip has no header at all now. 10 seeds
+    // the strip EXPANDED, so every trigger is in the DOM and the count is the
+    // row count.
+    '20 triggers total': (await p.locator('trigger-strip .trigger').count()) === 20,
     'new marker present': (await p.locator('trigger-strip .trigger--new').count()) === 1,
     // The strip reads oldest to newest in BOTH modes now, so the arrival - by
     // definition the newest trigger - is the LAST row whether 10's seeded

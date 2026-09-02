@@ -21,76 +21,78 @@ import { TRIGGER_COLLAPSED_ROWS, TRIGGER_EXPANDED_ROWS } from '../core/models';
 let stripSeq = 0;
 
 /**
- * One trigger control, identical in every state and at every width.
+ * The case's trigger history: rows, and a divider standing for the ones it is
+ * not showing.
  *
- * The strip is a sticky header - count chip, secondary text, verb - with the
- * trigger rows underneath it:
+ *   <=2 triggers   [oldest] [newest]            no divider - nothing to hide
+ *   collapsed      [oldest]
+ *                  ---- + Show 17 remaining ----
+ *                  [newest]
+ *   expanded       [oldest]
+ *                  ---- - Hide 17 ----
+ *                  [17 more rows, 5 visible, scrolling]
+ *                  [newest]
  *
- *   collapsed, <=2  (2 triggers)
- *                   [both rows, no toggle, no gap]
- *   collapsed, 3+   (19 triggers)                              v Show all
- *                   [oldest] [newest]              exactly 2 rows, no scroll
- *   expanded        (19 triggers)  Showing 5 of 19, scroll...  ^ Show less
- *                   [all 19 rows NEWEST FIRST, 5 visible, scrolling]
+ * NO HEADER. It had one - a bar carrying a "19 triggers" badge, and before
+ * that a Show all toggle beside it. The toggle moved into the gap it
+ * describes; the badge went after it, because a bar existing to hold one
+ * number is a row of chrome charged to the workflow beside it, and the number
+ * is readable from the strip itself.
  *
- * COLLAPSED IS A PAIR, NOT A PREVIEW. Exactly two rows, always: the oldest
- * trigger and the newest, with the whole middle withheld. The oldest is why
- * the case exists and the newest is what just happened - the two questions a
- * collapsed strip is asked. It reads ASCENDING, because that pairing is a
- * sentence: it started here, and this is where it is now.
+ * OLDEST TO NEWEST, ALWAYS, in both modes. The list is a history and it is
+ * read forwards. It briefly ran newest-first when expanded, which made the
+ * newest trigger the bottom row collapsed and the top row expanded - so
+ * expanding moved both anchors past each other. Expanding adds rows; it does
+ * not rearrange the ones already on screen.
  *
- * The two rows sit directly against each other, with nothing between them
- * marking the gap. The header verb is the one control, and the badge saying
- * "19 triggers" over two rows is already the whole of what a marker would say.
+ * COLLAPSED IS THE TWO ENDS. The oldest is why the case exists, the newest is
+ * what just happened, and those are the two questions a folded strip is asked.
+ * The middle is withheld, and the divider between them says how much - "17
+ * remaining" is read in the place the 17 are missing from, which is the one
+ * place that number means something specific.
  *
- * EXPANDED IS NEWEST FIRST, like every other time-ordered list in the product
- * bar the workflow stream. Once the whole history is on screen the question
- * changes from "what are the ends of this" to "what has been happening", and
- * that is read from the top down.
+ * THE ANCHORS NEVER MOVE. Expanding unfolds the middle below the divider,
+ * which stays exactly where it was; the same two rows are first and last in
+ * both modes.
  *
- * So the newest trigger is the BOTTOM row collapsed and the TOP row expanded.
- * That is deliberate: it moves because the reason it is on screen moves -
- * anchoring the recent end of a two-row summary, then heading a list.
+ * Only the expanded list scrolls, and only it needs to: collapsed renders the
+ * two rows it shows, so what it withholds is absent rather than below a fold.
+ * Expanded holds every trigger in the DOM and windows them to five - plus the
+ * divider's own height, because five is a promise about TRIGGERS and the
+ * divider is not one.
  *
- * Only the expanded list scrolls, and only it needs to: collapsed renders
- * exactly the two rows it shows, so what it withholds is absent rather than
- * below a fold. Expanded holds every trigger in the DOM and windows them to
- * five, which is what keeps the strip from pushing the workflow down the page.
- * The header stays sticky above that scroll region.
- *
- * The badge is the only place a count is rendered. It previously sat beside
- * both "Showing 2 of 19" and "+17 more triggers" - three restatements of one
- * number, two of them separately computed and free to drift apart.
+ * The divider is the ONLY interactive thing in the strip. It is a button
+ * inside a role="listitem", because role="list" requires listitem children and
+ * because that is the honest semantics: it stands for the rows it hides, so it
+ * is a member of the list - just the pressable one.
  *
  * Collapsing only pays for itself when it hides something: at or below
- * TRIGGER_COLLAPSED_ROWS the pair IS the whole history, so the toggle
+ * TRIGGER_COLLAPSED_ROWS the pair IS the whole history, so the divider
  * disappears - a control that reveals nothing is worse than no control.
  *
- * The bar is a LABEL STRIP, not a control. Only the Show all / Show less verb
- * is a button - the count chip and the scroll note are plain, selectable text.
- * Making the whole bar the hit target meant the strip's first row looked and
- * behaved like a clickable row, which is exactly what rows must not be.
- *
- * ONE control, in the header, in both directions - the strip has no second
- * way to expand. The verb never moves and never changes shape: same place,
- * every state, both layout widths. Only its label and aria-expanded change.
- *
  * Rule 11: an unresynced arrival is by definition the NEWEST trigger, so it is
- * the second collapsed row and the first expanded one - on screen in both,
- * never among the rows the pair withholds. Arriving while expanded, it lands at
- * the top of a list the agent may have scrolled away from, so the strip scrolls
- * back to it; the count chip carries the same amber as a second signal.
+ * the last row in either mode - on screen in both, never among the rows the
+ * collapsed strip withholds. Arriving while expanded it lands in a list the
+ * agent may have scrolled away from, so the strip scrolls back to it.
+ *
+ * It used to have a second signal: the count badge turned amber too, and that
+ * survived the row scrolling out of view. The badge is gone with the header,
+ * so the row's own amber and its New badge are the whole of it here. The
+ * workflow panel's out-of-sync notice is what still says it at panel level.
  *
  * The highlight persists until RESYNC, not until it is seen (open question 6).
- * Several arrivals before a resync all stay highlighted, and the collapsed pair
- * shows the newest of them.
+ * Several arrivals before a resync all stay highlighted, and the collapsed
+ * strip shows the newest of them.
  *
  * List layout: three columns - name, detail, timestamp. The list is a single
  * grid and each row is `display: contents`, so every row shares one set of
  * column widths. The NEW badge sits with the trigger name in column 1 - it
  * describes the trigger, not its time - and takes no column of its own, so a
  * highlighted row lines up exactly like every other row. The timestamp column
- * stays right-aligned with nothing beside it.
+ * stays right-aligned with nothing beside it. Below a container width of 520px
+ * the row stacks instead: name and timestamp on one line, the detail on its
+ * own beneath, clamped to one line so row height never depends on how much its
+ * author wrote.
  *
  * ROWS ARE NOT INTERACTIVE IN THIS EPIC. They are read-only content: no button
  * or link semantics, no pointer cursor, no hover tint, and the text stays
@@ -101,12 +103,12 @@ let stripSeq = 0;
  *   - resyncing directly from the new-trigger row
  * Both would make rows interactive, which changes the semantics of the whole
  * list (rows would need to become buttons, gain focus styling, and be reachable
- * in the tab order). The header bar toggle is deliberately the ONLY interactive
- * element in the strip.
+ * in the tab order). The divider is deliberately the ONLY interactive element
+ * in the strip.
  *
  * Resolved cases (state 07): the strip is still read-only and still expandable,
  * but it never shows an arrival. A resolved case cannot be acted on, so an
- * amber "act on this" signal would be a lie - see `showsArrival`.
+ * amber "act on this" signal would be a lie - see `isArrival`.
  */
 @Component({
   selector: 'trigger-strip',
@@ -116,16 +118,21 @@ let stripSeq = 0;
   template: `
     <section class="strip" aria-label="Case triggers">
       <!--
-        A LABEL, not a control. The bar used to carry the Show all toggle as
-        well; that moved into the list, where the rows it reveals actually are.
-        What is left is the count, and the count is not a button.
-      -->
-      <div class="strip__bar">
-        <ui-pill [tone]="showsArrival() ? 'warn' : 'info'">
-          {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
-        </ui-pill>
-      </div>
+        NO HEADER. The strip is the rows and the divider between them.
 
+        It carried a "19 triggers" badge, which was the last thing left in a
+        bar that had already given up its toggle. The count it stated is
+        readable from the strip itself - two rows and a divider naming what is
+        between them - and a bar existing to hold one badge is a row of chrome
+        charged to the workflow beside it.
+
+        What went with it is worth stating: the badge also turned amber on an
+        unresynced arrival, so a new trigger had two signals - the row and the
+        chip - and the chip was the one that survived the row scrolling out of
+        an expanded list. The row keeps its amber and its New badge; the second
+        signal is gone. The out-of-sync notice in the workflow panel is what
+        still says it at panel level.
+      -->
       @if (visible().length) {
         <!-- A scrollable region must be focusable or keyboard users cannot
              reach the rows below the fold. tabindex only when it scrolls. -->
@@ -243,29 +250,6 @@ let stripSeq = 0;
         border-bottom: 1px solid var(--line);
       }
 
-      /* A label strip, not a control: no cursor, no hover, nothing focusable.
-         Sticky so it stays pinned above the rows if the strip is ever placed
-         inside a scrolling ancestor - the toggle must never scroll away from
-         the list it controls. */
-      .strip__bar {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        /* The chip bar's height, not the trigger row's. The two bars stack in
-           the same column and read as one piece of chrome; --trigger-row-height
-           is what the ROWS below this are, and it happened to be the number
-           here as well. */
-        min-height: var(--panel-bar-h);
-        padding: 0 20px 0 20px;
-        box-sizing: border-box;
-        background: var(--panel);
-        cursor: default;
-        user-select: text;
-      }
       /**
        * THE DIVIDER THAT NAMES THE GAP.
        *
@@ -381,7 +365,6 @@ let stripSeq = 0;
       .strip__list {
         display: grid;
         grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto;
-        border-top: 1px solid var(--line);
       }
       /**
        * Five ROWS, plus the divider that is not one.
@@ -529,9 +512,6 @@ let stripSeq = 0;
        * A CONTAINER query, not a media query. See the note on :host.
        */
       @container (max-width: 519.98px) {
-        .strip__bar {
-          padding: 0 16px;
-        }
         .strip__list {
           display: block;
         }
@@ -682,16 +662,6 @@ export class TriggerStripComponent {
    */
   readonly scrollsInternally = computed(
     () => this.store.triggersExpanded() && this.total() > TRIGGER_EXPANDED_ROWS,
-  );
-
-  /**
-   * Rule 11 arrivals are suppressed once the case is resolved. The amber is an
-   * "act on this before recording" signal, and a resolved case cannot be acted
-   * on (rule 10) - so state 07 shows neither the highlighted row nor the amber
-   * count, whatever the trigger data happens to say.
-   */
-  readonly showsArrival = computed(
-    () => !this.store.isResolved() && this.store.newTriggerCount() > 0,
   );
 
   isArrival(trigger: { isNew?: boolean }): boolean {

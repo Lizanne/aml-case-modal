@@ -1407,7 +1407,6 @@ const named = await page.evaluate(() => {
   };
   return {
     sgWidget: read('back-office-widgets .w:first-of-type ui-pill'),
-    count: read('trigger-strip .strip__bar ui-pill'),
   };
 });
 // The widget's count badge is now the Figma badge, not a ui-pill: neutral
@@ -1421,9 +1420,9 @@ const widgetCount = await page.evaluate(() => {
 check('the widget count badge is the design badge, not a tone pill',
   widgetCount !== null && widgetCount.border === '1px' && widgetCount.radius === '100px',
   JSON.stringify(widgetCount));
-// The count goes amber on an unresynced arrival; state 10 is exactly that.
-check('the trigger count is warn while an arrival is unresynced',
-  named.count === 'warn', String(named.count));
+// The strip's amber count chip went with its header. The arrival's signal is
+// the row - its tint and its New badge - and rules.mjs is where that is
+// asserted, against an open case and a resolved one.
 
 console.log('\nThe snapshot header is one layout in both modes');
 await page.setViewportSize({ width: 1440, height: 1040 });
@@ -1907,39 +1906,28 @@ for (const [state, width] of [['01', 1180], ['03', 1180], ['10', 1180], ['09', 1
 check('the icon is the same size in all of them', new Set(adjustShapes).size === 1);
 
 /**
- * THE HEADER IS A LABEL. THE CONTROL IS IN THE LIST.
+ * NO HEADER AT ALL. The strip is rows and the divider between them.
  *
- * They used to be the same element - a bar carrying the count and a Show all
- * verb. The verb moved down into the gap it describes, between the oldest row
- * and the newest, so the count and the control are now two things in two
- * places and this checks both.
- *
- * The header's constant anatomy is a badge and NOTHING pressable; the
- * divider's is a button, full width, in the same slot in every state.
+ * It had a bar carrying a Show all verb, then just a "19 triggers" badge after
+ * the verb moved into the list. Both are gone, so what this checks is the
+ * absence of the bar and the constant shape of the one thing left: a
+ * full-width button in the list's second slot, after the oldest row, in every
+ * state and at both widths.
  */
 console.log('\nOne trigger control, identical in every state and at both widths');
 const controlShape = async () => {
-  const c = page.locator('trigger-strip .strip__bar');
+  const c = page.locator('trigger-strip .strip__list');
   if ((await c.count()) !== 1) return null;
   return page.evaluate(() => {
-    const bar = document.querySelector('trigger-strip .strip__bar');
     const strip = document.querySelector('trigger-strip .strip');
     const list = document.querySelector('trigger-strip .strip__list');
     const gap = document.querySelector('trigger-strip .strip__gap');
-    const box = bar.getBoundingClientRect();
-    const stripBox = strip.getBoundingClientRect();
     const gapBox = gap?.getBoundingClientRect();
     return {
-      tag: bar.tagName.toLowerCase(),
-      // The BAR is the first thing in the strip, full width.
-      atTopOfStrip: Math.round(box.top - stripBox.top) === 0,
-      fullWidth: Math.abs(box.width - stripBox.width) < 1,
-      height: Math.round(box.height),
-      parts: [...bar.children].map((c) => c.className.split(' ')[0]).join('|'),
-      hasChip: !!bar.querySelector('ui-pill'),
-      // Nothing in the header is pressable any more.
-      barHasNoControl: bar.querySelectorAll('button, a, [role=button]').length === 0,
-      barIsNotAControl: bar.tagName === 'DIV' && !bar.closest('button'),
+      // Nothing above the rows.
+      hasBar: !!document.querySelector('trigger-strip .strip__bar'),
+      listAtTopOfStrip:
+        Math.round(list.getBoundingClientRect().top - strip.getBoundingClientRect().top) === 0,
       // The divider: a button, spanning the list, in the second slot - after
       // the oldest row, which is where the hidden triggers belong.
       hasGap: !!gap,
@@ -1947,6 +1935,7 @@ const controlShape = async () => {
       gapFullWidth: gapBox ? Math.abs(gapBox.width - list.getBoundingClientRect().width) < 2 : false,
       gapSlot: gap ? [...list.children].indexOf(gap.parentElement) : -1,
       gapHeight: gapBox ? Math.round(gapBox.height) : null,
+      gapSlotRole: gap?.parentElement.getAttribute('role') ?? null,
     };
   });
 };
@@ -1960,13 +1949,14 @@ for (const [state, width] of [
   await page.waitForTimeout(400);
   await showStrip();
   const s = await controlShape();
-  check(`${state}: the header sits at the top, full width`, !!s && s.atTopOfStrip && s.fullWidth);
-  check(`${state}: the header is a count and nothing pressable`,
-    !!s && s.hasChip && s.barHasNoControl && s.barIsNotAControl, JSON.stringify(s));
+  check(`${state}: no header - the rows start the strip`,
+    !!s && !s.hasBar && s.listAtTopOfStrip, JSON.stringify(s));
   check(`${state}: the control is a full-width button in the list's second slot`,
     !!s && s.hasGap && s.gapIsButton && s.gapFullWidth && s.gapSlot === 1,
     JSON.stringify(s));
-  if (s) shapes.push({ state, key: `${s.tag}|${s.parts}|${s.height}|${s.gapHeight}` });
+  check(`${state}: and it is a listitem, as role="list" requires`,
+    !!s && s.gapSlotRole === 'listitem', String(s?.gapSlotRole));
+  if (s) shapes.push({ state, key: `${s.gapHeight}` });
 }
 check(
   'the control is structurally identical across all of them',
@@ -1991,10 +1981,10 @@ check('no legacy summary row survives', await page.evaluate(() =>
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-const boxBefore = await page.locator('trigger-strip .strip__bar').boundingBox();
+const boxBefore = await page.locator('trigger-strip .strip__gap').boundingBox();
 await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(300);
-const boxAfter = await page.locator('trigger-strip .strip__bar').boundingBox();
+const boxAfter = await page.locator('trigger-strip .strip__gap').boundingBox();
 // boundingBox() returns x/y/width/height - there is no .top, and comparing it
 // silently compares NaN to NaN, which is always false.
 check(
@@ -2021,8 +2011,9 @@ for (const width of [1180, 700]) {
   // out of the header and into the label, where the number is about this case
   // rather than being a second total.
   const collapsedRows = await rows();
-  const hidden = (await page.locator('trigger-strip .strip__bar ui-pill').innerText())
-    .trim().split(' ')[0] - collapsedRows;
+  const hidden = Number(
+    (await page.locator('trigger-strip .strip__gap-count').innerText()).trim(),
+  );
   check(`${width}px: starts collapsed with the two anchors`, collapsedRows === 2);
   check(`${width}px: the divider counts what it hides`,
     (await label()).includes(`Show ${hidden} remaining`), await label());
@@ -2036,56 +2027,67 @@ for (const width of [1180, 700]) {
   check(`${width}px: clicking the same row collapses it again`, (await rows()) === 2);
 }
 
-console.log('\nThe strip bar states the count once, and nothing redundant');
+/**
+ * The strip states the count ONCE, in the divider, and nothing redundant.
+ *
+ * It used to be a badge in a header: "19 triggers" over two rows, beside a
+ * Show all verb. The header is gone, and with it the last place the total was
+ * written. The divider names what it is WITHHOLDING instead - a different
+ * number, and the only one that is about the gap it sits in.
+ *
+ * The old failure this guards against is unchanged in shape: "Showing 2 of 19"
+ * and "+17 more triggers" once sat beside the badge, three restatements of one
+ * figure, two of them separately computed and free to drift apart.
+ */
+console.log('\nThe strip states its count once, in the divider');
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(450);
 
-const bar = async () =>
+const stripState = async () =>
   page.evaluate(() => {
-    const t = document.querySelector('trigger-strip .strip__bar');
+    const el = document.querySelector('trigger-strip .strip');
     const list = document.querySelector('trigger-strip .strip__list');
-    const verb = t.querySelector('.strip__gap');
+    const gap = list.querySelector('.strip__gap');
+    const count = gap?.querySelector('.strip__gap-count');
     return {
-      text: t.textContent.replace(/\s+/g, ' ').trim(),
-      chip: t.querySelector('.strip__bar ui-pill').textContent.trim(),
-      note: t.querySelector('.strip__count')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
-      verb: verb?.textContent.replace(/\s+/g, ' ').trim() ?? null,
-      // Flush means "sits on the bar's own right padding", not "within some
-      // magic number of pixels". The bar's padding moved 12px -> 20px and a
-      // hardcoded < 20 then failed by exactly the tolerance it had invented.
-      verbFlushRight: verb
-        ? Math.round(t.getBoundingClientRect().right - verb.getBoundingClientRect().right) ===
-          Math.round(parseFloat(getComputedStyle(t).paddingRight))
+      text: el.textContent.replace(/\s+/g, ' ').trim(),
+      hasBar: !!el.querySelector('.strip__bar'),
+      hasBadge: !!el.querySelector('.strip__bar ui-pill'),
+      hasNote: !!el.querySelector('.strip__count'),
+      label: gap?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      count: count?.textContent.trim() ?? null,
+      rows: document.querySelectorAll('trigger-strip .trigger').length,
+      // The divider is a row of the list, so it starts where the rows do.
+      alignsWithRows: gap
+        ? Math.round(gap.getBoundingClientRect().left - list.getBoundingClientRect().left) === 0
         : null,
-      aboveRows: list
-        ? t.getBoundingClientRect().bottom <= list.getBoundingClientRect().top + 1
-        : null,
-      scrolls: list ? list.scrollHeight > list.clientHeight + 1 : false,
+      scrolls: list.scrollHeight > list.clientHeight + 1,
     };
   });
 
-const collapsedBar = await bar();
-check('collapsed: badge carries the total', collapsedBar.chip === '19 triggers');
-check('collapsed: control reads "Show all"', collapsedBar.verb.includes('Show all'));
-check('collapsed: no showing-vs-total text', collapsedBar.note === null);
-check('collapsed: no "+N more" phrasing', !/\+\d+ more/.test(collapsedBar.text));
+const collapsed = await stripState();
+check('collapsed: no header, no badge, no scroll note',
+  !collapsed.hasBar && !collapsed.hasBadge && !collapsed.hasNote, JSON.stringify(collapsed));
+check('collapsed: the divider names what it hides',
+  collapsed.label.includes('Show') && collapsed.label.includes('remaining') &&
+    Number(collapsed.count) === 17,
+  collapsed.label);
+check('collapsed: no "+N more" phrasing', !/\+\d+ more/.test(collapsed.text));
+// 17 hidden + the 2 anchors = 19. The figure appears once, in the divider.
 check('collapsed: the number appears exactly once',
-  (collapsedBar.text.match(/19/g) || []).length === 1, collapsedBar.text);
-check('collapsed: control sits hard right', collapsedBar.verbFlushRight);
-check('collapsed: bar sits above the rows', collapsedBar.aboveRows);
+  (collapsed.text.match(/17/g) || []).length === 1, collapsed.text);
+check('collapsed: the divider starts where the rows do', collapsed.alignsWithRows);
 
 await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(400);
-const expandedBar = await bar();
-check('expanded: same badge', expandedBar.chip === '19 triggers');
-check('expanded: control reads "Show less"', expandedBar.verb.includes('Show less'));
-check('expanded: bar still sits above the rows', expandedBar.aboveRows);
-check('expanded: list really does scroll internally', expandedBar.scrolls);
-// Five, not ten: the expanded window shows five rows and holds the rest in
-// the DOM behind a scrollbar.
-check('expanded: scroll note appears, naming visible vs total',
-  expandedBar.note === 'Showing 5 of 19, scroll for more', expandedBar.note);
+const expanded = await stripState();
+check('expanded: still no header', !expanded.hasBar && !expanded.hasBadge);
+check('expanded: the divider offers to hide the same number',
+  expanded.label.includes('Hide') && expanded.count === collapsed.count, expanded.label);
+check('expanded: the middle really unfolded', expanded.rows > collapsed.rows,
+  `${collapsed.rows} -> ${expanded.rows}`);
+check('expanded: list really does scroll internally', expanded.scrolls);
 
 console.log('\nTrigger rows are read-only content, not controls');
 await page.setViewportSize({ width: 1180, height: 1000 });
@@ -2135,7 +2137,8 @@ const toggleSemantics = async () =>
       controlsResolves: !!(controls && document.getElementById(controls)),
       label: (t.textContent || '').replace(/\s+/g, ' ').trim(),
       chevronHidden: t.querySelector('mat-icon')?.getAttribute('aria-hidden'),
-      barSticky: getComputedStyle(document.querySelector('trigger-strip .strip__bar')).position,
+      // The divider is a list member, so it has to be inside a listitem.
+      slotRole: t.parentElement.getAttribute('role'),
     };
   });
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
@@ -2144,31 +2147,49 @@ let tg = await toggleSemantics();
 check('exactly one button', tg.count === 1);
 check('type="button"', tg.type === 'button');
 check('collapsed: aria-expanded="false"', tg.expanded === 'false', tg.expanded);
-check('collapsed: label is "Show all"', tg.label.endsWith('Show all'), tg.label);
+check('collapsed: the label offers to show what is hidden',
+  /^\s*add\s*Show \d+ remaining$/.test(tg.label), tg.label);
 check('aria-controls resolves to the list region', tg.controlsResolves, tg.controls);
-check('chevron is aria-hidden decoration', tg.chevronHidden === 'true');
+check('the sign is aria-hidden decoration', tg.chevronHidden === 'true');
+check('the control is a listitem, as role="list" requires', tg.slotRole === 'listitem',
+  String(tg.slotRole));
 await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(350);
 tg = await toggleSemantics();
 check('still exactly one button after toggling', tg.count === 1);
 check('expanded: aria-expanded="true"', tg.expanded === 'true', tg.expanded);
-check('expanded: label is "Show less"', tg.label.endsWith('Show less'), tg.label);
+check('expanded: the label offers to hide the same number',
+  /^\s*remove\s*Hide \d+$/.test(tg.label), tg.label);
 
-console.log('\nThe header bar stays put when the list scrolls');
+/**
+ * THE DIVIDER SCROLLS WITH THE ROWS, because it is one of them.
+ *
+ * This used to assert the opposite about a different element: the header bar
+ * was sticky, so the toggle it held could never scroll away from the list it
+ * controlled. There is no header now, and the control is a member of the list
+ * - pinning it would detach it from the gap it names, which is the whole point
+ * of where it sits.
+ */
+console.log('\nThe divider scrolls with the list, being part of it');
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(450);
-const stuck = await page.evaluate(async () => {
-  const t = document.querySelector('trigger-strip .strip__bar');
+const scrolled = await page.evaluate(async () => {
   const list = document.querySelector('trigger-strip .strip__list');
-  const cs = getComputedStyle(t);
-  const before = t.getBoundingClientRect().top;
+  const gap = list.querySelector('.strip__gap');
+  const before = gap.getBoundingClientRect().top;
   list.scrollTop = list.scrollHeight;
   await new Promise((r) => setTimeout(r, 300));
-  return { position: cs.position, scrolled: list.scrollTop > 0, moved: Math.round(t.getBoundingClientRect().top - before) };
+  return {
+    scrolled: list.scrollTop > 0,
+    moved: Math.round(gap.getBoundingClientRect().top - before),
+    position: getComputedStyle(gap).position,
+    noBar: !document.querySelector('trigger-strip .strip__bar'),
+  };
 });
-check('the list really scrolled', stuck.scrolled);
-check('the toggle did not move', stuck.moved === 0, `moved ${stuck.moved}px`);
-check('and is declared sticky', stuck.position === 'sticky', stuck.position);
+check('the list really scrolled', scrolled.scrolled);
+check('there is no header above it', scrolled.noBar);
+check('the divider moved with the rows', scrolled.moved < 0, `moved ${scrolled.moved}px`);
+check('and is not pinned', scrolled.position === 'static', scrolled.position);
 
 console.log('\nTrigger rows align, highlighted row included');
 await page.setViewportSize({ width: 1180, height: 1000 });
@@ -2288,14 +2309,21 @@ check('badge is vertically centred on the name', badge.centred);
 check('timestamp column holds nothing but the time', badge.metaOnlyHasTime);
 check('timestamp stays right-aligned', badge.timeFlushRight);
 
+/**
+ * Sorted by TIMESTAMP, not by array order - which is the bug this pins. The
+ * fixture is deliberately out of order, so a strip rendering it as given would
+ * come out unsorted rather than reversed.
+ *
+ * Ascending, and no pinned arrival: the strip reads oldest to newest in both
+ * modes, and rule 11's arrival earns the last row by being the most recent
+ * rather than by being pinned anywhere.
+ */
 console.log('\nTriggers sort by timestamp, not array order');
-check('rendered newest first', await page.evaluate(() => {
+check('rendered oldest first, by timestamp', await page.evaluate(() => {
   const times = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) =>
     Date.parse(t.getAttribute('datetime')),
   );
-  // The rule-11 arrival is pinned first by design; the rest must descend.
-  const rest = times.slice(1);
-  return rest.every((t, i) => i === 0 || rest[i - 1] >= t);
+  return times.length > 1 && times.every((t, i) => i === 0 || times[i - 1] <= t);
 }));
 
 /**
@@ -2314,10 +2342,28 @@ for (const [mode, vw] of [['side', 1800], ['side', 1440], ['side', 1200], ['side
   for (const st of ['01', '00a', '00b', '07']) {
     await page.goto(`${BASE}/?state=${st}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(250);
+    // The card only exists with its panel DOWN, and every one of these frames
+    // opens the case. Without this the sweep collected nothing and the gutter
+    // check compared an empty set - passing or failing on how many distinct
+    // values are in [] rather than on where any button sits.
+    if (await page.locator('dialog-shell').count()) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(250);
+    }
+    const closer = page.locator('aml-case-modal button[aria-label="Close case"]');
+    if (await closer.count()) {
+      await closer.click();
+      await page.waitForSelector('back-office-widgets .w', { timeout: 15000 });
+      await page.waitForTimeout(250);
+    }
     const cards = await page.evaluate(() => [...document.querySelectorAll('.w')].map((w) => {
       const box = w.getBoundingClientRect();
       const nm = w.querySelector('.w__name');
-      const a = w.querySelector('.w__actions').getBoundingClientRect();
+      const acts = w.querySelector('.w__actions');
+      // A card whose panel is up has no actions at all. Skipped rather than
+      // read as zeros, which would have quietly widened every claim below.
+      if (!acts) return null;
+      const a = acts.getBoundingClientRect();
       const c = w.querySelector('.w__content').getBoundingClientRect();
       return {
         // Against the title's own line box, so a taller identity block cannot
@@ -2328,23 +2374,54 @@ for (const [mode, vw] of [['side', 1800], ['side', 1440], ['side', 1200], ['side
         clipped: Math.max(0, Math.round(a.right - box.right)),
         nameCut: nm.scrollWidth - nm.clientWidth > 1,
       };
-    }));
+    }).filter(Boolean));
     shots.push({ mode, vw, st, cards });
   }
 }
 const flat = shots.flatMap((s) => s.cards);
+const side = shots.filter((s) => s.mode === 'side').flatMap((s) => s.cards);
+const stack = shots.filter((s) => s.mode === 'stack').flatMap((s) => s.cards);
 const off = (p) => shots.filter((s) => s.cards.some(p)).map((s) => `${s.mode} ${s.vw} ${s.st}`);
-check('button top sits on the title row', flat.every((c) => Math.abs(c.delta) <= 2),
-  off((c) => Math.abs(c.delta) > 2).join(', '));
-check('text never runs into the actions', flat.every((c) => c.overlap === 0),
-  off((c) => c.overlap > 0).join(', '));
+check('the sweep actually found cards to measure', flat.length > 0, `${flat.length}`);
+check('and both layouts are represented', side.length > 0 && stack.length > 0,
+  `${side.length} side / ${stack.length} stack`);
+
+/**
+ * THE CORNER CLAIM IS THE SIDE-BY-SIDE LAYOUT'S, not both.
+ *
+ * These read the whole sweep and asserted one model over it - buttons level
+ * with the title, never overlapping the text. That is right where the card is
+ * a row, and false by design where it is a column: below 720px .w__inner
+ * stacks and the actions become their own full-width row UNDER the content.
+ * Measured against the row model that reads as delta=72 and an overlap of
+ * 282px, which is not a bug - it is the other layout.
+ *
+ * It went unnoticed because the sweep was collecting nothing at all: every
+ * frame here opens the case panel, which takes its own card off the row, so
+ * `flat` was empty and every() was vacuously true.
+ */
+check('side by side: button top sits on the title row',
+  side.every((c) => Math.abs(c.delta) <= 2), off((c) => Math.abs(c.delta) > 2).join(', '));
+check('side by side: text never runs into the actions',
+  side.every((c) => c.overlap === 0), off((c) => c.overlap > 0).join(', '));
+// Stacked, the actions are BELOW the content, so there is nothing to run into
+// and the claim becomes "they really did drop to their own row".
+check('stacked: the actions sit below the content, not beside it',
+  stack.every((c) => c.delta > 20), stack.map((c) => c.delta).join('/'));
+
 check('actions never clip the card edge', flat.every((c) => c.clipped === 0),
   off((c) => c.clipped > 0).join(', '));
 check('the name is not shortened to make room', flat.every((c) => !c.nameCut),
   off((c) => c.nameCut).join(', '));
-// One gutter, derived from the cards themselves rather than restated.
-const gaps = [...new Set(flat.map((c) => c.rightGap))];
-check('the same right gutter at every width and state', gaps.length === 1, gaps.join('/'));
+// One gutter WITHIN a layout. The card's own padding is 12px side by side and
+// 16px stacked, so comparing across the two would be asserting that a padding
+// change never happened.
+const sideGaps = [...new Set(side.map((c) => c.rightGap))];
+const stackGaps = [...new Set(stack.map((c) => c.rightGap))];
+check('side by side: the same right gutter at every width and state',
+  sideGaps.length === 1, sideGaps.join('/'));
+check('stacked: the same right gutter in every state', stackGaps.length === 1,
+  stackGaps.join('/'));
 await page.setViewportSize({ width: 1440, height: 1000 });
 
 /**
