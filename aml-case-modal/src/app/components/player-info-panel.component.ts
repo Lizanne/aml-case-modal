@@ -283,7 +283,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 12px 20px;
+        padding: 16px 20px;
       }
       /* 16px on mobile, matching head__main and the page gutter. Placed BEFORE
          the flush rule below on purpose: both are single-class selectors, so
@@ -398,7 +398,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        margin: 14px 0 0;
+        margin: 16px 0 0;
         padding: 16px;
         border-radius: 8px;
         background: var(--warn-bg);
