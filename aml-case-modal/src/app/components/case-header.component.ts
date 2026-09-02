@@ -43,6 +43,7 @@ import { PillComponent } from './ui-pill.component';
       tabindex="-1"
       [class.head--narrow]="store.layoutNarrow()"
       [class.head--stacked]="store.layoutStacked()"
+      [class.head--resolved]="store.isResolved()"
     >
       <div class="head__main">
         <div class="head__titles">
@@ -93,6 +94,22 @@ import { PillComponent } from './ui-pill.component';
               window controls; stacked, it takes a full basis and drops below
               them. See .head__lockline.
             -->
+            <!--
+              NOTHING LOCK-SHAPED ON A RESOLVED CASE - not the glyph, not the
+              line, not the control.
+
+              The header used to carry a padlock and "Resolved - read-only"
+              beside a pill already reading Resolved: one fact, three times, in
+              the one state where none of it can be acted on. The pill carries
+              the status. Read-only is carried by what is absent - no lock
+              control here, no Record in the stream, no footer at all - which
+              is a stronger statement than a sentence saying so, because it
+              cannot disagree with the buttons.
+
+              The whole wrapper goes, not just its contents: an empty one still
+              claims its grid area and the row-gap above it.
+            -->
+            @if (!store.isResolved()) {
             <div class="head__lockline">
               <span
                 class="head__lock"
@@ -105,24 +122,26 @@ import { PillComponent } from './ui-pill.component';
                 <span class="head__lock-text">{{ lockLine() }}</span>
               </span>
 
-              @if (!store.isResolved()) {
-                @switch (store.lockState()) {
-                  @case ('unlocked') {
-                    <button mat-flat-button color="primary" type="button" (click)="store.lock()">
-                      Lock to me
-                    </button>
-                  }
-                  @case ('locked-to-me') {
-                    <button mat-stroked-button type="button" (click)="store.requestUnlock()">Unlock</button>
-                  }
-                  @case ('locked-to-other') {
-                    <button mat-stroked-button class="danger-button" type="button" (click)="store.requestUnlock()">
-                      Force unlock
-                    </button>
-                  }
+              <!-- Unconditional on resolution: the wrapper above already is.
+                   The switch is about which lock control this state calls
+                   for. -->
+              @switch (store.lockState()) {
+                @case ('unlocked') {
+                  <button mat-flat-button color="primary" type="button" (click)="store.lock()">
+                    Lock to me
+                  </button>
+                }
+                @case ('locked-to-me') {
+                  <button mat-stroked-button type="button" (click)="store.requestUnlock()">Unlock</button>
+                }
+                @case ('locked-to-other') {
+                  <button mat-stroked-button class="danger-button" type="button" (click)="store.requestUnlock()">
+                    Force unlock
+                  </button>
                 }
               }
             </div>
+            }
 
             <!--
               Minimise and close, pinned right in every layout - the last thing
@@ -249,6 +268,27 @@ import { PillComponent } from './ui-pill.component';
         flex: none;
         margin-left: 24px;
       }
+      /**
+       * Resolved: pinned right by an auto margin instead.
+       *
+       * Normally the LOCKLINE holds these against the right edge - it is
+       * flex: 1 and absorbs every spare pixel of the row. A resolved case
+       * renders no lockline, so nothing was absorbing anything and the
+       * controls sat wherever the pills happened to end, a third of the way
+       * across the header.
+       *
+       * The 24px it replaces was a gap from the lock action. There is no lock
+       * action here, so there is nothing to be held away from - only an edge
+       * to be pinned to.
+       *
+       * Beaten deliberately by the stacked rule below, which sets
+       * margin-left: 0 and pins with justify-self on the grid instead - equal
+       * specificity, later in the file. The narrow rule is excluded by a :not
+       * rather than by order, because order is what it won on.
+       */
+      .head--resolved .head__actions {
+        margin-left: auto;
+      }
       .head__close {
         display: inline-flex;
         align-items: center;
@@ -346,7 +386,11 @@ import { PillComponent } from './ui-pill.component';
       .head--narrow .head__title-row {
         gap: 6px;
       }
-      .head--narrow .head__actions {
+      /* The tighter gap from the LOCK ACTION - so it applies only when there
+         is one. Resolved has no lock action and needs the auto margin instead;
+         written as :not rather than left to source order, which is what let a
+         16px margin beat it here and strand the controls mid-header. */
+      .head--narrow:not(.head--resolved) .head__actions {
         margin-left: 16px;
       }
       .head--narrow .head__lock-text {
@@ -420,6 +464,18 @@ import { PillComponent } from './ui-pill.component';
           'lock  lock   lock';
         column-gap: 6px;
         row-gap: 8px;
+      }
+      /**
+       * Resolved: one row, because there is no second one.
+       *
+       * The lockline is not rendered at all on a resolved case, and an area
+       * declared in grid-template-areas keeps its track whether or not
+       * anything occupies it - so the empty row would have contributed nothing
+       * but the 8px row-gap above it, as a strip of dead space under the
+       * title.
+       */
+      .head--stacked.head--resolved .head__title-row {
+        grid-template-areas: 'title pills actions';
       }
       /* An auto track floors at min-content, and nowrap text's min-content is
          the whole string - so the case number cannot be shrunk into an ellipsis
@@ -547,7 +603,6 @@ export class CaseHeaderComponent {
   /** The same sentence at full length, whatever the row is currently showing. */
   private composeLockLine(compact: boolean): string {
     return lockStatusLine(this.store.lockState(), this.store.lockOwner()?.name, {
-      resolved: this.store.isResolved(),
       sinceIso: this.store.lockedSince() ?? undefined,
       compact,
     });

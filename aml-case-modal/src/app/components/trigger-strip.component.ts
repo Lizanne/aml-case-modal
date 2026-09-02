@@ -9,6 +9,7 @@ import {
   effect,
   inject,
 } from '@angular/core';
+
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
@@ -115,45 +116,14 @@ let stripSeq = 0;
   template: `
     <section class="strip" aria-label="Case triggers">
       <!--
-        The bar itself is NOT a control - it is a label strip. Only the verb is
-        a button, so the count and the scroll note stay plain, selectable text
-        and the hit target is exactly the thing that does something.
+        A LABEL, not a control. The bar used to carry the Show all toggle as
+        well; that moved into the list, where the rows it reveals actually are.
+        What is left is the count, and the count is not a button.
       -->
       <div class="strip__bar">
-        <ui-pill
-          [tone]="showsArrival() ? 'warn' : 'info'"
-        >
+        <ui-pill [tone]="showsArrival() ? 'warn' : 'info'">
           {{ total() }} {{ total() === 1 ? 'trigger' : 'triggers' }}
         </ui-pill>
-
-        <!-- Only when the list is actually withholding rows behind a scrollbar
-             is showing-vs-total worth saying. Either mode can be. -->
-        @if (scrollsInternally()) {
-          <span class="strip__count">
-            Showing {{ visibleRows() }} of {{ total() }}, scroll for more
-          </span>
-        }
-
-        <!--
-          ONE button whose label and aria-expanded change - never two buttons
-          that swap places. aria-controls points at the region it reveals.
-          Absent entirely when there is nothing to reveal.
-        -->
-        @if (canToggle()) {
-          <button
-            class="strip__verb"
-            type="button"
-            [attr.aria-expanded]="isExpanded()"
-            [attr.aria-controls]="visible().length ? listId : null"
-            (click)="store.triggersExpanded.set(!store.triggersExpanded())"
-          >
-            <!-- Decoration: the visible label already carries the meaning. -->
-            <mat-icon aria-hidden="true">
-              {{ store.triggersExpanded() ? 'expand_less' : 'expand_more' }}
-            </mat-icon>
-            {{ store.triggersExpanded() ? 'Show less' : 'Show all' }}
-          </button>
-        }
       </div>
 
       @if (visible().length) {
@@ -168,7 +138,7 @@ let stripSeq = 0;
           [attr.tabindex]="scrollsInternally() ? 0 : null"
           [attr.aria-label]="scrollsInternally() ? 'Triggers, scrollable list' : null"
         >
-          @for (trigger of visible(); track trigger.id) {
+          @for (trigger of visible(); track trigger.id; let first = $first) {
             <!-- role="listitem" only. Content, not a control (see class doc). -->
             <div class="trigger" [class.trigger--new]="isArrival(trigger)" role="listitem">
               <!-- The badge belongs to the trigger, so it sits with the name.
@@ -187,6 +157,63 @@ let stripSeq = 0;
                 <time class="cell__at" [attr.datetime]="trigger.at">{{ trigger.at | stamp }}</time>
               </span>
             </div>
+
+            <!--
+              THE CONTROL SITS IN THE GAP IT DESCRIBES - immediately after the
+              oldest row, which is where the hidden triggers belong.
+
+              A divider across the list rather than a button in the header:
+              collapsed it IS the elision, drawn between the two anchors, so
+              "17 remaining" is read in the place the 17 are missing from.
+              Expanded it stays exactly there and becomes the way back, with
+              the unfolded rows below it - so the control never moves either,
+              and neither anchor is disturbed by what happens between them.
+
+              Rendered after the FIRST row and only when there is a middle to
+              hide, so a strip of two triggers or fewer has no divider at all.
+            -->
+            @if (first && hiddenCount() > 0) {
+              <!--
+                A LISTITEM around the button, not the button alone.
+                
+                role="list" requires every child to be a listitem, and axe
+                catches a bare button here as aria-required-children. Which is
+                right: the divider stands for the rows it hides, so it IS a
+                member of this list - it just happens to be the member you can
+                press.
+              -->
+              <div class="strip__gap-slot" role="listitem">
+                <button
+                  class="strip__gap"
+                  type="button"
+                  [attr.aria-expanded]="store.triggersExpanded()"
+                  [attr.aria-controls]="listId"
+                  (click)="store.triggersExpanded.set(!store.triggersExpanded())"
+                >
+                  <span class="strip__gap-rule" aria-hidden="true"></span>
+                  <!--
+                    THE COUNT IS THE ONLY BOLD THING. A glance should pick up
+                    "17", not "Show" - the verb is the same on every strip in
+                    the product and the number is the only part that is about
+                    this case.
+                  -->
+                  <span class="strip__gap-label">
+                    <!-- Decoration: the words already carry the direction. -->
+                    <mat-icon class="strip__gap-sign" aria-hidden="true">{{
+                      store.triggersExpanded() ? 'remove' : 'add'
+                    }}</mat-icon>
+                    @if (store.triggersExpanded()) {
+                      <span>Hide <b class="strip__gap-count">{{ hiddenCount() }}</b></span>
+                    } @else {
+                      <span
+                        >Show <b class="strip__gap-count">{{ hiddenCount() }}</b> remaining</span
+                      >
+                    }
+                  </span>
+                  <span class="strip__gap-rule" aria-hidden="true"></span>
+                </button>
+              </div>
+            }
           }
         </div>
       }
@@ -239,46 +266,107 @@ let stripSeq = 0;
         cursor: default;
         user-select: text;
       }
-      .strip__count {
-        flex: 0 1 auto;
-        min-width: 0;
-        font-size: 12px;
-        color: var(--ink-3);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      /**
+       * THE DIVIDER THAT NAMES THE GAP.
+       *
+       * Spans the whole grid, because it stands for rows and a row spans the
+       * strip. Shorter than a real row and on the page ground rather than the
+       * panel's, so it reads as a break in the list rather than another entry
+       * in it - and the two rules either side of the label are the break made
+       * literal.
+       *
+       * It carries the count that the header no longer does: "17 remaining" is
+       * read in the place the 17 are missing from, which is the one place the
+       * number means something specific rather than being a second total.
+       */
+      /* The slot is the list member; the button fills it. Both span the grid,
+         because the divider stands for rows and a row spans the strip. */
+      .strip__gap-slot {
+        grid-column: 1 / -1;
       }
-      /* The only control in the strip. margin-left: auto, not a flexing
-         sibling - it stays hard right whether or not the scroll note is there.
-         Padding gives it a real hit target rather than bare text. */
-      .strip__verb {
-        flex: none;
-        margin-left: auto;
-        display: inline-flex;
+      .strip__gap {
+        display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 6px 8px;
+        /* Wide, so the rules read as a frame around the label rather than a
+           line with text sitting on it. */
+        gap: 16px;
+        width: 100%;
+        /* Published as a variable because the expanded window has to add it
+           back: five rows means five TRIGGERS, and this is not one. */
+        height: var(--trigger-gap-height);
+        padding: 0 20px;
+        box-sizing: border-box;
         border: 0;
-        border-radius: 6px;
-        background: transparent;
+        /* BOTTOM, not top. Every row already carries its own bottom rule, so a
+           top border here sat directly under the oldest row's and drew the
+           line twice. Below it there is nothing to collide with: the next row
+           rules its own underside too. */
+        border-bottom: 1px solid var(--line);
+        background: var(--page);
         font: inherit;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 600;
-        color: var(--primary);
         cursor: pointer;
       }
-      .strip__verb:hover {
+      /**
+       * The two halves of the break: solid hairlines, stopping 16px short of
+       * the label on each side.
+       *
+       * The 16px is the row's own flex gap, so the clearance either side is
+       * one number rather than two paddings that could drift apart. It is what
+       * keeps the label reading as the object and the rules as the frame -
+       * a rule running into the text made the line the object and the words an
+       * interruption in it.
+       *
+       * flex: 1 each, so the label stays centred whatever it says - "Show 17
+       * remaining" and "Hide 17" are very different lengths and the rules
+       * absorb the difference.
+       */
+      .strip__gap-rule {
+        flex: 1 1 auto;
+        height: 1px;
+        background: var(--line);
+      }
+      /**
+       * Regular weight, so the COUNT can be the only bold thing in it. The verb
+       * is the same on every strip in the product; the number is the only part
+       * that is about this case, and it is what a glance should pick up.
+       */
+      .strip__gap-label {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 400;
+        color: var(--primary);
+        white-space: nowrap;
+      }
+      .strip__gap-count {
+        font-weight: 700;
+      }
+      /* mat-icon.<class>, not just .<class>: Material's own .mat-icon rule
+         sets 24px at the same class specificity, so the element tag is what
+         wins. */
+      mat-icon.strip__gap-sign {
+        flex: none;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+      /* ONE TARGET. The tint is on the button, so it covers the label and both
+         rules to the full width of the row - the rules are inside the thing
+         being pressed, not chrome beside it. The rules keep the standard line
+         colour throughout; the tint is what says the row is live. */
+      .strip__gap:hover {
         background: var(--primary-bg);
       }
-      .strip__verb:focus-visible {
+      /* One rule for pointer and keyboard: the ring is what the keyboard gets
+         on top, never instead of the hover treatment. */
+      .strip__gap:focus-visible {
         outline: 2px solid var(--primary);
-        outline-offset: 1px;
-      }
-      .strip__verb mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        outline-offset: -2px;
+        background: var(--primary-bg);
       }
 
       /**
@@ -295,8 +383,18 @@ let stripSeq = 0;
         grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto;
         border-top: 1px solid var(--line);
       }
+      /**
+       * Five ROWS, plus the divider that is not one.
+       *
+       * The divider lives inside the scroller, so a window of five row-heights
+       * showed four triggers and a break. It is 28px of chrome describing the
+       * list rather than a member of it, and the five is a promise about
+       * triggers.
+       */
       .strip__list--expanded {
-        max-height: calc(var(--trigger-row-height) * var(--trigger-expanded-rows));
+        max-height: calc(
+          var(--trigger-row-height) * var(--trigger-expanded-rows) + var(--trigger-gap-height)
+        );
         overflow-y: auto;
       }
       /* On --expanded, because that is the only one that scrolls: a focus ring
@@ -453,7 +551,10 @@ let stripSeq = 0;
          * five rows rather than "about five".
          */
         .strip__list--expanded {
-          max-height: calc(var(--trigger-row-height-stacked) * var(--trigger-expanded-rows));
+          max-height: calc(
+            var(--trigger-row-height-stacked) * var(--trigger-expanded-rows) +
+              var(--trigger-gap-height)
+          );
         }
         /* The bar is the strip's own header and stays above its scroll region
            at every width - the stacked layout changes the rows, not that. */
@@ -512,6 +613,9 @@ let stripSeq = 0;
   ],
   host: {
     '[style.--trigger-row-height]': '"40px"',
+    // The divider's own height - chrome inside the scroller, not a row.
+    // 32px: the smallest button tier in the product, which is what it is.
+    '[style.--trigger-gap-height]': '"32px"',
     // The stacked row, added up rather than measured: 10px of padding either
     // side, two 20px lines, the 2px row-gap between them, and the 1px rule
     // under the row. Miss the border and the five-row window comes out 5px
@@ -533,69 +637,51 @@ export class TriggerStripComponent {
   readonly total = computed(() => this.store.sortedTriggers().length);
 
   /**
-   * A toggle is only worth offering once there is a middle to reveal. At two
-   * triggers or fewer the collapsed pair IS the whole history, so Show all
-   * would reveal nothing and a control that reveals nothing is worse than no
-   * control.
+   * How many triggers the collapsed strip is withholding - the middle, between
+   * the two anchors.
+   *
+   * Zero at two triggers or fewer, which is what removes the divider: there is
+   * no gap between the oldest and the newest when they are adjacent, and a
+   * control offering to reveal nothing is worse than no control.
    */
-  readonly canToggle = computed(() => this.total() > TRIGGER_COLLAPSED_ROWS);
-
+  readonly hiddenCount = computed(() => Math.max(0, this.total() - TRIGGER_COLLAPSED_ROWS));
 
   /**
-   * THE TWO MODES READ IN OPPOSITE DIRECTIONS, and that is the design.
+   * OLDEST TO NEWEST, ALWAYS. Collapsed and expanded, one direction.
    *
-   * Collapsed is a PAIR: the oldest trigger, then the newest. Not a slice of
-   * the list - the two ends of it. The oldest is why the case exists and the
-   * newest is what just happened, so ascending is the only order in which the
-   * pair reads as a sentence: it started here, and this is where it is now.
+   * The list is a history and it is read forwards. It briefly ran newest-first
+   * when expanded, on the argument that an open list answers "what has been
+   * happening" rather than "what are the ends of this" - but that made the
+   * newest trigger the bottom row collapsed and the top row expanded, so the
+   * act of expanding moved both anchors past each other. Expanding should add
+   * rows, not rearrange the ones already on screen.
    *
-   * Expanded is the whole history NEWEST FIRST, like every other time-ordered
-   * list in the product. Once every row is on screen the question changes from
-   * "what are the ends of this" to "what has been happening", and the answer to
-   * that is read from the top down, most recent first.
+   * Collapsed is the two ENDS: the oldest, which is why the case exists, and
+   * the newest, which is what just happened. Expanded restores the middle
+   * between them. Neither anchor moves either way - the same two rows are
+   * first and last in both modes, and the divider that names the gap sits
+   * between them in both.
    *
-   * The consequence is deliberate and worth stating: the newest trigger is the
-   * BOTTOM row collapsed and the TOP row expanded. It moves because the reason
-   * it is on screen moves - anchoring the recent end of a two-row summary, then
-   * heading a list.
-   *
-   * Rule 11 holds by construction either way: an unresynced arrival is by
-   * definition the newest trigger, so it is the second collapsed row and the
-   * first expanded one. It can never be among the rows the pair withholds.
+   * Rule 11 holds by construction: an unresynced arrival is by definition the
+   * newest trigger, so it is the LAST row in either mode and can never be
+   * among the rows the collapsed strip withholds.
    */
   readonly visible = computed(() => {
     const all = this.store.sortedTriggers();
-    if (this.store.triggersExpanded()) return [...all].reverse();
-    // At or below two there is no middle, so the pair is the whole list - and
-    // taking both ends of a one-trigger list would render it twice.
-    if (!this.canToggle()) return all;
+    if (this.store.triggersExpanded() || this.hiddenCount() === 0) return all;
     return [all[0], all[all.length - 1]];
   });
-
-  /** How many rows the current window shows before it scrolls. */
-  readonly visibleRows = computed(() =>
-    this.store.triggersExpanded() ? TRIGGER_EXPANDED_ROWS : TRIGGER_COLLAPSED_ROWS,
-  );
 
   /**
    * True only when EXPANDED and the list is taller than its window, so rows are
    * genuinely behind a scrollbar.
    *
-   * Collapsed never scrolls: it renders exactly two rows and withholds the rest
-   * outright rather than putting them below a fold. Show all is the control for
-   * that, which is why the collapsed bar says nothing about scrolling.
+   * Collapsed never scrolls: it renders two rows and a divider, and withholds
+   * the rest outright rather than putting them below a fold. That is the
+   * difference the divider is for - what it hides is absent, not scrolled past.
    */
   readonly scrollsInternally = computed(
     () => this.store.triggersExpanded() && this.total() > TRIGGER_EXPANDED_ROWS,
-  );
-
-  /**
-   * What aria-expanded reports. Not simply triggersExpanded(): below the
-   * toggle point every row is visible regardless, so the region IS expanded and
-   * saying otherwise would describe the page inaccurately.
-   */
-  readonly isExpanded = computed(() =>
-    this.canToggle() ? this.store.triggersExpanded() : true,
   );
 
   /**

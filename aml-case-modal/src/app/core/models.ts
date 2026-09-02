@@ -50,7 +50,6 @@ export function lockStatusLine(
   options: {
     since?: string;
     sinceIso?: string;
-    resolved?: boolean;
     /**
      * Drop the words the lock GLYPH already carries.
      *
@@ -70,7 +69,13 @@ export function lockStatusLine(
     compact?: boolean;
   } = {},
 ): string {
-  if (options.resolved) return 'Resolved - read-only';
+  /**
+   * No resolved branch. It returned "Resolved - read-only" for a header that
+   * no longer renders a lock line on a resolved case at all - the pill says
+   * Resolved, and read-only is carried by the absent controls. Both callers
+   * now avoid asking: the header does not render the line, and the widget's
+   * lockChip returns null.
+   */
   switch (state) {
     case 'locked-to-me':
       // Your own lock needs no age - you know when you took it. The band still

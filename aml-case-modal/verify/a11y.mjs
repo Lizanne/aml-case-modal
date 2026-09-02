@@ -94,6 +94,10 @@ check('a focusable path exists through the page', reachable > 10, String(reachab
 /**
  * The trigger control is a real button, so Enter and Space must both work.
  *
+ * It is the divider INSIDE the list now, not a verb in the header - the header
+ * carries a count and nothing pressable. Same element type, same keys; only
+ * where it lives changed.
+ *
  * Measured by aria-expanded AND the height of the window. The row count alone
  * would do it now - collapsed renders exactly two - but the window is the
  * property that matters: expanded holds every trigger in the DOM and shows
@@ -111,11 +115,11 @@ const stripState = () =>
     const rows = document.querySelectorAll('trigger-strip .trigger').length;
     const row = el.scrollHeight / rows;
     return {
-      expanded: document.querySelector('trigger-strip .strip__verb').getAttribute('aria-expanded'),
+      expanded: document.querySelector('trigger-strip .strip__gap').getAttribute('aria-expanded'),
       rowsVisible: Math.round(el.clientHeight / row),
     };
   });
-await page.locator('trigger-strip .strip__verb').focus();
+await page.locator('trigger-strip .strip__gap').focus();
 await page.keyboard.press('Enter');
 await page.waitForTimeout(300);
 const afterEnter = await stripState();

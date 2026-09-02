@@ -145,14 +145,30 @@ check('collapsed: it does not scroll - what it withholds is absent, not hidden',
     const el = document.querySelector('trigger-strip .strip__list');
     return el.scrollHeight <= el.clientHeight + 1 && el.getAttribute('tabindex') === null;
   }));
-await page.locator('trigger-strip .strip__verb').click();
+await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(400);
-check('expanded: newest first, arrival at the top', await page.evaluate(() => {
+/**
+ * ONE DIRECTION, both modes: oldest to newest.
+ *
+ * This asserted newest-first when expanded, which made the arrival the top row
+ * open and the bottom row closed - so expanding moved both anchors past each
+ * other. The strip reads forwards now in either mode, and expanding only adds
+ * the middle back between two rows that never move.
+ */
+check('expanded: oldest first, arrival still last', await page.evaluate(() => {
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
   const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
-  const descending = at.every((v, i) => i === 0 || at[i - 1] >= v);
-  return descending && rows[0].className.includes('trigger--new');
+  const ascending = at.every((v, i) => i === 0 || at[i - 1] <= v);
+  return ascending && rows[rows.length - 1].className.includes('trigger--new');
 }));
+// The anchors are the same two rows in both modes - that is what the divider
+// between them is for.
+check('expanded: the anchors are the ones the collapsed pair showed',
+  await page.evaluate(() => {
+    const at = [...document.querySelectorAll('trigger-strip .cell__at')]
+      .map((t) => t.getAttribute('datetime'));
+    return { first: at[0], last: at[at.length - 1] };
+  }).then((v) => !!v.first && !!v.last && v.first < v.last));
 // Every trigger is in the DOM; five of them are on screen. That is what keeps
 // the strip from pushing the workflow down the page.
 check('expanded: the whole history is rendered, five rows shown', await page.evaluate(() => {
@@ -167,7 +183,7 @@ check('expanded: the whole history is rendered, five rows shown', await page.eva
     Math.round(el.clientHeight / rowH) === 5 &&
     el.scrollHeight > el.clientHeight + 1;
 }));
-await page.locator('trigger-strip .strip__verb').click();
+await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(300);
 
 // Open question 2: a draft open when the trigger lands survives, Save does not.
@@ -328,7 +344,7 @@ check('resolved: no amber count', resolvedAfter.chip === 0);
 check('resolved: no highlighted row', resolvedAfter.rows === 0);
 check('resolved: no NEW marker', resolvedAfter.markers === 0);
 check('resolved: the strip still expands', await (async () => {
-  await page.locator('trigger-strip .strip__verb').click();
+  await page.locator('trigger-strip .strip__gap').click();
   await page.waitForTimeout(350);
   return (await page.locator('trigger-strip .trigger').count()) > 2;
 })());
