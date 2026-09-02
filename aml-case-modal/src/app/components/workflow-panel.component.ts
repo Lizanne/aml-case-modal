@@ -227,7 +227,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         padding: 20px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
-        gap: 12px;
+        gap: 16px;
         align-content: start;
         /* The recessed well, not the page ground - see --stream-bg. */
         background: var(--stream-bg);
@@ -247,9 +247,6 @@ import { RequiredChipsComponent } from './required-chips.component';
         font-size: 14px;
         line-height: 20px;
         color: var(--ink-3);
-      }
-      .stream__add {
-        margin-top: 4px;
       }
       /* One footer everywhere, narrow included: buttons at their natural
          width, hard right, 12px apart. Wrapping is the escape hatch if the
