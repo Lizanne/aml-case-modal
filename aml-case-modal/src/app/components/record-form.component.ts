@@ -117,7 +117,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         border: 1px solid var(--primary);
         border-radius: 12px;
         background: var(--panel);
-        padding: 16px 18px 12px;
+        padding: 16px;
         display: grid;
         gap: 16px;
       }
