@@ -231,8 +231,15 @@ target. The button contains only the icon, filename and size — no view icon.
 
 > **Why no view icon:** the button *is* the file.
 
-**Images only.** Size cap `ATTACHMENT_MAX_MB` (10). Per-file inline errors for
-wrong type and oversize that never clear valid files.
+**JPG or PNG only** in the user-facing copy, both in the hint and in the
+rejection message. Size cap `ATTACHMENT_MAX_MB` (10), interpolated rather than
+written out. Per-file inline errors for wrong type and oversize that never clear
+valid files.
+
+> ⚠️ The copy is narrower than the validation: `accept` is `image/*` and the
+> validator tests `type.startsWith('image/')`, so a GIF or WebP is still
+> accepted while the copy says JPG or PNG. Tighten the validator or widen the
+> copy — they should agree.
 
 > ⚠️ Images-only contradicts the epic's acceptance criteria — open question 10.
 

@@ -100,7 +100,7 @@ Empty stream shows `No outcomes recorded yet` above the placeholders.
 ### 02 — Recording, with attachment errors
 
 The form is inline in the stream, replacing the placeholder. Note required;
-attachments optional and images only; keep-locked / unlock radio **preselected
+attachments optional, JPG or PNG only; keep-locked / unlock radio **preselected
 to `Keep the case locked to me`**, with neither option styled as recommended.
 
 Save is gated on the note alone. There is no rule above the footer: 32px of

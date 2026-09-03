@@ -57,7 +57,7 @@ import { AttachmentListComponent } from './attachment-list.component';
           <span class="field__label">
             Attachments <span class="field__optional">(optional)</span>
           </span>
-          <p class="field__hint">PDF and images only. Up to {{ maxMb }} MB per file.</p>
+          <p class="field__hint">JPG or PNG only. Up to {{ maxMb }} MB per file.</p>
 
           <attachment-list
             [attachments]="draft.attachments"

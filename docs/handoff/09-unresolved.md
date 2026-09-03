@@ -103,7 +103,9 @@ This is the sharpest of the eleven, because it is a **direct contradiction of a
 written acceptance criterion**, not a silence.
 
 **Built as:** images only, throughout — the `accept` attribute, the upload
-validation, the error copy (`Files must be an image.`), and the fixtures.
+validation, and the fixtures. The user-facing copy was narrowed further to
+**`JPG or PNG only`** in both the hint and the rejection message, so the wording
+is now stricter than the validation, which still admits any `image/*` type.
 
 **Needs:** confirmation that the narrowing is deliberate. If it is not, the
 revert touches four places plus the fixtures.

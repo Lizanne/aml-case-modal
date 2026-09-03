@@ -533,7 +533,7 @@ export class CaseStore {
           id: nextId('err'),
           file: f.name,
           reason: 'type',
-          message: `${f.name} was not added. Images only.`,
+          message: `${f.name} was not added. JPG or PNG only.`,
         });
         continue;
       }

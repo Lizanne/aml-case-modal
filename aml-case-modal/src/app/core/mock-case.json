@@ -322,12 +322,12 @@
     {
       "file": "notes.docx",
       "reason": "type",
-      "message": "notes.docx was not added. PDF and images only."
+      "message": "notes.docx was not added. JPG or PNG only."
     },
     {
-      "file": "bank-statements.pdf",
+      "file": "statement-screenshot.png",
       "reason": "size",
-      "message": "bank-statements.pdf was not added. Files must be under 10 MB."
+      "message": "statement-screenshot.png was not added. Files must be under 10 MB."
     }
   ],
   "severityRanking": {
