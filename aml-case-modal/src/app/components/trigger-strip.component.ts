@@ -210,10 +210,13 @@ let stripSeq = 0;
                       store.triggersExpanded() ? 'remove' : 'add'
                     }}</mat-icon>
                     @if (store.triggersExpanded()) {
-                      <span>Hide <b class="strip__gap-count">{{ hiddenCount() }}</b></span>
+                      <span
+                        >Hide <b class="strip__gap-count">{{ hiddenCount() }}</b> triggers</span
+                      >
                     } @else {
                       <span
-                        >Show <b class="strip__gap-count">{{ hiddenCount() }}</b> remaining</span
+                        >Show <b class="strip__gap-count">{{ hiddenCount() }}</b> more
+                        triggers</span
                       >
                     }
                   </span>
@@ -245,8 +248,22 @@ let stripSeq = 0;
          */
         container-type: inline-size;
       }
+      /**
+       * ONE RECESSIVE BLOCK. The tint is on the strip, and everything inside it
+       * is transparent.
+       *
+       * The rows were --panel, so the strip was a white list on a white panel
+       * and read as another working surface. It is context: the history you
+       * read past on the way to the tabs below it. Tinting the block and
+       * letting the rows sit on it is what makes it one thing rather than a
+       * stack of cards.
+       *
+       * The exceptions are the two that mean something: an arrival's amber,
+       * and the divider's hover. Both are states, and a state has to be able to
+       * paint over the ground.
+       */
       .strip {
-        background: var(--panel);
+        background: var(--strip-bg);
         border-bottom: 1px solid var(--line);
       }
 
@@ -286,7 +303,10 @@ let stripSeq = 0;
            line twice. Below it there is nothing to collide with: the next row
            rules its own underside too. */
         border-bottom: 1px solid var(--line);
-        background: var(--page);
+        /* No ground of its own: it is part of the block, and its hairlines and
+           label are what separate it from the rows. It was --page, which was a
+           second tone inside a strip that is now one. */
+        background: transparent;
         font: inherit;
         cursor: pointer;
       }
@@ -407,7 +427,10 @@ let stripSeq = 0;
         font-size: 14px;
         line-height: 20px;
         color: var(--ink-2);
-        background: var(--panel);
+        /* The strip's tint shows through. The cell painted --panel while the
+           row had no box of its own - display: contents - so white came from
+           here rather than from the row. */
+        background: transparent;
       }
       /* Block cell so text-overflow works directly on the cell. */
       .cell--detail {
@@ -546,7 +569,9 @@ let stripSeq = 0;
           row-gap: 2px;
           padding: 10px 16px;
           border-bottom: 1px solid var(--line);
-          background: var(--panel);
+          /* Transparent here too - the row IS a box in this layout, so this is
+             where white came from when stacked. */
+          background: transparent;
         }
         .trigger:last-child {
           border-bottom: 0;

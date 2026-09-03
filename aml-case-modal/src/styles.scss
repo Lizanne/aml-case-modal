@@ -39,6 +39,20 @@
    * second copy of the hex free to drift from it.
    */
   --stream-bg: #F4F5F7;
+  /**
+   * The trigger strip's ground: one step lighter than the stream's.
+   *
+   * The two are the panel's recessive surfaces and they sit in adjacent
+   * columns, so they are a pair rather than two independent choices. The strip
+   * is context - a history you read past - and the stream is the surface being
+   * worked in, so the strip sits further back and the stream is the deeper
+   * recess of the two.
+   *
+   * Same blue cast as --stream-bg, one step up. A neutral grey at this
+   * lightness (#FAFAFA, which --page already is) would put a different hue
+   * beside it, and the pair would read as two greys rather than one scale.
+   */
+  --strip-bg: #F9FAFB;
 
   /* Host-app chrome, sampled from frame 09. Not part of the case language:
      nothing inside a panel may use these. */

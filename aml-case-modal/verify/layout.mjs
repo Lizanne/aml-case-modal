@@ -2016,12 +2016,12 @@ for (const width of [1180, 700]) {
   );
   check(`${width}px: starts collapsed with the two anchors`, collapsedRows === 2);
   check(`${width}px: the divider counts what it hides`,
-    (await label()).includes(`Show ${hidden} remaining`), await label());
+    (await label()).includes(`Show ${hidden} more triggers`), await label());
   await page.locator('trigger-strip .strip__gap').click();
   await page.waitForTimeout(300);
   check(`${width}px: it expands the strip`, (await rows()) > collapsedRows);
   check(`${width}px: expanded it offers to hide the same number`,
-    (await label()).includes(`Hide ${hidden}`), await label());
+    (await label()).includes(`Hide ${hidden} triggers`), await label());
   await page.locator('trigger-strip .strip__gap').click();
   await page.waitForTimeout(300);
   check(`${width}px: clicking the same row collapses it again`, (await rows()) === 2);
@@ -2070,7 +2070,7 @@ const collapsed = await stripState();
 check('collapsed: no header, no badge, no scroll note',
   !collapsed.hasBar && !collapsed.hasBadge && !collapsed.hasNote, JSON.stringify(collapsed));
 check('collapsed: the divider names what it hides',
-  collapsed.label.includes('Show') && collapsed.label.includes('remaining') &&
+  collapsed.label.includes('Show') && collapsed.label.includes('more triggers') &&
     Number(collapsed.count) === 17,
   collapsed.label);
 check('collapsed: no "+N more" phrasing', !/\+\d+ more/.test(collapsed.text));
@@ -2148,7 +2148,7 @@ check('exactly one button', tg.count === 1);
 check('type="button"', tg.type === 'button');
 check('collapsed: aria-expanded="false"', tg.expanded === 'false', tg.expanded);
 check('collapsed: the label offers to show what is hidden',
-  /^\s*add\s*Show \d+ remaining$/.test(tg.label), tg.label);
+  /^\s*add\s*Show \d+ more triggers$/.test(tg.label), tg.label);
 check('aria-controls resolves to the list region', tg.controlsResolves, tg.controls);
 check('the sign is aria-hidden decoration', tg.chevronHidden === 'true');
 check('the control is a listitem, as role="list" requires', tg.slotRole === 'listitem',
@@ -2159,7 +2159,7 @@ tg = await toggleSemantics();
 check('still exactly one button after toggling', tg.count === 1);
 check('expanded: aria-expanded="true"', tg.expanded === 'true', tg.expanded);
 check('expanded: the label offers to hide the same number',
-  /^\s*remove\s*Hide \d+$/.test(tg.label), tg.label);
+  /^\s*remove\s*Hide \d+ triggers$/.test(tg.label), tg.label);
 
 /**
  * THE DIVIDER SCROLLS WITH THE ROWS, because it is one of them.
