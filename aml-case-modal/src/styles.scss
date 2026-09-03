@@ -322,13 +322,39 @@ summary:focus-visible,
   --mdc-outlined-button-outline-color: var(--danger);
 
   /**
+   * THE STATE LAYER IS DANGER, NOT BLACK.
+   *
+   * Material's default layer colour is black, so focus and press washed this
+   * button 12% grey - a neutral smudge over a red-on-white control, which read
+   * as disabled rather than pressed and fought the outline it sat inside.
+   * Recoloured, the same 12% reads as a light tint of the button's own family.
+   *
+   * The press opacity comes down with it, and that one is a CONTRAST fix, not
+   * a taste one. Pressing implies hovering, so the layer stacks on the
+   * #FEE2E2 hover fill; at Material's 0.12 the label lands on rgb(246,202,202)
+   * for 4.39:1, under AA for 14px/600 text. 0.08 gives 4.66:1. 0.10 would
+   * technically pass at 4.52 and is too close to the line to rely on.
+   *
+   * Focus keeps Material's opacity - it sits on white, not on the hover fill,
+   * so it measures 5.28:1 and needs nothing.
+   */
+  --mat-outlined-button-state-layer-color: var(--danger);
+  --mat-outlined-button-pressed-state-layer-opacity: 0.08;
+
+  /**
    * Hover is the flat danger tint, #FEE2E2, which is --danger-bg-strong.
    *
    * The opacity line is the load-bearing one. Material paints hover as a state
-   * LAYER - a translucent overlay in the label colour, drawn over whatever
-   * background sits underneath - so a background alone would come out as
-   * #FEE2E2 tinted by a wash of --danger, not as #FEE2E2. Zeroing the layer and
-   * painting the background is what makes the rendered colour the exact token.
+   * LAYER - a translucent overlay drawn over whatever background sits
+   * underneath - so a background alone would come out as #FEE2E2 tinted by a
+   * wash, not as #FEE2E2. Zeroing the layer and painting the background is
+   * what makes the rendered colour the exact token.
+   *
+   * Focus and press are NOT zeroed, deliberately. They have no exact token to
+   * hit - they are a step away from whatever is underneath, which differs by
+   * whether the pointer is also over the button - so a layer is the right tool
+   * and only its colour was ever wrong. Pressing while hovering therefore
+   * deepens #FEE2E2 rather than replacing it, which is what a press should do.
    */
   --mat-outlined-button-hover-state-layer-opacity: 0;
 
