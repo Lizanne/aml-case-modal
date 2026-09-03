@@ -47,7 +47,11 @@ const CHECKS = {
     // support. What this frame proves is unchanged - the seeded errors do not
     // take the valid file down with them.
     'valid files kept': (await p.locator('record-form .file').count()) === 1,
-    'save disabled (no lock choice)': await p.locator('record-form button:has-text("Save outcome")').isDisabled(),
+    // The lock question now ships preselected, so it is no longer what holds
+    // Save back. This frame seeds a note, so the form is complete and Save is
+    // live; what the frame still proves is that the errors do not block it.
+    'lock choice preselected': (await p.locator('record-form .mat-mdc-radio-checked').count()) === 1,
+    'save enabled despite the file errors': await p.locator('record-form button:has-text("Save outcome")').isEnabled(),
   }),
   '02b': async (p) => ({
     'form is Player contact': (await p.locator('record-form .form__title').innerText()).toLowerCase().includes('player contact'),

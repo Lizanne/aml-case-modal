@@ -286,12 +286,13 @@ export class CaseStore {
    *
    * An untouched form is not work in progress - opening one and walking away
    * should not raise a warning about losing something that does not exist.
-   * Note, attachments and the lock choice each count as content.
+   * Note and attachments count as content. The lock choice no longer does:
+   * it now carries a preselected default, so it is evidence of nothing.
    */
   readonly draftDirty = computed(() => {
     const d = this.draft();
     if (!d) return false;
-    return d.note.trim().length > 0 || d.attachments.length > 0 || d.lockAfter !== null;
+    return d.note.trim().length > 0 || d.attachments.length > 0;
   });
 
   /** What to call that draft in the warning. */
@@ -498,7 +499,9 @@ export class CaseStore {
       note: '',
       attachments: [],
       errors: [],
-      lockAfter: null, // rule 5: no default
+      // Preselected: the common case is keeping the lock, and an explicit
+      // default is one less thing to fill in. Supersedes rule 5's "no default".
+      lockAfter: 'keep',
       attempted: false,
       fromPlaceholder,
     });

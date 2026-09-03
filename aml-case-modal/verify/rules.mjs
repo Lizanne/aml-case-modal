@@ -76,11 +76,20 @@ check('submit disabled with nothing recorded', await page.locator('.footer butto
 // Contact player first - rule 4 says order does not matter.
 await page.locator('action-placeholder:has-text("Contact player") button').click();
 await page.waitForTimeout(200);
-await fillForm({ note: 'Called the player on their verified number.' });
-check('rule 5: save blocked with a note but no lock choice',
+// Rule 5 now ships a DEFAULT rather than an empty choice: the lock question
+// is preselected to "keep", so it can no longer be the thing blocking Save.
+// What still gates Save is the note, and that is what these assert.
+check('rule 5: the lock choice is preselected, exactly one option',
+  (await page.locator('record-form .mat-mdc-radio-checked').count()) === 1);
+check('rule 5: and the preselected option is Keep the case locked to me',
+  (await page.locator('record-form .mat-mdc-radio-checked').innerText()).includes('Keep the case locked'));
+check('save is blocked while the note is empty',
   await page.locator('record-form button:has-text("Save outcome")').isDisabled());
-await fillForm({ note: 'Called the player on their verified number.', lockChoice: 'Keep the case locked' });
-check('rule 5: save enabled once the lock choice is explicit',
+await fillForm({ note: '   ' });
+check('and a whitespace-only note does not count as content',
+  await page.locator('record-form button:has-text("Save outcome")').isDisabled());
+await fillForm({ note: 'Called the player on their verified number.' });
+check('save is enabled once the note has content, with no further choice needed',
   await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);

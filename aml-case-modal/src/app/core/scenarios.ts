@@ -46,7 +46,7 @@ function draft(partial: Partial<Draft> & Pick<Draft, 'actionType' | 'title'>): D
     note: '',
     attachments: [],
     errors: [],
-    lockAfter: null,
+    lockAfter: 'keep',
     attempted: false,
     fromPlaceholder: true,
     ...partial,

@@ -13,7 +13,7 @@ import { AttachmentListComponent } from './attachment-list.component';
  *
  * Three things gate Save:
  *   - a text note (required)
- *   - an explicit keep-locked / unlock choice (no default, rule 5)
+ *   - a keep-locked / unlock choice, preselected to keep (rule 5)
  *   - a snapshot that is in sync (rule 11 / open question 2 - the draft survives
  *     a mid-draft trigger, only Save is withheld)
  */
@@ -83,9 +83,12 @@ import { AttachmentListComponent } from './attachment-list.component';
           </div>
         </div>
 
-        <!-- Rule 5: explicit choice, neither option styled as the recommended one. -->
+        <!-- Rule 5, revised: the choice now ships PRESELECTED to keep, because
+             keeping the lock is the common case and an empty required question
+             is one more thing to fill in. Neither option is styled as
+             recommended; the default is carried by selection alone. -->
         <fieldset class="field field--lock">
-          <legend class="field__label">After saving <span class="field__hint">choose one</span></legend>
+          <legend class="field__label">After saving</legend>
           <mat-radio-group
             class="lock-choice"
             [value]="draft.lockAfter"
@@ -208,12 +211,14 @@ import { AttachmentListComponent } from './attachment-list.component';
         flex-direction: column;
         gap: 2px;
       }
+      /* No rule above the footer: the separation is carried by space alone.
+         .form is a 16 grid, so 16 more here makes the 32 that reads as a
+         break without drawing one. */
       .form__foot {
         display: flex;
         justify-content: flex-end;
         gap: 8px;
-        border-top: 1px solid var(--line);
-        padding-top: 12px;
+        margin-top: 16px;
       }
       /* Material gives a text button less side padding than a filled one, so
          Cancel sat visibly tighter than Save outcome beside it - 8px against
