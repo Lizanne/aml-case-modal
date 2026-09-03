@@ -215,6 +215,15 @@ import { AttachmentListComponent } from './attachment-list.component';
         border-top: 1px solid var(--line);
         padding-top: 12px;
       }
+      /* Material gives a text button less side padding than a filled one, so
+         Cancel sat visibly tighter than Save outcome beside it - 8px against
+         16. The same rule dialog-shell already applies to its own footer; this
+         footer is not one of those, so it states it for itself rather than
+         inheriting by accident. */
+      .form__foot ::ng-deep .mat-mdc-button {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
     `,
   ],
 })
