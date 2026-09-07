@@ -79,10 +79,21 @@ snapshot.
 
 | State | Background | Label | Layer | Contrast |
 |---|---|---|---|---|
-| Rest | `#B91C1C` | `#FFFFFF` | — | 6.47 |
-| Hover | `#B21B1B` | `#FFFFFF` | black @ 0.04 | 6.87 |
-| Pressed | `#A31919` | `#FFFFFF` | black @ 0.12 | 7.77 |
+| Rest | `#B91C1C` (`--danger`) | `#FFFFFF` | — | 6.47 |
+| Hover | `#991B1B` (`--danger-strong`) | `#FFFFFF` | none — layer zeroed | 8.31 |
+| Pressed | `#7F1D1D` (`--danger-pressed`) | `#FFFFFF` | none — layer zeroed | 10.02 |
 | Focus | `#A31919` | `#FFFFFF` | black @ 0.12 | 7.77 |
+| Focus + hover | `#871818` | `#FFFFFF` | black @ 0.12 over `--danger-strong` | 9.70 |
+
+> **Why named fills instead of a composited layer.** This button steps down its
+> own red family — `--danger`, `--danger-strong`, `--danger-pressed` — so each
+> state is a colour someone chose, not wherever 4% and 12% black happened to
+> land. The hover and pressed layers are zeroed so nothing tints on top.
+> **Focus still uses Material's layer**, so its two values (`#A31919` alone,
+> `#871818` when also hovered) remain composites rather than named steps.
+
+> `--danger-pressed` shares a value with `--sev-edd` and is deliberately **not**
+> aliased to it: severity tokens are only ever for severity.
 
 ## Icon buttons
 
