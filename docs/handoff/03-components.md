@@ -172,7 +172,9 @@ other list in the panel.
 Contains outcome cards, severity events and the decision. **Lock events never
 appear here** — they go to the timeline.
 
-`.stream` sits on `--stream-bg`, `padding: 20px`, `gap: 16px`.
+`.stream` sits on `--stream-bg`, `padding: 20px`, `gap: 12px` — with **24px
+below the case creation event**, which gets a clear break before the first slot
+rather than sitting in the work's rhythm.
 
 ---
 
@@ -251,14 +253,37 @@ valid files.
 
 ## `event-row`
 
+Two kinds of event share this row: a **severity change**, and a **manual case
+creation** at the head of the stream.
+
 | Property | Value |
 |---|---|
-| Padding | `12px 16px`, radius 12, `gap: 4px` |
+| Padding | `0 16px`, radius 12, `gap: 4px` |
 | Head | 14px / 20px, `gap: 8px` |
-| Reason | 14px / 20px, clamped to two lines |
+| Line two | 14px / 20px, clamped to two lines, full text on hover |
+
+> **Why no vertical padding.** These are unboxed annotations, and the stream's
+> own 12px gap is what separates them from the cards either side. The row's own
+> padding was additive on top of it and read as drift rather than rhythm.
 
 Line one holds only fixed-width elements and never truncates: label, from/to
-pills, actor and time right-aligned. Direction derives from `SEVERITY_RANK`.
+pills (severity change only), actor and time right-aligned. Direction derives
+from `SEVERITY_RANK`.
+
+**Case creation** reads `Manual case created - [Referral | OGMS | CCMM]` with no
+pills — a creation reason is provenance, not severity, and pill chrome would put
+it in a vocabulary it has nothing to do with. Line two is the free-text
+motivation. It heads the stream because the stream is oldest-first and nothing
+precedes the case existing, and it is repeated in the Timeline tab.
+
+> **System-created cases have no creation event at all.** A system case carries
+> no motivation text, and an event with an empty second line would be a heading
+> pretending to be a record. If a system equivalent is ever specified it gets
+> its own label rather than reusing this one blank.
+
+There is no empty-stream line in any state. The dashed placeholders name each
+outstanding action, which is more useful than a generic line above them, and
+with the creation event at the head the stream is not visually empty anyway.
 
 > **Why clamps must not reserve height:** a two-line clamp that reserves both
 > lines leaves a gap under every one-line reason.

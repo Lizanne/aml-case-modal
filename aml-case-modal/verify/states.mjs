@@ -39,6 +39,17 @@ const CHECKS = {
     'two placeholders': (await p.locator('action-placeholder').count()) === 2,
     'record enabled': await p.locator('action-placeholder button').first().isEnabled(),
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
+    // A manual case opens with its creation event, and the empty line is about
+    // OUTCOMES - so it stays, below the event rather than above it.
+    'creation event heads the stream':
+      (await p.locator('.stream > event-row').first().locator('.row__label').innerText()).trim() ===
+      'Manual case created - Referral',
+    'creation event is unboxed and carries no pill':
+      (await p.locator('.stream > event-row ui-pill').count()) === 0,
+    // The generic empty line is gone in every state: the dashed placeholders
+    // name each outstanding action, which says more than "nothing yet" above
+    // them ever did.
+    'no empty-stream line anywhere': (await p.locator('.stream__empty').count()) === 0,
   }),
   '02': async (p) => ({
     'record form open': (await p.locator('record-form form').count()) === 1,
@@ -62,7 +73,13 @@ const CHECKS = {
   '03': async (p) => ({
     'both chips done': (await p.locator('required-chips ui-pill[data-tone="success"]').count()) === 2,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
-    'severity event row shown': (await p.locator('event-row .row').count()) === 1,
+    // Two event rows now: the case's own creation heads the stream, and the
+    // severity change sits between the outcomes. Counted apart, because only
+    // a severity change carries pills.
+    'creation event heads the stream':
+      (await p.locator('.stream > event-row').first().locator('.row__label').innerText()).trim() ===
+      'Manual case created - Referral',
+    'severity event row shown': (await p.locator('event-row:has(ui-pill)').count()) === 1,
     'submit enabled': await p.locator('.footer button:has-text("Submit decision")').isEnabled(),
     'header severity is the post-escalation one': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === POST_ESCALATION,
   }),

@@ -95,7 +95,9 @@ Both required indicators outlined and hollow. Two dashed placeholders with
 `Record` primary. Add action available. Submit disabled, with its reason in the
 pinned required bar and a tooltip on the button — **not** in footer helper text.
 
-Empty stream shows `No outcomes recorded yet` above the placeholders.
+There is no empty-stream line. The two dashed placeholders name the
+outstanding actions directly, and a manual case opens with its creation event,
+so the stream is neither blank nor unexplained.
 
 ### 02 — Recording, with attachment errors
 

@@ -83,10 +83,6 @@ import { RequiredChipsComponent } from './required-chips.component';
 
       <!-- Scrolls. -->
       <div class="stream" #stream tabindex="0" aria-label="Workflow stream" (scroll)="onScroll()">
-        @if (isEmpty()) {
-          <p class="stream__empty">No outcomes recorded yet.</p>
-        }
-
         @for (item of store.stream(); track item.id) {
           @if (asOutcome(item); as outcome) {
             <outcome-card [outcome]="outcome" (viewSnapshot)="store.viewSnapshot($event)" />
@@ -227,13 +223,23 @@ import { RequiredChipsComponent } from './required-chips.component';
         padding: 20px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
-        gap: 16px;
+        gap: 12px;
         align-content: start;
         /* The recessed well, not the page ground - see --stream-bg. */
         background: var(--stream-bg);
       }
       /* Grid items default to min-width: auto, which is what lets content push
          them wider than their track. */
+      /**
+       * 24 below the creation event, against 12 everywhere else.
+       *
+       * It is the case's provenance, not a step in the work, so it wants a
+       * clear break before the first slot rather than sitting in the same
+       * rhythm as the outcomes. 12 of margin on top of the grid's 12 gap.
+       */
+      .stream > event-row.event-row--created {
+        margin-bottom: 12px;
+      }
       .stream > * {
         min-width: 0;
         max-width: 100%;
@@ -241,12 +247,6 @@ import { RequiredChipsComponent } from './required-chips.component';
       .stream:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: -2px;
-      }
-      .stream__empty {
-        margin: 0;
-        font-size: 14px;
-        line-height: 20px;
-        color: var(--ink-3);
       }
       /* One footer everywhere, narrow included: buttons at their natural
          width, hard right, 12px apart. Wrapping is the escape hatch if the
@@ -365,8 +365,6 @@ export class WorkflowPanelComponent implements AfterViewInit, OnDestroy {
   }
 
   readonly store = inject(CaseStore);
-
-  readonly isEmpty = computed(() => this.store.stream().length === 0 && !this.store.draft());
 
   /** Why Submit is disabled - shown as a tooltip where the sentence does not fit. */
   readonly gateTooltip = computed(() => {

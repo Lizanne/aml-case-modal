@@ -9,6 +9,13 @@
     "status": "OPEN",
     "severity": "EDD",
     "createdAt": "2026-08-04T09:12:00Z",
+    "origin": "manual",
+    "creation": {
+      "reason": "Referral",
+      "by": "A. Kowalski",
+      "at": "2026-08-04T09:12:00Z",
+      "description": "Raised from a payments referral: three card deposits from an account name that does not match the registered player, inside forty minutes, following a dormant period of eleven weeks."
+    },
     "lock": {
       "state": "locked-to-me",
       "owner": {

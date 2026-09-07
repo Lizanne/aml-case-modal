@@ -2,6 +2,9 @@ import { Injectable, computed, signal } from '@angular/core';
 
 import mockCase from './mock-case.json';
 import {
+  CaseCreatedEvent,
+  CaseOrigin,
+  CreationReason,
   ALLOWED_ATTACHMENT_KINDS,
   ATTACHMENT_MAX_KB,
   ATTACHMENT_MAX_MB,
@@ -163,6 +166,13 @@ export class CaseStore {
   readonly player = signal<Player>(mockCase.player as Player);
   readonly caseId = signal<string>(mockCase.case.id);
   readonly createdAt = signal<string>(mockCase.case.createdAt);
+  /**
+   * Manual or system. Only a manual case carries a motivation, so this is what
+   * decides whether the stream opens with a creation event at all.
+   */
+  readonly caseOrigin = signal<CaseOrigin>(
+    ((mockCase.case as any).origin as CaseOrigin) ?? 'system',
+  );
   readonly status = signal<CaseStatus>('OPEN');
   /** Rule 8. Always derived from the ranking, never from a hardcoded direction. */
   readonly severity = signal<Severity>(OPENING_SEVERITY);
@@ -393,12 +403,17 @@ export class CaseStore {
     this.snapshotOutOfSync.set(false);
     // The fixture ships the rule-11 arrival inline; the base case predates it.
     this.triggers.set((mockCase.triggers as Trigger[]).filter((t) => !t.isNew));
-    this.stream.set([]);
+    // Not empty: a manual case opens with its own creation event, which is the
+    // oldest thing that can be in an oldest-first stream.
+    this.stream.set(this.withCreation([]));
+    const created = this.creationEvent();
     this.timeline.set([
       {
         at: mockCase.case.createdAt,
-        what: `Case created (${OPENING_SEVERITY})`,
-        who: this.me().name,
+        what: created
+          ? `Manual case created - ${created.reason}`
+          : `Case created (${OPENING_SEVERITY})`,
+        who: created ? created.actor : this.me().name,
       },
       { at: mockCase.case.createdAt, what: 'Trigger added: Manual - EDD', who: 'system' },
     ]);
@@ -759,6 +774,7 @@ export class CaseStore {
   seed(patch: {
     status?: CaseStatus;
     severity?: Severity;
+    caseOrigin?: CaseOrigin;
     lockState?: LockState;
     lockOwner?: Agent | null;
     lockedSince?: string | null;
@@ -779,6 +795,7 @@ export class CaseStore {
     if (patch.lockState !== undefined) this.lockState.set(patch.lockState);
     if (patch.lockOwner !== undefined) this.lockOwner.set(patch.lockOwner);
     if (patch.lockedSince !== undefined) this.lockedSince.set(patch.lockedSince);
+    if (patch.caseOrigin !== undefined) this.caseOrigin.set(patch.caseOrigin);
     if (patch.stream !== undefined) this.stream.set(patch.stream);
     if (patch.timeline !== undefined) this.timeline.set(patch.timeline);
     if (patch.triggers !== undefined) this.triggers.set(patch.triggers);
@@ -790,6 +807,37 @@ export class CaseStore {
     if (patch.viewedSnapshot !== undefined) this.viewedSnapshot.set(patch.viewedSnapshot);
     if (patch.infoTab !== undefined) this.infoTab.set(patch.infoTab);
     if (patch.lastActivePanel !== undefined) this.lastActivePanel.set(patch.lastActivePanel);
+  }
+
+  /**
+   * The case's own creation, as a stream item - or null when the system raised
+   * it. A system case has no motivation text, so there is nothing to put on
+   * line two, and a creation event with an empty second line would be a
+   * heading pretending to be a record.
+   */
+  creationEvent(): CaseCreatedEvent | null {
+    if (this.caseOrigin() !== 'manual') return null;
+    const c = (mockCase.case as any).creation;
+    if (!c) return null;
+    return {
+      kind: 'event',
+      id: 'case-created',
+      type: 'case-created',
+      reason: c.reason as CreationReason,
+      description: c.description,
+      actor: c.by,
+      at: c.at,
+    };
+  }
+
+  /**
+   * The stream always opens with the creation event when there is one. The
+   * stream runs oldest first and nothing precedes the case existing, so it is
+   * the head of the list rather than something inserted by date.
+   */
+  private withCreation(items: StreamItem[]): StreamItem[] {
+    const created = this.creationEvent();
+    return created ? [created, ...items] : items;
   }
 
   /** @internal dev-only - the fixture history, replayed as saved stream items. */
@@ -825,9 +873,10 @@ export class CaseStore {
       } as StreamItem;
     });
 
-    if (upTo === 'first') return items.slice(0, 1);
-    if (upTo === 'required') return items.filter((i) => !(isOutcome(i) && i.actionType === 'decision'));
-    return items;
+    if (upTo === 'first') return this.withCreation(items.slice(0, 1));
+    if (upTo === 'required')
+      return this.withCreation(items.filter((i) => !(isOutcome(i) && i.actionType === 'decision')));
+    return this.withCreation(items);
   }
 
   /**

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { StampPipe } from '../core/format';
-import { SeverityChangeEvent } from '../core/models';
+import { CaseCreatedEvent, EventItem, SeverityChangeEvent } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
 /**
@@ -23,6 +23,11 @@ import { PillComponent } from './ui-pill.component';
   standalone: true,
   imports: [MatIconModule, StampPipe, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // On the HOST, not the inner .row: the gap beneath this event is the
+  // stream's business, and the stream can only address the host element.
+  host: {
+    '[class.event-row--created]': "event.type === 'case-created'",
+  },
   template: `
     <div class="row">
       <!--
@@ -32,20 +37,28 @@ import { PillComponent } from './ui-pill.component';
         reason, and it is on the line below.
       -->
       <div class="row__head">
-        <!-- The direction arrow is gone: the label already says escalation or
-             de-escalation, and the pills say which way. -->
-        <span class="row__label">
-          {{ event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation' }}
-        </span>
+        <!-- One label slot for both kinds. The direction arrow is gone: the
+             label already says escalation or de-escalation, and the pills say
+             which way. -->
+        <span class="row__label">{{ headLabel }}</span>
 
-        <ui-pill size="sm" [severity]="event.from">{{ event.from }}</ui-pill>
-        <mat-icon class="row__arrow">arrow_forward</mat-icon>
-        <ui-pill size="sm" [severity]="event.to">{{ event.to }}</ui-pill>
+        <!--
+          Pills belong to a severity change only. A creation reason is a
+          provenance label, not a severity, and pill chrome would put it in the
+          severity vocabulary it has nothing to do with.
+        -->
+        @if (severityChange; as sev) {
+          <ui-pill size="sm" [severity]="sev.from">{{ sev.from }}</ui-pill>
+          <mat-icon class="row__arrow">arrow_forward</mat-icon>
+          <ui-pill size="sm" [severity]="sev.to">{{ sev.to }}</ui-pill>
+        }
 
         <span class="row__meta">{{ event.actor }} · {{ event.at | stamp }}</span>
       </div>
 
-      <p class="row__reason" [title]="event.reason">{{ event.reason }}</p>
+      <!-- Line two either way: the severity reason, or the creation
+           motivation. Same clamp, same hover title. -->
+      <p class="row__reason" [title]="lineTwo">{{ lineTwo }}</p>
     </div>
   `,
   styles: [
@@ -69,7 +82,11 @@ import { PillComponent } from './ui-pill.component';
         flex-direction: column;
         min-width: 0;
         gap: 4px;
-        padding: 12px 16px;
+        /* No vertical padding on either event kind. These are unboxed
+           annotations, and the stream's own 12px gap is what separates them
+           from the cards either side; the row's own padding was additive on
+           top of it and read as drift rather than rhythm. */
+        padding: 0 16px;
         border-radius: 12px;
         background: none;
         border: 0;
@@ -175,5 +192,31 @@ import { PillComponent } from './ui-pill.component';
   ],
 })
 export class EventRowComponent {
-  @Input({ required: true }) event!: SeverityChangeEvent;
+  @Input({ required: true }) event!: EventItem;
+
+  /**
+   * Narrowed accessors rather than casts at the template's call sites: the
+   * union is discriminated on `type`, and @if binding the narrowed value is
+   * what lets the template read fields that only exist on one arm.
+   */
+  get severityChange(): SeverityChangeEvent | null {
+    return this.event.type === 'severity-change' ? this.event : null;
+  }
+
+  get caseCreated(): CaseCreatedEvent | null {
+    return this.event.type === 'case-created' ? this.event : null;
+  }
+
+  /** Line one. Both kinds get a label; only a severity change gets pills. */
+  get headLabel(): string {
+    if (this.event.type === 'case-created') {
+      return `Manual case created - ${this.event.reason}`;
+    }
+    return this.event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation';
+  }
+
+  /** Line two: the severity reason, or the creation motivation. */
+  get lineTwo(): string {
+    return this.event.type === 'case-created' ? this.event.description : this.event.reason;
+  }
 }

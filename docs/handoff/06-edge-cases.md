@@ -67,7 +67,7 @@ Every list tab needs one.
 
 | Surface | Empty state |
 |---|---|
-| Workflow stream | `No outcomes recorded yet`, above the placeholders |
+| Workflow stream | **No empty line.** The dashed placeholders name each outstanding action, which says more than a generic line above them |
 | Left panel, resolved | `No snapshot selected` until an outcome's `View snapshot` is clicked |
 | Widget, no open case | A `Create case` state — designed and in the component set, **out of scope for this ticket and not in the prototype** |
 | Widget, resolved case | Resolved status, no lock line, no actions |

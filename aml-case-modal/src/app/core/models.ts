@@ -298,14 +298,47 @@ export interface SeverityChangeEvent {
 }
 
 /**
+ * How the case came into being. Only a MANUAL case carries a motivation, so
+ * only a manual case has a creation event to show.
+ */
+export type CaseOrigin = 'manual' | 'system';
+
+/** The closed set of reasons an agent can raise a case under. */
+export const CREATION_REASONS = ['Referral', 'OGMS', 'CCMM'] as const;
+export type CreationReason = (typeof CREATION_REASONS)[number];
+
+/**
+ * The case being opened, rendered as the first thing in the stream.
+ *
+ * An event and not an outcome: nobody DID this as part of the investigation,
+ * it is the fact the investigation starts from. So it takes the event row's
+ * unboxed treatment rather than a card, exactly as a severity change does.
+ *
+ * SYSTEM-CREATED CASES DO NOT HAVE ONE. A system case has no motivation text
+ * to put on line two, and an event whose second line is empty would be a
+ * heading pretending to be a record. If a system equivalent is ever specified,
+ * it gets its own label rather than reusing this one with a blank description.
+ */
+export interface CaseCreatedEvent {
+  kind: 'event';
+  id: string;
+  type: 'case-created';
+  reason: CreationReason;
+  /** Free text. Line two, clamped to two lines with the full text on hover. */
+  description: string;
+  actor: string;
+  at: string;
+}
+
+/**
  * Lock and unlock are NOT stream items. They are case-history facts and live in
  * the Timeline tab only, per the spec's Case Timeline definition.
  *
  * The union below is deliberately narrow so the stream cannot represent one:
- * the workflow stream carries outcomes (including the decision) and severity
- * changes, and nothing else.
+ * the workflow stream carries outcomes (including the decision), severity
+ * changes and the case's own creation, and nothing else.
  */
-export type EventItem = SeverityChangeEvent;
+export type EventItem = SeverityChangeEvent | CaseCreatedEvent;
 export type StreamItem = OutcomeItem | EventItem;
 
 export interface TimelineEntry {
@@ -376,6 +409,14 @@ export function isOutcome(item: StreamItem): item is OutcomeItem {
 
 export function isEvent(item: StreamItem): item is EventItem {
   return item.kind === 'event';
+}
+
+export function isSeverityChange(item: StreamItem): item is SeverityChangeEvent {
+  return item.kind === 'event' && item.type === 'severity-change';
+}
+
+export function isCaseCreated(item: StreamItem): item is CaseCreatedEvent {
+  return item.kind === 'event' && item.type === 'case-created';
 }
 
 /**

@@ -49,11 +49,16 @@ const timeline = async () => {
   await page.waitForTimeout(250);
   return page.locator('player-info-panel .timeline__what').allInnerTexts();
 };
-check('locking wrote NO stream event', (await page.locator('event-row').count()) === 0);
+// The creation event always heads a manual case's stream, so what these
+// assert is that LOCKING added nothing to it. Severity rows are the ones
+// carrying pills; the creation event carries none.
+check('locking wrote NO stream event',
+  (await page.locator('event-row:has(ui-pill)').count()) === 0);
 check('locking wrote a Timeline entry', (await timeline()).some((t) => t === 'Case locked'));
 await page.locator('case-header button:has-text("Unlock")').click();
 await page.waitForTimeout(250);
-check('unlocking wrote NO stream event', (await page.locator('event-row').count()) === 0);
+check('unlocking wrote NO stream event',
+  (await page.locator('event-row:has(ui-pill)').count()) === 0);
 check('unlocking wrote a Timeline entry', (await timeline()).some((t) => t === 'Case unlocked'));
 
 console.log('\nRule 3 - force unlock, and open question 4 (owner’s draft is lost)');
@@ -62,7 +67,8 @@ check('self-unlock path not offered for another’s lock', (await page.locator('
 await page.locator('confirm-unlock-dialog button:has-text("Unlock case")').click();
 await page.waitForTimeout(200);
 check('case is now unlocked', (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
-check('force unlock wrote NO stream event', (await page.locator('event-row').count()) === 0);
+check('force unlock wrote NO stream event',
+  (await page.locator('event-row:has(ui-pill)').count()) === 0);
 check('force unlock named the previous owner in the Timeline', await (async () => {
   await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
   await page.waitForTimeout(250);
@@ -282,7 +288,7 @@ check('header pill now Compliance',
   (await page.locator('case-header ui-pill[data-sev]').innerText()).trim() === 'Compliance');
 check('lock was lifted', (await page.locator('case-header button:has-text("Lock to me")').count()) === 1);
 check('re-lock is one click away', await page.locator('case-header button:has-text("Lock to me")').isEnabled());
-check('event row logged', (await page.locator('event-row .row').count()) === 2);
+check('event row logged', (await page.locator('event-row:has(ui-pill) .row').count()) === 2);
 // Rule 8 takes the lock like everything else now. The severity save above
 // lifted the lock, so the control that opened the dialog is disabled the
 // moment the case is no longer yours - which is the point, and is exactly how
@@ -296,11 +302,18 @@ check('and comes back with the lock',
 
 console.log('\nStream carries outcomes and severity changes only');
 check('the lock lift did not add a stream event',
-  (await page.locator('event-row').count()) === 2);
-check('every stream event is a severity change', await page.evaluate(() =>
+  (await page.locator('event-row:has(ui-pill)').count()) === 2);
+// The stream may carry exactly two kinds of event: the case's own creation,
+// once and at the head, and severity changes. Anything else is a regression.
+check('every stream event is a severity change or the case creation', await page.evaluate(() =>
   [...document.querySelectorAll('event-row')].every((e) =>
-    /Severity (escalation|de-escalation)/.test(e.textContent)),
+    /Severity (escalation|de-escalation)|Manual case created - (Referral|OGMS|CCMM)/.test(e.textContent)),
 ));
+check('the creation event appears once, at the head of the stream', await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('.stream > event-row')];
+  const created = rows.filter((e) => /Manual case created/.test(e.textContent));
+  return created.length === 1 && rows[0] === created[0];
+}));
 check('the lock lift IS in the Timeline', await (async () => {
   await page.locator('player-info-panel .mat-mdc-tab:has-text("Timeline")').click();
   await page.waitForTimeout(250);
