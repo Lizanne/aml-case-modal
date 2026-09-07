@@ -262,6 +262,24 @@ import { RequiredChipsComponent } from './required-chips.component';
         border-top: 1px solid var(--line);
         background: var(--panel);
       }
+      /* 16px sides on both footer buttons. Material's stroked button gives
+         itself 15 because it spends a pixel on its border, which left Adjust
+         severity a pixel narrower than Submit beside it; stating it puts the
+         pair, and anything added here later, on the same 16 as every other
+         button in the panel. */
+      .footer button {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      /* 16px glyph, matching View snapshot, Add action and Add files.
+         mat-icon.mat-icon, not just the class: Material sets 24px at .mat-icon
+         inside its own button rule, so the element tag is what wins. */
+      .footer mat-icon.mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       /* flex: none - a shrinking Material button crushes its own icon before
          anything else gives. */
       .footer button {
