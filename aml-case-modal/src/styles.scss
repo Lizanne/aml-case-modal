@@ -377,6 +377,27 @@ summary:focus-visible,
   }
 }
 
+/**
+ * Primary filled buttons darken under interaction; they must not lighten.
+ *
+ * Material's filled-button state layer is WHITE, so hover and press wash the
+ * fill toward white while the label stays white. Measured, that took white on
+ * primary from 4.84:1 at rest to 4.51 on hover and 3.93 when pressed or
+ * focused - under AA, in the two states an agent is most likely to be looking
+ * at. The layer is the only thing that has to change: swapping it to black
+ * moves the fill toward --primary-ink, which is the direction the spec always
+ * described, and every state then clears AA by a wider margin than rest does.
+ *
+ * The danger filled button already behaves this way; it simply never inherited
+ * the white layer because it is not color="primary".
+ */
+.mat-mdc-unelevated-button.mat-primary {
+  --mat-filled-button-state-layer-color: #000000;
+  --mat-filled-button-hover-state-layer-opacity: 0.08;
+  --mat-filled-button-focus-state-layer-opacity: 0.12;
+  --mat-filled-button-pressed-state-layer-opacity: 0.12;
+}
+
 .danger-button-filled.mat-mdc-unelevated-button {
   --mdc-filled-button-container-color: var(--danger);
   --mdc-filled-button-label-text-color: #ffffff;

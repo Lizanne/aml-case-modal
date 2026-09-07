@@ -206,6 +206,16 @@ import { AttachmentListComponent } from './attachment-list.component';
       .field__actions {
         margin-top: 4px;
       }
+      .field__actions button {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .field__actions mat-icon.mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       .lock-choice {
         display: flex;
         flex-direction: column;

@@ -54,6 +54,16 @@ import { ActionTypeId } from '../core/models';
       :host {
         display: block;
       }
+      .add-btn {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .add-btn mat-icon.mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       .item {
         display: flex;
         flex-direction: column;

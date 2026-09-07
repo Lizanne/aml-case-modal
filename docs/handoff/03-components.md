@@ -44,7 +44,7 @@ minimise and close.
 | Badges | `ui-pill` `md` — 24 tall, `0 8px`, 14/20, 600 |
 | Lock text | 14px / 20px, `gap: 4px` to its 20px icon |
 | Lock action | Material smallest density (32) |
-| Window controls | 32 × 32, radius 8, `gap: 12px` |
+| Window controls | 32 × 32, radius 4 (the controls tier, shared with the minimised bar's icon buttons), `gap: 12px` |
 | Gap, lock action → controls | 24px (16px narrow) |
 
 > **Why 24px there against the pair's own 12px:** Force unlock is destructive and

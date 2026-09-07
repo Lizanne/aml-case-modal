@@ -96,11 +96,12 @@ shortcut. If you want them as first-class review states, they need adding to
 | [07-motion.md](07-motion.md) | Panel choreography, reduced motion, notices and snackbars |
 | [08-accessibility.md](08-accessibility.md) | Semantics, keyboard, screen reader, contrast, and the testing checklist |
 | [09-unresolved.md](09-unresolved.md) | The eleven open questions with their build assumptions, and every place the code and the designs disagree |
+| [10-button-colours.md](10-button-colours.md) | Every button family, every state, measured with the state layer composited, with contrast |
 
 ### Verification status
 
 The prototype ships ten Playwright verification suites
-(`npm run verify:*` in `aml-case-modal/`). Nine pass. `verify:layout` runs 477
+(`npm run verify:*` in `aml-case-modal/`). Nine pass. `verify:layout` runs 493
 checks with nine failures, every one of which is either a design decision still
 open or a stale assertion — all are itemised in
 [09-unresolved.md](09-unresolved.md) rather than left for you to rediscover.

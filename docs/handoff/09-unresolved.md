@@ -192,23 +192,46 @@ rows, medium for the panel header."*
 **The code and Figma agree; the verifier is out of date.** Do not "fix" the
 component to satisfy it.
 
-### D · Minimised bar close button, 44px vs 40px
+### D · Minimised bar icon buttons are 32px, against a 44px assertion ⚠️
 
-`verify:layout` asserts a 44px hit target on the bar's close control. The bar was
-edited from 44 → 40 in commit `cdd0b16`.
+`verify:layout` asserts a 44px hit target on the bar's controls. They are now
+**32 × 32**, having gone 44 → 40 (when a stale `background-clip` inset was
+removed) → 32.
 
-The current implementation gives each control **44px of hit area** with the hover
-square painted at 40px via `background-clip: content-box`, so the *target* is
-compliant and the *paint* is 40. Whether the assertion is measuring the right box
-is unresolved. Same for the companion right-edge-clearance check.
+The hover tint fills the button exactly, so paint and target agree — but the
+target is **12px short of the 44px guidance**, and it is the only way to restore
+or dismiss a minimised panel. This is the one open item here with an
+accessibility cost rather than a documentation cost.
 
-### E · Widget count badge
+**Decide:** raise the buttons to 44 and keep the glyph at 16, or accept 32 and
+retire the assertion deliberately rather than leaving it red.
+
+> The companion right-edge-clearance check now **passes**: the bar's padding
+> moved to `10px 16px`, which is the 16px clearance it was asking for.
+
+### E · SG widget tile glyph is amber, not info
+
+`verify:layout` expects the SG type tile's glyph to take
+`--color-foreground-on-info` (`#1E3A8A`) on the info tint. It renders
+`#78350F` on `#FEF3C7` — the amber pair, which is `--sev-aml` / `--warn`.
+
+Either the tile should be info-blue and the CSS is wrong, or SG is meant to
+carry a severity tint and the assertion is. **Not reconciled.**
+
+> This one was invisible until now: the block asserting it sat behind two
+> `getComputedStyle(null)` crashes, so the suite died before reaching it. Both
+> crashes were caused by the *"no widget renders while its panel is open"* rule
+> — the blocks read widget tiles from states whose panels are open, where no
+> widget exists. They now close the panel first, and the suite runs to the end
+> again: 492 checks against the 477 it managed while dying early.
+
+### F · Widget count badge
 
 `verify:layout` expects a count badge on the widget that the built widget does
 not render. Not reconciled — the badge may have been dropped deliberately when
 the widget row was reworked, but there is no note recording that.
 
-### F · `PROTOTYPE.md` is superseded, and should be treated as such
+### G · `PROTOTYPE.md` is superseded, and should be treated as such
 
 The brief at the repo root is the **older, thinner** source. It disagrees with
 both the build and the Figma handoff on:
@@ -227,7 +250,7 @@ both the build and the Figma handoff on:
 > **Recommendation:** either regenerate it from this handoff or mark it
 > historical at the top. As it stands it is a live document that will mislead.
 
-### G · A stray constant comment
+### H · A stray constant comment
 
 `core/models.ts:175` carries an orphaned doc comment —
 `/** Widest a single modal gets, per the layout brief (1000x820, resizable). */`

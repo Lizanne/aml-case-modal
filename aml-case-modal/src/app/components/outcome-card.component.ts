@@ -114,10 +114,32 @@ import { AttachmentListComponent } from './attachment-list.component';
         border-color: transparent;
         background: var(--primary-bg);
       }
+      /* 16px side padding and a 16px glyph, matching Add action and Add files.
+         mat-icon.mat-icon, not just the class: Material sets 24px at .mat-icon
+         inside its own button rule, so the element tag is what wins. */
+      .card__snap {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .card__snap mat-icon.mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
       /* Pressed, not merely hovered - it stays down while the snapshot is up. */
       .card__snap--on {
         --mdc-outlined-button-outline-color: var(--primary);
         --mdc-outlined-button-label-text-color: var(--primary-ink);
+        /* The state layer is PRIMARY here, not Material's black. On a button
+           that already carries a blue tint, a black layer greys it down until
+           --primary-ink lands at 3.78:1 - under AA. A primary layer deepens
+           the same hue instead, and the lower pressed opacity keeps the
+           ground light enough for the label to clear 4.5. */
+        --mat-outlined-button-state-layer-color: var(--primary);
+        --mat-outlined-button-hover-state-layer-opacity: 0.04;
+        --mat-outlined-button-focus-state-layer-opacity: 0.06;
+        --mat-outlined-button-pressed-state-layer-opacity: 0.06;
         background: rgba(26, 115, 201, 0.12);
       }
       /**
@@ -194,7 +216,6 @@ import { AttachmentListComponent } from './attachment-list.component';
         gap: 12px;
         margin-top: 16px;
         padding-top: 16px;
-        border-top: 1px solid var(--line);
       }
       /* Its own row. flex-start rather than stretch, so the button keeps its
          natural width instead of spanning the card. */
@@ -228,7 +249,6 @@ import { AttachmentListComponent } from './attachment-list.component';
       .card--narrow .card__foot {
         margin-top: 10px;
         padding-top: 0;
-        border-top: 0;
         gap: 8px;
       }
     `,

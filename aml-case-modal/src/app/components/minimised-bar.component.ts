@@ -59,16 +59,16 @@ import { PillComponent } from './ui-pill.component';
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 6px 8px 6px 12px;
+        padding: 10px 16px;
         border: 1px solid var(--line);
-        border-radius: 10px;
+        border-radius: 12px;
         background: var(--panel);
         box-shadow: 0 -2px 14px rgba(24, 24, 27, 0.1);
       }
       .bar__label {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         flex: 1;
         min-width: 0;
       }
@@ -114,11 +114,13 @@ import { PillComponent } from './ui-pill.component';
         align-items: center;
         justify-content: center;
         flex: none;
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         padding: 0;
         border: 0;
-        border-radius: 10px;
+        /* The controls radius tier, 4 - the same one buttons, inputs and menus
+           take. The bar's own 12 is the card tier; its controls are not cards. */
+        border-radius: 4px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;

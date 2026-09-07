@@ -2302,9 +2302,12 @@ check('badge follows the name', badge.afterName);
 check('6px gap between name and badge', badge.gap === 6, `${badge.gap}px`);
 check('badge is the shared pill component', badge.tag === 'UI-PILL');
 check('badge is fully rounded like every other pill', badge.radius === '999px', badge.radius);
-// Pills are one component now, so the badge shares the 14px pill type rather
-// than being a size step below the row text as it was when it was bespoke.
-check('badge uses the shared pill type', badge.badgeFs === 14, String(badge.badgeFs));
+// One component, two sizes, and the size follows the SURFACE: sm for widget
+// and list rows, md for the panel header. A trigger row is a list row, so the
+// badge takes sm - 12px - and sits a step below the 14px row text. It briefly
+// carried md while the pill was being unified; that was the transition, not
+// the rule.
+check('badge takes the sm pill type, per list-row sizing', badge.badgeFs === 12, String(badge.badgeFs));
 check('badge is vertically centred on the name', badge.centred);
 check('timestamp column holds nothing but the time', badge.metaOnlyHasTime);
 check('timestamp stays right-aligned', badge.timeFlushRight);
@@ -2432,24 +2435,36 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 console.log('\nSeverity pill: one component, sizes sm and md');
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-const sevPills = await page.evaluate(() => {
-  const read = (e) => {
-    const c = getComputedStyle(e);
-    return {
-      tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
-      padL: c.paddingLeft, fs: c.fontSize, lh: c.lineHeight,
-      radius: c.borderRadius, bg: c.backgroundColor, fg: c.color,
-    };
-  };
-  const sm = document.querySelector('.w__titles ui-pill');
-  const md = document.querySelector('case-header ui-pill[data-sev]');
-  return {
-    sm: read(sm), md: read(md),
-    dots: document.querySelectorAll('.w__dot, .w__sev').length,
-    // Same component, so a severity swap must move both identically.
-    sameSeverity: sm.getAttribute('data-sev') === md.getAttribute('data-sev'),
-  };
-});
+/**
+ * The two sizes cannot be read from one screenshot any more: no widget card
+ * renders while its own panel is open, so the header pill and the widget pill
+ * are never on screen together for the same case. Read the md pill first, then
+ * close the panel and read the sm one. Same case either way, so the severity
+ * comparison still means what it meant.
+ */
+const READ = `(e) => { const c = getComputedStyle(e); return {
+  tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
+  padL: c.paddingLeft, fs: c.fontSize, lh: c.lineHeight,
+  radius: c.borderRadius, bg: c.backgroundColor, fg: c.color,
+  sev: e.getAttribute('data-sev'),
+}; }`;
+const mdPill = await page.evaluate((src) => {
+  const el = document.querySelector('case-header ui-pill[data-sev]');
+  if (!el) throw new Error('no md severity pill in the case header');
+  return eval(src)(el);
+}, READ);
+await page.locator('case-header button[aria-label="Close case"]').click();
+await page.waitForTimeout(500);
+const smPill = await page.evaluate((src) => {
+  const el = document.querySelector('.w__titles ui-pill');
+  if (!el) throw new Error('no sm severity pill on the widget after closing the panel');
+  return { ...eval(src)(el), dots: document.querySelectorAll('.w__dot, .w__sev').length };
+}, READ);
+const sevPills = {
+  sm: smPill, md: mdPill, dots: smPill.dots,
+  sameSeverity: smPill.sev === mdPill.sev,
+};
+
 check('the widget badge IS the shared pill', sevPills.sm.tag === 'UI-PILL', sevPills.sm.tag);
 check('no dot, and no local copy of the badge left', sevPills.dots === 0, String(sevPills.dots));
 check('sm is 20px tall', sevPills.sm.h === 20, `${sevPills.sm.h}px`);
@@ -2472,6 +2487,21 @@ check('both render the same severity', sevPills.sameSeverity);
  * copy of the severity palette.
  */
 console.log('\nWidget type icon takes its severity foreground');
+/**
+ * Widget tiles only exist when no panel is open for them, and state 09 is the
+ * one scenario carrying BOTH an SG widget and an AML widget. So go there and
+ * close both panels; state 01 can only ever produce the AML half.
+ */
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+for (let i = 0; i < 3; i++) {
+  const btn = page
+    .locator('[aria-label="Close case"], [aria-label*="Close SG"], [aria-label*="Close alert"]')
+    .first();
+  if ((await btn.count()) === 0) break;
+  await btn.click();
+  await page.waitForTimeout(400);
+}
 const tiles = await page.evaluate(() => {
   const t = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const norm = (c) => {
@@ -2498,6 +2528,9 @@ const tiles = await page.evaluate(() => {
 for (const [sev, { got, want }] of Object.entries(tiles)) {
   check(`${sev} glyph is its foreground token`, got === want, `${got} vs ${want}`);
 }
+// Put the page back: the blocks below expect state 01 with its panel open.
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
 
 /**
  * Force unlock hover. Measured RENDERED, after a real hover, because Material

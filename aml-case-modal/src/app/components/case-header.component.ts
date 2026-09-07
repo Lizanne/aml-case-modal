@@ -297,7 +297,11 @@ import { PillComponent } from './ui-pill.component';
         width: 32px;
         height: 32px;
         border: 0;
-        border-radius: 8px;
+        /* The controls radius tier, 4 - shared with the minimised bar's own
+           two icon buttons, so the window chrome reads the same in both
+           places. The panel's 12 is the surface tier; its controls are not
+           surfaces. */
+        border-radius: 4px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;

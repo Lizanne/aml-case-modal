@@ -154,7 +154,7 @@ let stripSeq = 0;
               <span class="cell cell--name">
                 <span class="cell__label">{{ trigger.name }}</span>
                 @if (isArrival(trigger)) {
-                  <ui-pill tone="warn-solid">New</ui-pill>
+                  <ui-pill tone="warn-solid" size="sm">New</ui-pill>
                 }
               </span>
               <!-- Clamped to one line; the title is where the rest of it
@@ -342,7 +342,11 @@ let stripSeq = 0;
         font-size: 14px;
         line-height: 20px;
         font-weight: 400;
-        color: var(--primary);
+        /* --primary-ink, not --primary: this label sits on --primary-bg the
+           moment the row is hovered or focused, and --primary is only 4.28:1
+           on its own tint - under AA. --primary-ink is the token that exists
+           for exactly this, and it clears AA on the strip tint too. */
+        color: var(--primary-ink);
         white-space: nowrap;
       }
       .strip__gap-count {
