@@ -163,7 +163,13 @@ import { AttachmentListComponent } from './attachment-list.component';
        */
       .card--decision {
         background: var(--success-bg-subtle);
-        border-color: var(--success);
+        /* --foreground-success (#15803D), not --success (#14532D). The lighter
+           of the two greens: it is the border, not text, so it is held to the
+           3:1 non-text bar rather than 4.5, and the paler tone reads as a
+           frame around the tint instead of a second dark rule. Reuses the
+           existing token rather than adding a border-specific one - two names
+           for one colour is just somewhere for them to diverge again. */
+        border-color: var(--foreground-success);
         border-width: 2px;
       }
       /**
@@ -225,7 +231,6 @@ import { AttachmentListComponent } from './attachment-list.component';
         min-width: 0;
         gap: 12px;
         margin-top: 16px;
-        padding-top: 16px;
       }
       /* Its own row. flex-start rather than stretch, so the button keeps its
          natural width instead of spanning the card. */
@@ -258,7 +263,6 @@ import { AttachmentListComponent } from './attachment-list.component';
       }
       .card--narrow .card__foot {
         margin-top: 10px;
-        padding-top: 0;
         gap: 8px;
       }
     `,

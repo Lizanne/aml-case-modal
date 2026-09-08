@@ -119,7 +119,10 @@ let dialogSeq = 0;
         width: 32px;
         height: 32px;
         border: 0;
-        border-radius: 8px;
+        /* The controls radius tier, 4 - shared with the header's window controls
+           and the minimised bar's icon buttons, so every piece of chrome that
+           closes something reads the same. */
+        border-radius: 4px;
         background: transparent;
         color: var(--ink-3);
         cursor: pointer;
