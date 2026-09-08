@@ -94,6 +94,9 @@
      diffed without translating. 9.52:1 - the pill text is small and bold, so
      it is held to the text bar rather than the 3:1 non-text one. */
   --color-background-info-subdued: #EFF6FF;
+  /* One step deeper than subdued, and the ground a whole card can take rather
+     than a pill: the outcome card whose snapshot is being viewed. */
+  --color-background-info: #DBEAFE;
   --color-foreground-on-info: #1E3A8A;
   --link: #1D4ED8;
   --link-hover: #1E40AF;

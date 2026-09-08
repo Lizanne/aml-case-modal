@@ -128,9 +128,10 @@ in the same slot `Resync` occupies.
 
 > **Why the same slot:** so the header does not reflow between modes.
 
-The source outcome card takes a persistent **selected** treatment (3px `--primary`
-left edge plus a subtle tint) and its button reads `Viewing`. Only one card is
-selected at a time.
+The source outcome card takes a persistent **selected** treatment — the whole
+card fills with `--color-background-info` (`#DBEAFE`) and its border goes
+transparent — and its button reads `Viewing`. Only one card is selected at a
+time.
 
 > **Why each action stores its own snapshot:** the player keeps playing while the
 > case is open. A reviewer needs to see not just what the agent decided but what

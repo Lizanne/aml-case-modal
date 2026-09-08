@@ -133,17 +133,29 @@ label.
 
 `.card__snap--on` — persistent while that card's snapshot is up.
 
+Sits on a card filled with `--color-background-info` (`#DBEAFE`), and its own
+12% primary tint composites over that.
+
 | State | Background | Label | Border | Layer | Contrast |
 |---|---|---|---|---|---|
-| Rest | `#D1E3F5` | `#175FA8` | 1px `#1A73C9` | — | 4.94 |
-| Hover | `#CADEF3` | `#175FA8` | 1px `#1A73C9` | primary @ 0.04 | 4.72 |
-| Pressed | `#C6DCF2` | `#175FA8` | 1px `#1A73C9` | primary @ 0.06 | 4.61 |
-| Focus | `#C6DCF2` | `#175FA8` | 1px `#1A73C9` | primary @ 0.06 | 4.61 |
+| Rest | `#C4DCF8` | `#1E3A8A` | 1px `#1A73C9` (3.43) | — | 7.35 |
+| Hover | `#BDD8F6` | `#1E3A8A` | 1px `#1A73C9` (3.29) | primary @ 0.04 | 7.04 |
+| Pressed | `#BAD5F5` | `#1E3A8A` | 1px `#1A73C9` (3.22) | primary @ 0.06 | 6.88 |
+| Focus | `#BAD5F5` | `#1E3A8A` | 1px `#1A73C9` (3.22) | primary @ 0.06 | 6.88 |
 
 > **Why the layer is primary and not black.** On a button already carrying a
-> blue tint, a black layer greys it down until `--primary-ink` lands at
-> **3.78 : 1**. A primary layer deepens the same hue instead, and the lower
-> pressed opacity keeps the ground light enough for the label to clear 4.5.
+> blue tint, a black layer greys it down instead of deepening it. A primary
+> layer stays in the same hue.
+
+> **Why the label is `--color-foreground-on-info` and not `--primary-ink`.**
+> The card underneath is `--color-background-info`, and this button's tint sits
+> on top of it, so the ground is darker than it was on the old `--primary-bg`
+> card. `--primary-ink` measured **4.41 hovered and 4.31 pressed** there —
+> under AA. `foreground-on-info` is the token that pairs with this background
+> by name, and it clears AA in every state with room to spare.
+
+> The 1px border is non-text, so it is held to 3:1, not 4.5. It clears that in
+> every state but with little margin — 3.22 at its tightest.
 
 ---
 

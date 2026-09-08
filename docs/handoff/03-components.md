@@ -211,10 +211,13 @@ and **done** (filled success, tick).
 > it to find twice.
 
 Three variants: standard, decision (green fill), selected (viewing its
-snapshot — 3px `--primary` left edge plus a tint, button reads `Viewing`).
+snapshot — the whole card takes `--color-background-info` `#DBEAFE`, its border
+goes transparent, and the button reads `Viewing`).
 
-> **Why the decision card keeps its green while selected:** fill is identity and
-> the left edge is selection.
+> **Why the border goes transparent rather than being removed:** the card is
+> `border-box` with 16px of padding, so dropping the border outright would hand
+> its content 2px more width than every unselected card beside it, and the text
+> would shift as selection moved down the stream.
 
 **Immutable once saved** — no edit or delete affordance anywhere on the card.
 
