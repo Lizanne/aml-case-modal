@@ -77,11 +77,13 @@ for (const state of ['03', '07']) {
 
 console.log('\nThe severity event in the stream reads AML -> EDD, escalation');
 await go('03');
-const eventPills = await page.locator('event-row ui-pill').allInnerTexts();
+// :has(ui-pill) throughout - a manual case now opens with a creation event,
+// which is also an event-row. Pills are what mark the severity one.
+const eventPills = await page.locator('event-row:has(ui-pill) ui-pill').allInnerTexts();
 check('event pills are AML then EDD', eventPills.map((t) => t.trim()).join('->') === 'AML->EDD',
   eventPills.join('->'));
 check('the row calls it an escalation',
-  (await page.locator('event-row .row').innerText()).includes('Severity escalation'));
+  (await page.locator('event-row:has(ui-pill) .row').innerText()).includes('Severity escalation'));
 /**
  * The direction arrow is gone. PROTOTYPE.md gave it a warn tone on escalation;
  * the label and the two pills carry the direction now, so there is nothing
@@ -89,7 +91,7 @@ check('the row calls it an escalation',
  * the between-pills arrow.
  */
 check('no direction arrow, only the between-pills one', await page.evaluate(() => {
-  const icons = [...document.querySelectorAll('event-row mat-icon')].map((i) => i.textContent.trim());
+  const icons = [...document.querySelectorAll('event-row:has(ui-pill) mat-icon')].map((i) => i.textContent.trim());
   return icons.length === 1 && icons[0] === 'arrow_forward';
 }));
 // Primary ink, per 22319:5225 - the label is the row's heading now that the
@@ -97,7 +99,7 @@ check('no direction arrow, only the between-pills one', await page.evaluate(() =
 // The pills are the only coloured parts now.
 check('the label is primary ink',
   (await page.evaluate(() =>
-    getComputedStyle(document.querySelector('event-row .row__label')).color)) === (await token('--ink')));
+    getComputedStyle(document.querySelector('event-row:has(ui-pill) .row__label')).color)) === (await token('--ink')));
 
 console.log('\nThe severity dialog: AML -> EDD with an Escalation badge');
 await go('01'); // pre-escalation, so current severity is AML
@@ -135,7 +137,7 @@ await page.waitForTimeout(400);
 check('header pill is now EDD', (await headerPill().innerText()).trim() === 'EDD');
 check('header pill is now the EDD tone', (await rgb(await headerPill().elementHandle())) === EDD_TONE);
 check('a new event row says escalation',
-  (await page.locator('event-row .row').last().innerText()).includes('Severity escalation'));
+  (await page.locator('event-row:has(ui-pill) .row').last().innerText()).includes('Severity escalation'));
 
 /**
  * The event row's shape: two lines, no box, and a first line that cannot give.
@@ -147,7 +149,7 @@ check('a new event row says escalation',
  */
 console.log('\nSeverity event row: two lines, fixed first line');
 const evShape = async () => page.evaluate(() => {
-  const e = document.querySelector('event-row');
+  const e = document.querySelector('event-row:has(ui-pill)');
   const row = e.querySelector('.row');
   const head = e.querySelector('.row__head');
   const meta = e.querySelector('.row__meta');
@@ -173,11 +175,11 @@ const evShape = async () => page.evaluate(() => {
 });
 const LONG = 'Escalated after the adverse media review surfaced two further matches that could not be excluded on name alone, and the source-of-funds documentation supplied by the player does not reconcile with the deposit pattern observed over the last ninety days.';
 const setReason = (t) => page.evaluate((text) => {
-  const r = document.querySelector('event-row .row__reason');
+  const r = document.querySelector('event-row:has(ui-pill) .row__reason');
   r.textContent = text;
   r.setAttribute('title', text);
 }, t);
-const SHORT = await page.evaluate(() => document.querySelector('event-row .row__reason').textContent);
+const SHORT = await page.evaluate(() => document.querySelector('event-row:has(ui-pill) .row__reason').textContent);
 // 900 puts the panel at roughly the width one half of the dual layout gets, so
 // this is the narrow stream and not a second run at the same size.
 for (const [label, w] of [['1440', 1440], ['narrow panel', 900]]) {
@@ -298,14 +300,15 @@ await page.waitForTimeout(400);
 check('one file accepted, three rejected',
   (await page.locator('record-form .file').count()) === 1 &&
     (await page.locator('record-form .error').count()) === 3);
-// Rule 5 is images only now. The type errors must say so, and the oversize
-// image must fail on SIZE rather than being swept up by the type rule.
+// The type errors must name the rule in the words the form uses - "JPG or PNG
+// only" - and the oversize image must fail on SIZE rather than being swept up
+// by the type rule.
 const uploadErrors = await page.locator('record-form .error').allInnerTexts();
-check('a PDF is refused on type, in the new words',
-  uploadErrors.some((t) => /report\.pdf/.test(t) && /Images only/i.test(t)),
+check('a PDF is refused on type, in the words the form uses',
+  uploadErrors.some((t) => /report\.pdf/.test(t) && /JPG or PNG only/i.test(t)),
   uploadErrors.join(' | '));
 check('and so is anything else that is not an image',
-  uploadErrors.some((t) => /notes\.docx/.test(t) && /Images only/i.test(t)),
+  uploadErrors.some((t) => /notes\.docx/.test(t) && /JPG or PNG only/i.test(t)),
   uploadErrors.join(' | '));
 check('an oversize IMAGE still fails on size, not on type',
   uploadErrors.some((t) => /oversize\.png/.test(t) && /under/i.test(t)),
