@@ -7,13 +7,11 @@ import { join } from 'node:path';
 /**
  * Rule 8 (severity ranking) and rule 5 (draft attachments).
  *
- * The ranking is NOT the intuitive one: mock-case.json ranks EDD above AML, so
+ * The ranking is NOT the intuitive one: mock-cases.json ranks EDD above AML, so
  * AML -> EDD is an escalation. Every check here is written against that, so a
  * hardcoded direction anywhere fails loudly.
  */
-const FIXTURE = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../src/app/core/mock-case.json', import.meta.url)), 'utf8'),
-);
+const { FIXTURE } = await import('./_fixture.mjs');
 let SEV_TOKEN;
 
 const BASE = process.env.BASE ?? 'http://localhost:4200';

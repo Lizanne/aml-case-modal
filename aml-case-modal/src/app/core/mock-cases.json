@@ -1,0 +1,1372 @@
+{
+  "_note": "Single source for every case. Shared config is not duplicated per case; per-case history lives on the case. The modal loads one of these by id.",
+  "agents": [
+    {
+      "id": "ak",
+      "name": "A. Kowalski",
+      "isMe": true
+    },
+    {
+      "id": "mt",
+      "name": "M. Torres",
+      "isMe": false
+    }
+  ],
+  "requiredActions": [
+    "open-source-searches",
+    "player-contact"
+  ],
+  "actionTypes": [
+    {
+      "id": "player-contact",
+      "label": "Contact player",
+      "hint": "Log another contact with the player"
+    },
+    {
+      "id": "open-source-searches",
+      "label": "Open source searches",
+      "hint": "Record an additional search"
+    },
+    {
+      "id": "note",
+      "label": "Add a note",
+      "hint": "Free note with optional attachments"
+    }
+  ],
+  "workTypes": [
+    {
+      "id": "open-source-searches",
+      "label": "Open source searches"
+    },
+    {
+      "id": "player-contact",
+      "label": "Contact player"
+    },
+    {
+      "id": "sof-request",
+      "label": "SoF request"
+    },
+    {
+      "id": "edd-review",
+      "label": "EDD review"
+    },
+    {
+      "id": "sanctions-screen",
+      "label": "Sanctions screen"
+    },
+    {
+      "id": "pep-check",
+      "label": "PEP check"
+    }
+  ],
+  "severityRanking": {
+    "comment": "Confirmed by compliance 12 Aug: rank high to low. Any direction of change is allowed; badge derives from this order.",
+    "order": [
+      "COMPLIANCE",
+      "EDD",
+      "AML"
+    ]
+  },
+  "attachmentErrorsExample": [
+    {
+      "file": "notes.docx",
+      "reason": "type",
+      "message": "notes.docx was not added. JPG or PNG only."
+    },
+    {
+      "file": "statement-screenshot.png",
+      "reason": "size",
+      "message": "statement-screenshot.png was not added. Files must be under 10 MB."
+    }
+  ],
+  "cases": [
+    {
+      "id": "4821",
+      "player": {
+        "id": "208023002531575",
+        "name": "Howard Williams",
+        "status": "PLAYER_VERIFY"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAt": "2026-08-04T09:12:00Z",
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 610
+      },
+      "linkedAccounts": 3,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "sof-request",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "Referral",
+        "by": "A. Kowalski",
+        "at": "2026-08-04T09:12:00Z",
+        "description": "Raised from a payments referral: three card deposits from an account name that does not match the registered player, inside forty minutes, following a dormant period of eleven weeks."
+      },
+      "snapshot": {
+        "generatedAt": "2026-08-11T10:32:00Z",
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "t20",
+          "name": "System - Threshold",
+          "detail": "Large deposit while case open. Snapshot resync required before recording outcomes.",
+          "at": "2026-08-11T12:02:00Z",
+          "isNew": true
+        },
+        {
+          "id": "t19",
+          "name": "Manual - EDD",
+          "detail": "Unusual deposit pattern flagged during profile review.",
+          "at": "2026-08-11T10:31:00Z"
+        },
+        {
+          "id": "t18",
+          "name": "HVP withdrawal",
+          "detail": "HVP 50\u00a3 withdrawal request.",
+          "at": "2026-08-11T10:35:00Z"
+        },
+        {
+          "id": "t17",
+          "name": "Declined deposits",
+          "detail": "Player has hit a configured threshold for failed deposits.",
+          "at": "2026-08-04T09:40:00Z"
+        },
+        {
+          "id": "t16",
+          "name": "Player status change",
+          "detail": "From ENABLED to PLAYER_VERIFY",
+          "at": "2026-08-05T11:20:00Z"
+        },
+        {
+          "id": "t15",
+          "name": "Player status change",
+          "detail": "From PLAYER_VERIFY to ENABLED",
+          "at": "2026-08-06T09:05:00Z"
+        },
+        {
+          "id": "t14",
+          "name": "Player status change",
+          "detail": "From ENABLED to PLAYER_VERIFY",
+          "at": "2026-08-07T15:44:00Z"
+        },
+        {
+          "id": "t13",
+          "name": "Player status change",
+          "detail": "From PLAYER_VERIFY to ENABLED",
+          "at": "2026-08-08T10:12:00Z"
+        },
+        {
+          "id": "t12",
+          "name": "Time spent playing",
+          "detail": "360 min consecutively",
+          "at": "2026-08-09T22:00:00Z"
+        },
+        {
+          "id": "t11",
+          "name": "Time spent playing",
+          "detail": "420 min consecutively",
+          "at": "2026-08-10T23:15:00Z"
+        },
+        {
+          "id": "t10",
+          "name": "Time spent playing",
+          "detail": "480 min consecutively",
+          "at": "2025-10-14T21:30:00Z"
+        },
+        {
+          "id": "t09",
+          "name": "HVP withdrawal",
+          "detail": "HVP 120\u00a3 withdrawal request.",
+          "at": "2025-10-02T13:25:00Z"
+        },
+        {
+          "id": "t08",
+          "name": "Declined deposits",
+          "detail": "Player has hit a configured threshold for failed deposits.",
+          "at": "2025-09-21T17:48:00Z"
+        },
+        {
+          "id": "t07",
+          "name": "Time spent playing",
+          "detail": "300 min consecutively",
+          "at": "2025-09-14T20:10:00Z"
+        },
+        {
+          "id": "t06",
+          "name": "Player status change",
+          "detail": "From ENABLED to PLAYER_VERIFY",
+          "at": "2025-09-01T08:55:00Z"
+        },
+        {
+          "id": "t05",
+          "name": "HVP withdrawal",
+          "detail": "HVP 75\u00a3 withdrawal request.",
+          "at": "2025-08-19T12:40:00Z"
+        },
+        {
+          "id": "t04",
+          "name": "Declined deposits",
+          "detail": "Player has hit a configured threshold for failed deposits.",
+          "at": "2025-08-05T16:22:00Z"
+        },
+        {
+          "id": "t03",
+          "name": "Time spent playing",
+          "detail": "330 min consecutively",
+          "at": "2025-07-28T22:35:00Z"
+        },
+        {
+          "id": "t02",
+          "name": "Player status change",
+          "detail": "From PLAYER_VERIFY to ENABLED",
+          "at": "2025-07-10T09:15:00Z"
+        },
+        {
+          "id": "t01",
+          "name": "Manual - EDD",
+          "detail": "Case opened: unusual deposit pattern",
+          "at": "2025-07-01T10:00:00Z"
+        }
+      ],
+      "workflow": [
+        {
+          "kind": "outcome",
+          "id": "a1",
+          "actionType": "open-source-searches",
+          "title": "Open source searches",
+          "actor": "A. Kowalski",
+          "at": "2026-08-11T10:42:00Z",
+          "note": "Adverse media check complete. Two hits reviewed, both false positives relating to a namesake. Full results attached.",
+          "attachments": [
+            {
+              "name": "promo-catch-a-triple-wave.png",
+              "type": "image",
+              "sizeKb": 188
+            }
+          ],
+          "snapshotAt": "2026-08-11T10:42:00Z"
+        },
+        {
+          "kind": "event",
+          "id": "e1",
+          "type": "severity-change",
+          "from": "AML",
+          "to": "EDD",
+          "direction": "escalation",
+          "actor": "A. Kowalski",
+          "at": "2026-08-11T11:03:00Z",
+          "reason": "Open source findings raise the risk profile; enhanced due diligence required."
+        },
+        {
+          "kind": "outcome",
+          "id": "a2",
+          "actionType": "player-contact",
+          "title": "Player contact",
+          "actor": "A. Kowalski",
+          "at": "2026-08-11T12:15:00Z",
+          "note": "Called player on verified number. Confirmed source of funds as property sale, documentation promised within 5 days.",
+          "attachments": [],
+          "snapshotAt": "2026-08-11T12:15:00Z"
+        },
+        {
+          "kind": "outcome",
+          "id": "a3",
+          "actionType": "decision",
+          "title": "Decision - case resolved",
+          "actor": "A. Kowalski",
+          "at": "2026-08-11T12:31:00Z",
+          "note": "Source of funds verified via documentation. No further concerns; monitoring continues under standard rules.",
+          "attachments": [],
+          "snapshotAt": "2026-08-11T12:31:00Z"
+        }
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-04T09:12:00Z",
+          "what": "Case created (AML)",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-04T09:12:00Z",
+          "what": "Trigger added: Manual - EDD",
+          "who": "system"
+        },
+        {
+          "at": "2026-08-11T10:31:00Z",
+          "what": "Case locked",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T10:42:00Z",
+          "what": "Outcome recorded: Open source searches",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T11:03:00Z",
+          "what": "Severity changed AML to EDD (escalation); lock lifted",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T11:05:00Z",
+          "what": "Case locked",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T12:02:00Z",
+          "what": "Trigger added: System - Threshold; snapshot out of sync",
+          "who": "system"
+        },
+        {
+          "at": "2026-08-11T12:06:00Z",
+          "what": "Snapshot resynced",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T12:15:00Z",
+          "what": "Outcome recorded: Player contact",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T12:31:00Z",
+          "what": "Decision submitted; case RESOLVED",
+          "who": "A. Kowalski"
+        }
+      ],
+      "pastCases": [
+        {
+          "caseId": "3310",
+          "status": "RESOLVED",
+          "severity": "COMPLIANCE",
+          "reason": "\u00a330,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
+          "dateCreated": "2025-11-02T10:00:00Z"
+        },
+        {
+          "caseId": "2984",
+          "status": "RESOLVED",
+          "severity": "EDD",
+          "reason": "\u00a330,000 Lifetime Net Loss Checkpoint.",
+          "dateCreated": "2025-06-18T14:30:00Z"
+        }
+      ],
+      "starredCommentaries": [
+        {
+          "at": "2026-05-20T09:40:00Z",
+          "tag": "AML",
+          "text": "Player previously provided SoF documentation for property income.",
+          "who": "M. Torres"
+        },
+        {
+          "at": "2026-02-03T14:12:00Z",
+          "tag": "EDD",
+          "text": "Address verified against utility bill; earlier mismatch was a formatting issue on the payment provider side.",
+          "who": "A. Kowalski"
+        },
+        {
+          "at": "2026-08-11T10:31:00Z",
+          "tag": "AML",
+          "text": "Case 4821 created (EDD). Reason: unusual deposit pattern flagged during profile review.",
+          "who": "System"
+        }
+      ],
+      "scoring": {
+        "pendingWithdrawals": 4200,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4834",
+      "player": {
+        "id": "364533553486397",
+        "name": "Priya Raman",
+        "status": "ACTIVE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 95,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "OGMS",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 95,
+        "description": "Flagged by OGMS on a combination of deposit velocity and an unverified funding source."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 90,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4834-t1",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 95,
+          "isNew": false
+        },
+        {
+          "id": "4834-t2",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 58,
+          "isNew": false
+        },
+        {
+          "id": "4834-t3",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 21,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4839",
+      "player": {
+        "id": "371795795761703",
+        "name": "Tomasz Nowak",
+        "status": "SUSPENDED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 320,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mt",
+          "name": "M. Torres"
+        },
+        "sinceOffsetMinutes": 1460
+      },
+      "linkedAccounts": 7,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "sanctions-screen",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "sof-request",
+          "state": "todo"
+        },
+        {
+          "type": "edd-review",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 315,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4839-t1",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling 24h threshold.",
+          "atOffsetMinutes": 320,
+          "isNew": false
+        },
+        {
+          "id": "4839-t2",
+          "name": "System - Dormancy",
+          "detail": "Activity resumed after an extended dormant period.",
+          "atOffsetMinutes": 283,
+          "isNew": false
+        },
+        {
+          "id": "4839-t3",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 246,
+          "isNew": false
+        },
+        {
+          "id": "4839-t4",
+          "name": "System - Mismatch",
+          "detail": "Payment instrument name does not match the registered player.",
+          "atOffsetMinutes": 209,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 19800,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4842",
+      "player": {
+        "id": "282904872116017",
+        "name": "Grace Okafor",
+        "status": "ACTIVE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 640,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 1,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "Referral",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 640,
+        "description": "Raised from a payments referral after the deposit pattern was escalated by the payments team."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 635,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4842-t1",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 640,
+          "isNew": false
+        },
+        {
+          "id": "4842-t2",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 603,
+          "isNew": false
+        },
+        {
+          "id": "4842-t3",
+          "name": "System - Sanctions",
+          "detail": "Name screened against an updated sanctions list.",
+          "atOffsetMinutes": 566,
+          "isNew": false
+        },
+        {
+          "id": "4842-t4",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 529,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4847",
+      "player": {
+        "id": "368328851344256",
+        "name": "Liam Byrne",
+        "status": "PLAYER_VERIFY"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 800,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 2,
+      "actions": [
+        {
+          "type": "sanctions-screen",
+          "state": "done"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "pep-check",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 795,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4847-t1",
+          "name": "System - Dormancy",
+          "detail": "Activity resumed after an extended dormant period.",
+          "atOffsetMinutes": 800,
+          "isNew": false
+        },
+        {
+          "id": "4847-t2",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling 24h threshold.",
+          "atOffsetMinutes": 763,
+          "isNew": false
+        },
+        {
+          "id": "4847-t3",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 726,
+          "isNew": false
+        },
+        {
+          "id": "4847-t4",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 689,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1650,
+        "amlRisk": "medium",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4851",
+      "player": {
+        "id": "357147217660414",
+        "name": "Elena Petrova",
+        "status": "SUSPENDED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1500,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 240
+      },
+      "linkedAccounts": 12,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "sanctions-screen",
+          "state": "done"
+        },
+        {
+          "type": "pep-check",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "sof-request",
+          "state": "todo"
+        },
+        {
+          "type": "edd-review",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "CCMM",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 1500,
+        "description": "Raised at CCMM review: the account profile no longer matches the declared source of funds."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1495,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4851-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 1500,
+          "isNew": false
+        },
+        {
+          "id": "4851-t2",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 1463,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 34500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": true
+      }
+    },
+    {
+      "id": "4856",
+      "player": {
+        "id": "207042797708071",
+        "name": "Daniel Adeyemi",
+        "status": "ACTIVE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2050,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2045,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4856-t1",
+          "name": "System - Mismatch",
+          "detail": "Payment instrument name does not match the registered player.",
+          "atOffsetMinutes": 2050,
+          "isNew": false
+        },
+        {
+          "id": "4856-t2",
+          "name": "System - Dormancy",
+          "detail": "Activity resumed after an extended dormant period.",
+          "atOffsetMinutes": 2013,
+          "isNew": false
+        },
+        {
+          "id": "4856-t3",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 1976,
+          "isNew": false
+        },
+        {
+          "id": "4856-t4",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 1939,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 750,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4860",
+      "player": {
+        "id": "339741900566509",
+        "name": "Sofia Marchetti",
+        "status": "DORMANT"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 2300,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mt",
+          "name": "M. Torres"
+        },
+        "sinceOffsetMinutes": 3020
+      },
+      "linkedAccounts": 4,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "done"
+        },
+        {
+          "type": "sof-request",
+          "state": "done"
+        },
+        {
+          "type": "edd-review",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "OGMS",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 2300,
+        "description": "Flagged by OGMS on a combination of deposit velocity and an unverified funding source."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2295,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4860-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2300,
+          "isNew": false
+        },
+        {
+          "id": "4860-t2",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 2263,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4863",
+      "player": {
+        "id": "397480660596802",
+        "name": "Marcus Hale",
+        "status": "ACTIVE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2750,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 5,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "sof-request",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2745,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4863-t1",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 2750,
+          "isNew": false
+        },
+        {
+          "id": "4863-t2",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2713,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 11300,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4869",
+      "player": {
+        "id": "337855395750953",
+        "name": "Ana Sousa",
+        "status": "SELF_EXCLUDED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 3100,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 1,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "Referral",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 3100,
+        "description": "Raised from a payments referral after the deposit pattern was escalated by the payments team."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 3095,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4869-t1",
+          "name": "System - Dormancy",
+          "detail": "Activity resumed after an extended dormant period.",
+          "atOffsetMinutes": 3100,
+          "isNew": false
+        },
+        {
+          "id": "4869-t2",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 3063,
+          "isNew": false
+        },
+        {
+          "id": "4869-t3",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling 24h threshold.",
+          "atOffsetMinutes": 3026,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 250,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4872",
+      "player": {
+        "id": "302819652515579",
+        "name": "Viktor Lindqvist",
+        "status": "SUSPENDED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 210,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 9,
+      "actions": [
+        {
+          "type": "sanctions-screen",
+          "state": "done"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "edd-review",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 205,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4872-t1",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 210,
+          "isNew": false
+        },
+        {
+          "id": "4872-t2",
+          "name": "System - Mismatch",
+          "detail": "Payment instrument name does not match the registered player.",
+          "atOffsetMinutes": 173,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 22400,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": true
+      }
+    },
+    {
+      "id": "4875",
+      "player": {
+        "id": "391690127239889",
+        "name": "Fatima Haddad",
+        "status": "PLAYER_VERIFY"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 1720,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 55
+      },
+      "linkedAccounts": 2,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "pep-check",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "sof-request",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "CCMM",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 1720,
+        "description": "Raised at CCMM review: the account profile no longer matches the declared source of funds."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1715,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4875-t1",
+          "name": "System - Sanctions",
+          "detail": "Name screened against an updated sanctions list.",
+          "atOffsetMinutes": 1720,
+          "isNew": false
+        },
+        {
+          "id": "4875-t2",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 1683,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 5900,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4881",
+      "player": {
+        "id": "356388187925799",
+        "name": "Noah Berger",
+        "status": "ACTIVE"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 2600,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mt",
+          "name": "M. Torres"
+        },
+        "sinceOffsetMinutes": 890
+      },
+      "linkedAccounts": 6,
+      "actions": [
+        {
+          "type": "open-source-searches",
+          "state": "done"
+        },
+        {
+          "type": "player-contact",
+          "state": "done"
+        },
+        {
+          "type": "sanctions-screen",
+          "state": "done"
+        },
+        {
+          "type": "pep-check",
+          "state": "done"
+        },
+        {
+          "type": "edd-review",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2595,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4881-t1",
+          "name": "Manual - EDD",
+          "detail": "Raised by an agent during a routine review.",
+          "atOffsetMinutes": 2600,
+          "isNew": false
+        },
+        {
+          "id": "4881-t2",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling 24h threshold.",
+          "atOffsetMinutes": 2563,
+          "isNew": false
+        },
+        {
+          "id": "4881-t3",
+          "name": "System - Dormancy",
+          "detail": "Activity resumed after an extended dormant period.",
+          "atOffsetMinutes": 2526,
+          "isNew": false
+        },
+        {
+          "id": "4881-t4",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2489,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 250,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "4888",
+      "player": {
+        "id": "304524520793114",
+        "name": "Ingrid Halvorsen",
+        "status": "DORMANT"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 4300,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 3,
+      "actions": [
+        {
+          "type": "sof-request",
+          "state": "done"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "player-contact",
+          "state": "todo"
+        }
+      ],
+      "origin": "manual",
+      "creation": {
+        "reason": "OGMS",
+        "by": "A. Kowalski",
+        "atOffsetMinutes": 4300,
+        "description": "Flagged by OGMS on a combination of deposit velocity and an unverified funding source."
+      },
+      "snapshot": {
+        "generatedAtOffsetMinutes": 4295,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "4888-t1",
+          "name": "System - HVP",
+          "detail": "High value payout requested.",
+          "atOffsetMinutes": 4300,
+          "isNew": false
+        },
+        {
+          "id": "4888-t2",
+          "name": "System - Mismatch",
+          "detail": "Payment instrument name does not match the registered player.",
+          "atOffsetMinutes": 4263,
+          "isNew": false
+        },
+        {
+          "id": "4888-t3",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 4226,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    }
+  ]
+}

@@ -4,9 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 // Direction is derived from the fixture's confirmed ranking, never assumed:
 // the order is not the intuitive one and has already been re-confirmed once.
-const ORDER = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../src/app/core/mock-case.json', import.meta.url)), 'utf8'),
-).severityRanking.order; // high to low
+const ORDER = (await import('./_fixture.mjs')).FIXTURE.severityRanking.order; // high to low
 const rank = (s) => ORDER.length - ORDER.indexOf(s);
 const directionOf = (from, to) => (rank(to) > rank(from) ? 'Escalation' : 'De-escalation');
 

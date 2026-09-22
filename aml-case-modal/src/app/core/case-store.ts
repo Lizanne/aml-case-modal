@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-import mockCase from './mock-case.json';
+import { DEFAULT_CASE_ID, SHARED, caseFixture } from './case-fixture';
 import {
   CaseCreatedEvent,
   CaseOrigin,
@@ -65,12 +65,15 @@ const nextId = (prefix: string) => `${prefix}-${++seq}`;
  * event is what tells you where it started, so derive it from there and fall
  * back to `case.severity` for a case that never changed severity.
  */
-const OPENING_SEVERITY: Severity = (() => {
-  const firstChange = (mockCase.workflow as any[]).find(
+function openingSeverityOf(fx: ReturnType<typeof caseFixture>): Severity {
+  const firstChange = (fx.workflow as any[]).find(
     (w) => w.kind === 'event' && w.type === 'severity-change',
   );
-  return (firstChange?.from ?? mockCase.case.severity) as Severity;
-})();
+  return (firstChange?.from ?? fx.case.severity) as Severity;
+}
+
+/** The default case's opening severity. Per-case, use openingSeverityOf(). */
+const OPENING_SEVERITY: Severity = openingSeverityOf(caseFixture());
 
 const nowIso = () => new Date().toISOString();
 
@@ -152,26 +155,81 @@ function newestFirst(a: { at: string }, b: { at: string }): number {
   return Date.parse(b.at) - Date.parse(a.at);
 }
 
+/** The trigger the case opened on, for the seeded Timeline entry. */
+function oldestTriggerName(fx: ReturnType<typeof caseFixture>): string {
+  const first = [...(fx.triggers as { name: string; at: string }[])].sort(
+    (a, b) => Date.parse(a.at) - Date.parse(b.at),
+  )[0];
+  return first?.name ?? 'Manual - EDD';
+}
+
 @Injectable({ providedIn: 'root' })
 export class CaseStore {
+  /**
+   * The case this store is showing, projected from the shared collection.
+   *
+   * Declared FIRST because the fields below read it during construction, and
+   * class fields initialise in declaration order.
+   *
+   * One store, two views: the table owns the collection and the modal owns one
+   * case out of it. loadCase() is the only way this moves.
+   */
+  private fx = caseFixture();
+
+  /** Which case the modal is showing. */
+  readonly loadedCaseId = signal<string>(DEFAULT_CASE_ID);
+
+  /**
+   * Point the modal at another case from the collection.
+   *
+   * Re-projects the fixture and replays reset(), so every signal below is
+   * re-seeded from the new case rather than patched field by field - the same
+   * path the dev switcher already uses, which is what keeps this honest.
+   */
+  loadCase(id: string): void {
+    this.fx = caseFixture(id);
+    this.loadedCaseId.set(id);
+
+    // Identity first: reset() reads origin and createdAt when it builds the
+    // creation event and the seeded Timeline, so those must already be the new
+    // case's or it would seed the previous one's.
+    this.player.set(this.fx.player as Player);
+    this.caseId.set(this.fx.case.id);
+    this.createdAt.set(this.fx.case.createdAt);
+    this.caseOrigin.set((this.fx.case.origin as CaseOrigin) ?? 'system');
+    this.pastCases.set(this.fx.pastCases as PastCase[]);
+    this.starred.set(this.fx.starredCommentaries as StarredCommentary[]);
+
+    this.reset();
+
+    // Then the state the case is actually IN. reset() lands every case on the
+    // base scenario - open, unlocked, opening severity - which is right for the
+    // dev switcher and wrong for a case picked off the table.
+    this.status.set(this.fx.case.status as CaseStatus);
+    this.severity.set(this.fx.case.severity as Severity);
+    this.lockState.set(this.fx.case.lock.state as LockState);
+    this.lockOwner.set((this.fx.case.lock.owner as Agent | null) ?? null);
+    this.lockedSince.set(this.fx.case.lock.since);
+  }
+
   // ---------------------------------------------------------------- reference data
-  readonly agents = signal<Agent[]>(mockCase.agents as Agent[]);
-  readonly actionTypes = signal<ActionTypeDef[]>(mockCase.actionTypes as ActionTypeDef[]);
-  readonly pastCases = signal<PastCase[]>(mockCase.pastCases as PastCase[]);
+  readonly agents = signal<Agent[]>(SHARED.agents as Agent[]);
+  readonly actionTypes = signal<ActionTypeDef[]>(SHARED.actionTypes as ActionTypeDef[]);
+  readonly pastCases = signal<PastCase[]>(this.fx.pastCases as PastCase[]);
   readonly starred = signal<StarredCommentary[]>(
-    mockCase.starredCommentaries as StarredCommentary[],
+    this.fx.starredCommentaries as StarredCommentary[],
   );
 
   // ---------------------------------------------------------------- case state
-  readonly player = signal<Player>(mockCase.player as Player);
-  readonly caseId = signal<string>(mockCase.case.id);
-  readonly createdAt = signal<string>(mockCase.case.createdAt);
+  readonly player = signal<Player>(this.fx.player as Player);
+  readonly caseId = signal<string>(this.fx.case.id);
+  readonly createdAt = signal<string>(this.fx.case.createdAt);
   /**
    * Manual or system. Only a manual case carries a motivation, so this is what
    * decides whether the stream opens with a creation event at all.
    */
   readonly caseOrigin = signal<CaseOrigin>(
-    ((mockCase.case as any).origin as CaseOrigin) ?? 'system',
+    ((this.fx.case as any).origin as CaseOrigin) ?? 'system',
   );
   readonly status = signal<CaseStatus>('OPEN');
   /** Rule 8. Always derived from the ranking, never from a hardcoded direction. */
@@ -184,7 +242,7 @@ export class CaseStore {
   readonly lockedSince = signal<string | null>(null);
 
   // Rule 11.
-  readonly snapshotGeneratedAt = signal<string>(mockCase.case.snapshot.generatedAt);
+  readonly snapshotGeneratedAt = signal<string>(this.fx.case.snapshot.generatedAt);
   readonly snapshotOutOfSync = signal<boolean>(false);
 
   readonly triggers = signal<Trigger[]>([]);
@@ -395,27 +453,37 @@ export class CaseStore {
   reset(): void {
     seq = 0;
     this.status.set('OPEN');
-    this.severity.set(OPENING_SEVERITY);
+    this.severity.set(openingSeverityOf(this.fx));
     this.lockState.set('unlocked');
     this.lockOwner.set(null);
     this.lockedSince.set(null);
-    this.snapshotGeneratedAt.set(mockCase.case.snapshot.generatedAt);
+    this.snapshotGeneratedAt.set(this.fx.case.snapshot.generatedAt);
     this.snapshotOutOfSync.set(false);
     // The fixture ships the rule-11 arrival inline; the base case predates it.
-    this.triggers.set((mockCase.triggers as Trigger[]).filter((t) => !t.isNew));
+    this.triggers.set((this.fx.triggers as Trigger[]).filter((t) => !t.isNew));
     // Not empty: a manual case opens with its own creation event, which is the
     // oldest thing that can be in an oldest-first stream.
     this.stream.set(this.withCreation([]));
     const created = this.creationEvent();
     this.timeline.set([
       {
-        at: mockCase.case.createdAt,
+        at: this.fx.case.createdAt,
         what: created
           ? `Manual case created - ${created.reason}`
-          : `Case created (${OPENING_SEVERITY})`,
+          : // The LOADED case's opening severity, not the default case's: every
+            // case in the collection is openable, and the module constant would
+            // caption all of them with 4821's.
+            `Case created (${openingSeverityOf(this.fx)})`,
         who: created ? created.actor : this.me().name,
       },
-      { at: mockCase.case.createdAt, what: 'Trigger added: Manual - EDD', who: 'system' },
+      // The case's OWN oldest trigger, not a copy of 4821's: every case in the
+      // collection is openable now, and a hardcoded name would caption all of
+      // them with one case's first trigger.
+      {
+        at: this.fx.case.createdAt,
+        what: `Trigger added: ${oldestTriggerName(this.fx)}`,
+        who: 'system',
+      },
     ]);
     this.draft.set(null);
     this.openDialog.set(null);
@@ -690,7 +758,7 @@ export class CaseStore {
 
   /** Dev button. Inserts a system trigger, marks the snapshot out of sync. */
   simulateNewTrigger(): void {
-    const fixture = (mockCase.triggers as Trigger[]).find((t) => t.isNew);
+    const fixture = (this.fx.triggers as Trigger[]).find((t) => t.isNew);
     const already = this.triggers().some((t) => t.id === fixture?.id);
     const trigger: Trigger =
       fixture && !already
@@ -817,7 +885,7 @@ export class CaseStore {
    */
   creationEvent(): CaseCreatedEvent | null {
     if (this.caseOrigin() !== 'manual') return null;
-    const c = (mockCase.case as any).creation;
+    const c = (this.fx.case as any).creation;
     if (!c) return null;
     return {
       kind: 'event',
@@ -842,7 +910,7 @@ export class CaseStore {
 
   /** @internal dev-only - the fixture history, replayed as saved stream items. */
   fixtureStream(upTo: 'first' | 'required' | 'all'): StreamItem[] {
-    const raw = mockCase.workflow as any[];
+    const raw = this.fx.workflow as any[];
     const items: StreamItem[] = raw.map((r) => {
       if (r.kind === 'outcome') {
         return {
@@ -893,17 +961,17 @@ export class CaseStore {
 
   /** @internal dev-only */
   fixtureTimeline(): TimelineEntry[] {
-    return mockCase.timeline as TimelineEntry[];
+    return this.fx.timeline as TimelineEntry[];
   }
 
   /** @internal dev-only */
   allFixtureTriggers(): Trigger[] {
-    return mockCase.triggers as Trigger[];
+    return this.fx.triggers as Trigger[];
   }
 
   /** @internal dev-only - the two canned attachment errors from the fixture. */
   fixtureAttachmentErrors(): AttachmentError[] {
-    return (mockCase.attachmentErrorsExample as any[]).map((e) => ({
+    return (SHARED.attachmentErrorsExample as any[]).map((e) => ({
       id: nextId('err'),
       file: e.file,
       reason: e.reason as 'type' | 'size',

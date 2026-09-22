@@ -3,7 +3,7 @@
  *
  * Business rule references (rule N) map to PROTOTYPE.md "Business rules".
  */
-import mockCase from './mock-case.json';
+import mockCases from './mock-cases.json';
 
 /** Rule 2. IDLE appears in the spec but is undefined there (open question 1) - not implemented. */
 export type CaseStatus = 'OPEN' | 'RESOLVED';
@@ -421,7 +421,7 @@ export function isCaseCreated(item: StreamItem): item is CaseCreatedEvent {
 
 /**
  * Severity ordering, most severe first, taken straight from
- * `mock-case.json > severityRanking.order` so the two cannot drift.
+ * `mock-cases.json > severityRanking.order` so the two cannot drift.
  *
  * Confirmed by compliance: high to low is COMPLIANCE, EDD, AML - so lowest to
  * highest is AML, EDD, COMPLIANCE. This is NOT alphabetical and NOT the order
@@ -431,7 +431,7 @@ export function isCaseCreated(item: StreamItem): item is CaseCreatedEvent {
  * Any direction of change is allowed. Nothing gates which severity you may move
  * to; the ranking only decides what the change is CALLED.
  */
-export const SEVERITY_ORDER = mockCase.severityRanking.order as readonly Severity[];
+export const SEVERITY_ORDER = mockCases.severityRanking.order as readonly Severity[];
 
 /** Higher number = more severe. */
 export const SEVERITY_RANK: Record<Severity, number> = SEVERITY_ORDER.reduce(
@@ -449,3 +449,240 @@ export function severityDirection(
 ): 'escalation' | 'de-escalation' {
   return SEVERITY_RANK[to] > SEVERITY_RANK[from] ? 'escalation' : 'de-escalation';
 }
+
+/* ==========================================================================
+ * Global AML Cases table - PROTOTYPE-TABLE.md
+ *
+ * The table and the modal are two views of one store, so everything the table
+ * needs lives here beside the modal's own types rather than in a parallel set.
+ * ========================================================================== */
+
+/** Which queue a case sits in. Decided by severity alone, rule 1. */
+export type CaseQueue = 'active' | 'compliance';
+
+/**
+ * Severity decides the queue, and nothing else does.
+ *
+ * Derived, never stored: a case that escalates must leave one tab and join the
+ * other in the same tick, and a stored queue field is a second place for that
+ * to be wrong.
+ */
+export function queueFor(severity: Severity): CaseQueue {
+  return severity === 'COMPLIANCE' ? 'compliance' : 'active';
+}
+
+export type PriorityBand = 'low' | 'medium' | 'high' | 'urgent';
+
+/**
+ * The tiers from the scoring matrix. Higher is more urgent, and the band and
+ * its label are stated once here so they cannot disagree.
+ *
+ * These replaced placeholder thresholds (75/50/25/0) invented before the
+ * document existed. Open question 19 is closed.
+ */
+export const PRIORITY_BANDS: readonly { band: PriorityBand; min: number; label: string }[] = [
+  { band: 'urgent', min: 150, label: 'Urgent' },
+  { band: 'high', min: 60, label: 'High' },
+  { band: 'medium', min: 30, label: 'Medium' },
+  // The matrix floor is 10, not 0: AML risk is scored on every case and its
+  // lowest tier is 10, so nothing can total less. 0 here rather than 10 so the
+  // lookup below can never miss - a band that returns undefined for an
+  // impossible score is still a crash waiting for a data change.
+  { band: 'low', min: 0, label: 'Low' },
+];
+
+/**
+ * Derived from the score, never read from the fixture.
+ *
+ * The fixture used to carry a band too, and a stored band is a label free to
+ * contradict the number printed next to it - the same reason severity
+ * direction is computed from SEVERITY_RANK rather than stored.
+ */
+export function priorityBand(score: number): PriorityBand {
+  return PRIORITY_BANDS.find((b) => score >= b.min)!.band;
+}
+
+export function priorityLabel(score: number): string {
+  return PRIORITY_BANDS.find((b) => score >= b.min)!.label;
+}
+
+/* ---- the scoring matrix -------------------------------------------------
+ *
+ * "EDD overhaul ticket priority scoring". Four categories, each a fixed tier
+ * rather than a curve, totalling 10 to 200.
+ *
+ * The four INPUTS are what the fixture stores. Points, breakdown and total are
+ * all computed here, so a case cannot carry a score that its own factors do
+ * not add up to - which the previous hand-authored breakdowns could, and the
+ * verifier had to check for.
+ *
+ * Two deliberate departures from the source document, both recorded in
+ * PROTOTYPE-TABLE.md:
+ *
+ *  1. High runs to 149, not 99. As written the tiers leave 100-149 in no band
+ *     at all, while Low/Medium and Medium/High are contiguous - and 100 is
+ *     trivially reachable (a £2,000+ withdrawal on a high-risk player). The 99
+ *     reads as a leftover from an earlier 100-point scale.
+ *  2. SG vulnerabilities and player complaint are marked in the document as
+ *     fields that do not exist yet. They are modelled here as booleans so the
+ *     matrix can be shown whole; they are prototype data, not live data.
+ */
+export type AmlRisk = 'low' | 'medium' | 'high';
+
+/** What a case stores. Everything else about priority is derived from this. */
+export interface CaseScoring {
+  /** Pending withdrawals, in whole pounds. */
+  pendingWithdrawals: number;
+  amlRisk: AmlRisk;
+  sgVulnerability: boolean;
+  complaint: boolean;
+}
+
+/** Descending, so the first tier a value clears is its tier. */
+export const WITHDRAWAL_TIERS: readonly { min: number; points: number }[] = [
+  { min: 2000, points: 50 },
+  { min: 1000, points: 30 },
+  { min: 500, points: 20 },
+  { min: 100, points: 10 },
+  { min: 1, points: 5 },
+  { min: 0, points: 0 },
+];
+
+export const AML_RISK_POINTS: Readonly<Record<AmlRisk, number>> = {
+  low: 10,
+  medium: 25,
+  high: 50,
+};
+
+export const SG_VULNERABILITY_POINTS = 50;
+export const COMPLAINT_POINTS = 50;
+
+/** The lowest and highest a case can score, per the matrix. */
+export const PRIORITY_MIN = 10;
+export const PRIORITY_MAX = 200;
+
+export function withdrawalPoints(amount: number): number {
+  return WITHDRAWAL_TIERS.find((t) => amount >= t.min)!.points;
+}
+
+const GBP = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+  maximumFractionDigits: 0,
+});
+
+const AML_RISK_LABEL: Readonly<Record<AmlRisk, string>> = {
+  low: 'Low risk',
+  medium: 'Medium risk',
+  high: 'High risk',
+};
+
+/**
+ * The score, the band and the four breakdown lines, from the four inputs.
+ *
+ * Always four lines, in the matrix's own order, including the ones worth
+ * nothing: "SG vulnerabilities - None - 0" is information. Dropping the zeroes
+ * would leave the reader unable to tell a factor that was checked and cleared
+ * from one that was never assessed.
+ */
+export function priorityOf(s: CaseScoring): Priority {
+  const breakdown: PriorityLine[] = [
+    {
+      label: 'Withdrawals pending',
+      amount: GBP.format(s.pendingWithdrawals),
+      points: withdrawalPoints(s.pendingWithdrawals),
+    },
+    {
+      label: 'AML risk level',
+      amount: AML_RISK_LABEL[s.amlRisk],
+      points: AML_RISK_POINTS[s.amlRisk],
+    },
+    {
+      label: 'SG vulnerabilities',
+      amount: s.sgVulnerability ? 'Detected' : 'None',
+      points: s.sgVulnerability ? SG_VULNERABILITY_POINTS : 0,
+    },
+    {
+      label: 'Player complaint',
+      amount: s.complaint ? 'Yes' : 'No',
+      points: s.complaint ? COMPLAINT_POINTS : 0,
+    },
+  ];
+  const score = breakdown.reduce((n, line) => n + line.points, 0);
+  return { score, band: priorityBand(score), breakdown };
+}
+
+/** One line of the priority popover. Always four per case. */
+export interface PriorityLine {
+  label: string;
+  amount: string;
+  points: number;
+}
+
+export interface Priority {
+  score: number;
+  band: PriorityBand;
+  breakdown: PriorityLine[];
+}
+
+/** A Work chip. Nothing in that column is actionable. */
+export type WorkState = 'todo' | 'done';
+
+export interface WorkItem {
+  type: string;
+  state: WorkState;
+}
+
+export interface WorkTypeDef {
+  id: string;
+  label: string;
+}
+
+/**
+ * SLA bands, rule 6 of the table spec. Four bands, one traffic light.
+ *
+ * `breached` is not a fifth colour: it stays red and switches from outline to
+ * solid fill with the time in bold.
+ */
+export type SlaBand = 'fresh' | 'warn' | 'late' | 'breached';
+
+export const SLA_THRESHOLDS_H: readonly { band: SlaBand; underH: number }[] = [
+  { band: 'fresh', underH: 12 },
+  { band: 'warn', underH: 36 },
+  { band: 'late', underH: 48 },
+];
+
+export function slaBand(elapsedMs: number): SlaBand {
+  const hours = elapsedMs / 3_600_000;
+  return SLA_THRESHOLDS_H.find((t) => hours < t.underH)?.band ?? 'breached';
+}
+
+/** `Xh Ym`, the only format the SLA column uses. */
+export function formatElapsed(elapsedMs: number): string {
+  const total = Math.max(0, Math.floor(elapsedMs / 60_000));
+  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
+}
+
+/** A case as the table holds it. The modal reads one of these by id. */
+export interface CaseRecord {
+  id: string;
+  player: Player;
+  status: CaseStatus;
+  severity: Severity;
+  /** Materialised at seed time - see CasesStore on why the fixture stores an offset. */
+  createdAt: string;
+  lock: { state: LockState; owner: Agent | null; since: string | null };
+  /** The four inputs the matrix scores. The only authored priority data. */
+  scoring: CaseScoring;
+  /**
+   * Derived from `scoring` by priorityOf(), at seed time and again whenever a
+   * factor changes. Never authored, never edited in place: a score and the
+   * lines that are supposed to add up to it cannot be allowed to drift apart.
+   */
+  priority: Priority;
+  linkedAccounts: number;
+  actions: WorkItem[];
+}
+
+/** Sort choice, rule 6. Persists for the session. */
+export type TableSort = 'priority' | 'sla';

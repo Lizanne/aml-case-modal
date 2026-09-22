@@ -5,9 +5,7 @@ import { fileURLToPath } from 'node:url';
 // Severity expectations are derived from the fixture, never written out here.
 // The ranking is not the intuitive one (EDD outranks AML), so a literal in a
 // test is just another place the direction can be hardcoded wrong.
-const FIXTURE = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../src/app/core/mock-case.json', import.meta.url)), 'utf8'),
-);
+const { FIXTURE } = await import('./_fixture.mjs');
 const SEV_EVENTS = FIXTURE.workflow.filter((w) => w.kind === 'event' && w.type === 'severity-change');
 const OPENING_SEVERITY = SEV_EVENTS[0]?.from ?? FIXTURE.case.severity;
 const POST_ESCALATION = SEV_EVENTS[SEV_EVENTS.length - 1]?.to ?? FIXTURE.case.severity;
