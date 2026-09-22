@@ -23,7 +23,12 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
  * pill colour or radius now reaches it like everything else. Anything that
  * wants a THIRD size wants a design decision, not another value here.
  *
- * Usage: sm in the widget title rows, md in the case panel header.
+ * An lg step existed briefly for the cases table. The table is on md now, so
+ * it is gone rather than left behind unused - an unused size is the first of
+ * the copies this component was made to end.
+ *
+ * Usage: sm in the widget title rows, md in the case panel header and in every
+ * pill in the cases table.
  *
  * Vertical padding would fight the fixed height, so the height and
  * align-items do the centring instead.
@@ -36,6 +41,8 @@ export type PillTone =
   | 'success'
   | 'warn'
   | 'warn-solid'
+  | 'danger'
+  | 'danger-solid'
   | 'outline'
   | 'dashed';
 
@@ -97,6 +104,23 @@ export type PillTone =
       /* Solid amber, white text - the NEW marker. 6.32:1. */
       :host([data-tone='warn-solid']) {
         background: var(--warn);
+        color: #fff;
+      }
+      /**
+       * The danger pair, added for the cases table's SLA column: there was no
+       * red tone, and the SLA band is the one traffic light in that row. Added
+       * HERE rather than restyled locally, so a red pill is the same red pill
+       * wherever one appears next.
+       *
+       * danger-solid is not a fifth colour - it is the same red, filled, for a
+       * breached SLA.
+       */
+      :host([data-tone='danger']) {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+      :host([data-tone='danger-solid']) {
+        background: var(--danger);
         color: #fff;
       }
       :host([data-tone='outline']) {

@@ -6,6 +6,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { WorkspaceStore } from '../core/workspace-store';
+import { CasesStore } from '../core/cases-store';
+import { NavStore } from '../core/nav-store';
+import {
+  DEFAULT_TABLE_SCENARIO,
+  TABLE_SCENARIOS,
+  applyTableScenario,
+} from './table-scenarios';
 import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
 
 /**
@@ -27,9 +34,9 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
       <span class="dev__tag">Dev</span>
 
       <label class="dev__field">
-        <span class="dev__label">State</span>
+        <span class="dev__label">{{ onCases() ? 'Table state' : 'State' }}</span>
         <select class="dev__select" (change)="select($event)">
-          @for (scenario of scenarios; track scenario.id) {
+          @for (scenario of visibleScenarios(); track scenario.id) {
             <!-- [selected] per option, not [value] on the select: the options are
                  rendered by @for after the select is bound, so [value] loses. -->
             <option [value]="scenario.id" [selected]="scenario.id === current()">
@@ -41,6 +48,9 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
 
       <p class="dev__hint">{{ hint() }}</p>
 
+      <!-- The modal's own controls. Hidden on the table view: they act on the
+           loaded case, and the table is not showing one. -->
+      @if (!onCases()) {
       <div class="dev__actions">
         <button
           mat-stroked-button
@@ -60,6 +70,7 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
           Reset state
         </button>
       </div>
+      }
     </div>
   `,
   styles: [
@@ -186,34 +197,68 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
 export class DevStateSwitcherComponent {
   readonly store = inject(CaseStore);
   readonly ws = inject(WorkspaceStore);
+  readonly cases = inject(CasesStore);
+  readonly nav = inject(NavStore);
   readonly scenarios = SCENARIOS;
 
-  private readonly _current = signal(DEFAULT_SCENARIO);
-  readonly current = this._current.asReadonly();
+  /**
+   * Two groups, never mixed.
+   *
+   * The modal's fourteen keep their ids, order and labels exactly as they
+   * were; the table's T-* states are a separate list that only exists while
+   * ?view=cases is active. Each group also keeps its own URL param, so
+   * switching view cannot leave a state id behind that the other group cannot
+   * resolve.
+   */
+  readonly onCases = computed(() => this.nav.view() === 'cases');
+  readonly visibleScenarios = computed(() =>
+    this.onCases() ? TABLE_SCENARIOS : SCENARIOS,
+  );
 
-  readonly hint = computed(
-    () => SCENARIOS.find((s) => s.id === this._current())?.hint ?? '',
+  private readonly _current = signal(DEFAULT_SCENARIO);
+  private readonly _currentTable = signal(DEFAULT_TABLE_SCENARIO);
+  readonly current = computed(() =>
+    this.onCases() ? this._currentTable() : this._current(),
+  );
+
+  readonly hint = computed(() =>
+    this.onCases()
+      ? (TABLE_SCENARIOS.find((s) => s.id === this._currentTable())?.hint ?? '')
+      : (SCENARIOS.find((s) => s.id === this._current())?.hint ?? ''),
   );
 
   constructor() {
-    const fromUrl = new URLSearchParams(window.location.search).get('state');
-    this._current.set(applyScenario(this.store, this.ws, fromUrl ?? DEFAULT_SCENARIO));
-    this.writeUrl(this._current());
+    const q = new URLSearchParams(window.location.search);
+
+    // The modal's state is applied either way: the table view can be left, and
+    // the modal must be where its own state id says when that happens.
+    this._current.set(applyScenario(this.store, this.ws, q.get('state') ?? DEFAULT_SCENARIO));
+    this.writeUrl('state', this._current());
+
+    if (this.onCases()) {
+      this._currentTable.set(applyTableScenario(this.cases, this.nav, q.get('tstate')));
+      this.writeUrl('tstate', this._currentTable());
+    }
   }
 
   select(event: Event): void {
     const id = (event.target as HTMLSelectElement).value;
-    this._current.set(applyScenario(this.store, this.ws, id));
-    this.writeUrl(id);
+    if (this.onCases()) {
+      this._currentTable.set(applyTableScenario(this.cases, this.nav, id));
+      this.writeUrl('tstate', this._currentTable());
+    } else {
+      this._current.set(applyScenario(this.store, this.ws, id));
+      this.writeUrl('state', id);
+    }
   }
 
   reload(): void {
     this._current.set(applyScenario(this.store, this.ws, this._current()));
   }
 
-  private writeUrl(id: string): void {
+  private writeUrl(param: 'state' | 'tstate', id: string): void {
     const url = new URL(window.location.href);
-    url.searchParams.set('state', id);
+    url.searchParams.set(param, id);
     window.history.replaceState({}, '', url);
   }
 }

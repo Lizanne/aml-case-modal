@@ -21,7 +21,7 @@ import { CaseStore } from '../core/case-store';
       </button>
       <span class="ph__flag" aria-hidden="true">🇬🇧</span>
       <h1 class="ph__title">
-        {{ store.player().name }} #{{ accountNumber }}
+        {{ store.player().name }} #{{ store.player().id }}
         <span class="ph__state">(ENABLED)</span>
       </h1>
 
@@ -126,5 +126,9 @@ import { CaseStore } from '../core/case-store';
 export class PlayerHeaderComponent {
   readonly store = inject(CaseStore);
   /** From the frame. Not in the fixture - it is host-app data, not case data. */
-  readonly accountNumber = '226588376000002';
+  /**
+   * Removed: the account number was a constant, so every player showed one
+   * number. Now that the table can open any player's details, it has to be
+   * the loaded player's own id - which is the 15-digit account number.
+   */
 }

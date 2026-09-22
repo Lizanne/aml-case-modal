@@ -1,10 +1,17 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+
+import { CasesStore } from '../core/cases-store';
+import { CasesTab, NavStore } from '../core/nav-store';
 
 interface NavItem {
   label: string;
   count?: number;
   expandable?: boolean;
+  /** Live count, read from the store on every change rather than seeded. */
+  liveCount?: 'active' | 'compliance';
+  /** Where this item goes. The LHM is the only way into the table. */
+  goto?: CasesTab;
 }
 
 interface NavGroup {
@@ -32,9 +39,20 @@ interface NavGroup {
         <ul class="nav__list">
           @for (item of group.items; track item.label) {
             <li>
-              <button class="nav__item" type="button">
+              <button
+                class="nav__item"
+                type="button"
+                [class.nav__item--on]="item.goto && nav.view() === 'cases' && nav.tab() === item.goto"
+                [attr.aria-current]="
+                  item.goto && nav.view() === 'cases' && nav.tab() === item.goto ? 'page' : null
+                "
+                (click)="item.goto && nav.showCases(item.goto)"
+              >
                 <span class="nav__label">{{ item.label }}</span>
-                @if (item.count !== undefined) {
+                @if (item.liveCount) {
+                  <!-- Derived from the store, never held separately (rule 8). -->
+                  <span class="nav__count">{{ countOf(item.liveCount) }}</span>
+                } @else if (item.count !== undefined) {
                   <span class="nav__count">{{ item.count }}</span>
                 }
                 @if (item.expandable) {
@@ -102,6 +120,11 @@ interface NavGroup {
         outline: 2px solid var(--primary);
         outline-offset: -2px;
       }
+      .nav__item--on {
+        background: var(--primary-bg);
+        color: var(--primary-ink);
+        font-weight: 600;
+      }
       .nav__label {
         flex: 1;
         min-width: 0;
@@ -135,12 +158,23 @@ interface NavGroup {
   ],
 })
 export class SideNavComponent {
+  readonly nav = inject(NavStore);
+  private readonly cases = inject(CasesStore);
+
+  countOf(which: 'active' | 'compliance'): number {
+    return which === 'active' ? this.cases.activeCount() : this.cases.complianceCount();
+  }
+
   readonly groups: NavGroup[] = [
     {
       heading: 'Players',
       items: [
-        { label: 'Alerts', count: 2 },
-        { label: 'Triggered snoozes' },
+        { label: 'SG Alerts', count: 2 },
+        { label: 'SG Snoozes' },
+        // The table's only entry point - player details and the modal do not
+        // link back, so these two are how an agent returns to the queue.
+        { label: 'AML cases', liveCount: 'active', goto: 'active' },
+        { label: 'Compliance AML cases', liveCount: 'compliance', goto: 'compliance' },
         { label: 'Sessions' },
         { label: 'Documents', count: 8 },
         { label: 'Timers' },

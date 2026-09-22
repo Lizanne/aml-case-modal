@@ -24,7 +24,10 @@ import { MinimisedBarComponent } from './components/minimised-bar.component';
 import { SgAlertModalComponent } from './components/sg-alert-modal.component';
 import { AttachmentPreviewStore } from './core/attachment-preview-store';
 import { CaseStore } from './core/case-store';
+import { CasesStore } from './core/cases-store';
 import { MODAL_GAP_PX } from './core/models';
+import { NavStore } from './core/nav-store';
+import { CasesTableComponent } from './components/cases-table.component';
 import { WorkspaceStore } from './core/workspace-store';
 import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
 
@@ -49,6 +52,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     AppTopBarComponent,
     PlayerHeaderComponent,
     SideNavComponent,
+    CasesTableComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -130,6 +134,13 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       </aside>
 
       <div class="shell__main">
+        <!-- Two views, one shell. The top bar and the nav are the Back Office
+             and stay put; only the working area changes. -->
+        @if (nav.view() === 'cases') {
+          <main class="page page--cases" id="workspace">
+            <cases-table />
+          </main>
+        } @else {
         <player-header />
 
         <main class="page" id="workspace">
@@ -180,6 +191,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
             </div>
           }
         </main>
+        }
       </div>
     </div>
 
@@ -206,6 +218,20 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     -->
     @if (store.openDialog() === 'confirm-unlock') {
       <confirm-unlock-dialog />
+    }
+    <!--
+      The same dialog, asked for by a row in the cases table instead of by the
+      widget. Hosted HERE rather than inside cases-table for the reason the
+      block above exists: an overlay owned by the thing that triggers it
+      disappears with it, and the table is not guaranteed to be on screen for
+      the whole life of the dialog.
+
+      Two @ifs rather than one @else if: the (expr; as name) form of @else if
+      is not supported in Angular 17, and the two conditions are exclusive
+      in practice anyway - one is the modal's case, the other a table row.
+    -->
+    @if (cases.pendingForceUnlock()) {
+      <confirm-unlock-dialog [caseId]="cases.pendingForceUnlock()" />
     }
   `,
   styles: [
@@ -423,9 +449,28 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
   readonly ws = inject(WorkspaceStore);
+  readonly nav = inject(NavStore);
   readonly preview = inject(AttachmentPreviewStore);
   /** Only for the force-unlock dialog above - see the template comment. */
   readonly store = inject(CaseStore);
+  readonly cases = inject(CasesStore);
+
+  /**
+   * Rule 4's other half: the deep link the table's Open AML Case button opens.
+   *
+   * NavStore parses ?case= at startup but nothing acted on it, so the link
+   * carried the right id and the modal showed whichever case was loaded
+   * before - the default, always. Loaded HERE, in the root constructor,
+   * because it has to happen before the dev harness applies a scenario:
+   * applyScenario calls reset(), which re-seeds from whatever fixture is
+   * current, so identity has to be right first or the scenario re-seeds the
+   * previous case. Parent constructors run before their template children,
+   * which is what makes this the earliest honest place for it.
+   */
+  constructor() {
+    const deepLinked = this.nav.deepLinkCaseId();
+    if (deepLinked) this.store.loadCase(deepLinked);
+  }
 
   /**
    * Height the docked bars occupy, published as --dock-h so the modals can

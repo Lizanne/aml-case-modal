@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
+import { CasesStore } from '../core/cases-store';
 import { StampPipe } from '../core/format';
 import { DialogShellComponent } from './dialog-shell.component';
 
@@ -86,15 +87,32 @@ import { DialogShellComponent } from './dialog-shell.component';
 })
 export class ConfirmUnlockDialogComponent {
   readonly store = inject(CaseStore);
+  private readonly cases = inject(CasesStore);
+
+  /**
+   * A row in the cases TABLE, rather than the case the modal has open.
+   *
+   * Rule 5 says breaking a lock from a row behaves exactly as from the widget,
+   * and the cheapest way to guarantee "exactly" is for it to be the same
+   * dialog - same heading, same two sentences, same focus on Cancel, same red
+   * confirm. Only the source of the owner and the timestamp differs, and only
+   * when this is set. Left null, every line below behaves as it always has.
+   */
+  @Input() caseId: string | null = null;
 
   /** When the lock was taken. Absolute, not "2h ago": this is the sentence a
    *  decision gets made on, and an absolute stamp cannot be misread as the
    *  age of the case. The relative age is one line above, on the band or the
    *  widget the button was clicked from. */
-  readonly since = computed(() => new StampPipe().transform(this.store.lockedSince()));
+  readonly since = computed(() => {
+    const row = this.caseId ? this.cases.byId(this.caseId) : null;
+    return new StampPipe().transform(row ? row.lock.since : this.store.lockedSince());
+  });
 
   owner(): string {
-    return this.store.lockOwner()?.name ?? 'Another agent';
+    const row = this.caseId ? this.cases.byId(this.caseId) : null;
+    const name = row ? row.lock.owner?.name : this.store.lockOwner()?.name;
+    return name ?? 'Another agent';
   }
 
   /**
@@ -103,10 +121,12 @@ export class ConfirmUnlockDialogComponent {
    * make "get them out of my way" and "start work" one irreversible action.
    */
   confirm(): void {
-    this.store.forceUnlock();
+    if (this.caseId) this.cases.confirmForceUnlock();
+    else this.store.forceUnlock();
   }
 
   close(): void {
-    this.store.openDialog.set(null);
+    if (this.caseId) this.cases.cancelForceUnlock();
+    else this.store.openDialog.set(null);
   }
 }

@@ -448,6 +448,37 @@ summary:focus-visible,
   --mdc-secondary-navigation-tab-container-height: 48px;
 }
 
+/**
+ * ONE tab bar, everywhere.
+ *
+ * These were scoped inside the player info panel until the cases table needed
+ * the same bar. Two copies of a tab style in two feature components is how the
+ * two drift, so they sit here with the header tokens above: whatever uses
+ * mat-tab-group gets the panel's tabs, and there is nothing to keep in sync.
+ *
+ * The original constraint still holds and is why the padding is 10: four tabs
+ * have to fit 420px without the pagination arrows appearing, and those arrows
+ * cost more width than they save.
+ */
+/**
+ * Scoped through the header, and that is load-bearing, not tidiness.
+ *
+ * As a bare `.mat-mdc-tab` these lost to Material's own `.mdc-tab` padding -
+ * same specificity, later in the cascade - and the tabs went back to 24px
+ * sides. Four of them then came to 428px inside a 419px header and the
+ * pagination arrows appeared, which is the exact failure the 10px exists to
+ * prevent. The descendant selector wins it without !important.
+ */
+.mat-mdc-tab-header .mat-mdc-tab .mdc-tab__text-label {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+.mat-mdc-tab-header .mat-mdc-tab {
+  padding: 0 10px;
+  min-width: 0;
+}
+
 /* --------------------------------------------------------------------------
  * Radios select in the primary blue, not the accent.
  *
@@ -518,4 +549,26 @@ button .mat-icon,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Cases table popovers.
+ *
+ * Global, and it has to be: Material builds the menu panel itself, outside the
+ * component's DOM, so it carries no _ngcontent attribute and no scoped rule
+ * can reach it. The content inside it CAN be scoped - that comes from the
+ * component's own template - which is why only the box is here.
+ *
+ * Material's default panel is min 112px and max 280px wide. The priority
+ * breakdown was rendering at 277 - against the cap, with the longest label one
+ * character from wrapping and a longer one clipping outright.
+ * ------------------------------------------------------------------------ */
+.mat-mdc-menu-panel.pop {
+  /* Sizes to its longest line, with a floor and a ceiling. */
+  width: max-content;
+  min-width: 320px;
+  max-width: 400px;
+  /* Nothing is hidden and nothing scrolls: past max-width the label wraps and
+     the panel grows taller, which is what "never truncates" means here. */
+  overflow: visible;
 }

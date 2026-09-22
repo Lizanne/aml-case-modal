@@ -264,17 +264,9 @@ const TAB_LABEL: Record<InfoTab, string> = {
         flex: none;
         border-bottom: 1px solid var(--line);
       }
-      /* Four tabs have to fit 420px without the pagination arrows appearing -
-         those arrows cost more width than they save. */
-      .info__tabs ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
-        font-size: 14px;
-        line-height: 20px;
-        letter-spacing: 0;
-      }
-      .info__tabs ::ng-deep .mat-mdc-tab {
-        padding: 0 10px;
-        min-width: 0;
-      }
+      /* Tab type and padding used to live here. They are in styles.scss now,
+         beside the header tokens: the cases table uses the same tab bar, and a
+         component-scoped copy is exactly how the two would drift apart. */
       .info__body:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: -2px;
