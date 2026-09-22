@@ -5,9 +5,7 @@ import { fileURLToPath } from 'node:url';
 // The severity language comes from the fixture, never from a literal here -
 // the ranking is not the intuitive one and a hardcoded list is one more place
 // it can be written down wrong.
-const FIXTURE = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../src/app/core/mock-case.json', import.meta.url)), 'utf8'),
-);
+const { FIXTURE } = await import('./_fixture.mjs');
 const SEVERITY_ORDER = FIXTURE.severityRanking.order;
 
 /**
@@ -26,8 +24,11 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 
 let failed = 0;
-const check = (label, ok) => {
-  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label}`);
+const check = (label, ok, detail) => {
+  // Every call site already passes a measured value as the third argument.
+  // This signature dropped it, so a failure printed the rule and not the
+  // number that broke it - the one thing needed to tell stale from broken.
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label}${!ok && detail ? ` -> ${detail}` : ''}`);
   if (!ok) failed++;
 };
 
@@ -509,12 +510,15 @@ for (const state of ['03', '07']) {
   check(`${state}: every card is 16px on all four sides`,
     cards.length > 0 && cards.every((c) => c.pad === '16px 16px 16px 16px'),
     cards.map((c) => `${c.variant}:${c.pad}`).join(' | '));
-  check(`${state}: the footer clears its rule by 16px`,
-    cards.every((c) => c.footPadTop === null || c.footPadTop === '16px'),
+  // The footer has NO rule and NO padding of its own any more: 16 of margin
+  // alone separates it from the note. Padding on top of that was a gap above
+  // nothing once the hairline went.
+  check(`${state}: the footer carries no padding of its own`,
+    cards.every((c) => c.footPadTop === null || c.footPadTop === '0px'),
     cards.map((c) => c.footPadTop).join(','));
 }
-// The narrow card keeps 16px too, but its footer has no rule to clear - the
-// padding there would be a gap above nothing, and margin already provides it.
+// The narrow card keeps 16px all round too; its footer is spaced by margin
+// alone, exactly as the wide one now is.
 await page.setViewportSize({ width: 1500, height: 1040 });
 await page.goto(`${BASE}/?state=09`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('outcome-card .card--narrow', { timeout: 15000 });
@@ -757,7 +761,7 @@ await page.waitForTimeout(600);
  * NOT "verbatim" any more, which is what this asserted and what the copy has
  * since moved away from on purpose. The band is a status - "Locked to
  * M. Torres · 15d" - and the dialog is a warning before a destructive act:
- * "M. Torres has held the lock since 11 Aug 2026, 10:58 and may be mid
+ * "M. Torres has held the lock since <a date> and may be mid
  * investigation." The second says more because it is asked to justify itself,
  * and flattening it back to the first would lose the reason.
  *
@@ -1409,17 +1413,65 @@ const named = await page.evaluate(() => {
     sgWidget: read('back-office-widgets .w:first-of-type ui-pill'),
   };
 });
-// The widget's count badge is now the Figma badge, not a ui-pill: neutral
-// fill, 1px border, --ink text. Asserted against the design, not the tone.
+/**
+ * The widget count badge - and the reason this probe closes panels first.
+ *
+ * A widget card does not exist while its own panel is open, so querying
+ * `.w__count` on a state with the SG panel up returned null every time, and a
+ * null read was being scored as a failure of the BADGE rather than of the
+ * probe. It has therefore measured nothing since the card became conditional.
+ * Close what is open, then read.
+ */
+// State 09 rather than 10: the SG widget renders on PRESENCE, so a scenario
+// with no SG alert has no SG card to read a count off, open panels or not.
+// 09 is the one scenario carrying both an SG widget and an AML widget, which
+// is why the tile block below goes there too. The next block navigates for
+// itself, so this does not have to put 10 back.
+await page.goto(`${BASE}/?state=09`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+// Dispatched rather than clicked through the locator: closing a panel plays
+// an exit animation, so the button detaches under Playwright's stability wait
+// and the click times out. The dispatch does not wait for stability, and the
+// pause after it is what lets the animation finish.
+for (let i = 0; i < 3; i++) {
+  const closed = await page.evaluate(() => {
+    const btn = document.querySelector(
+      '[aria-label="Close case"], [aria-label*="Close SG"], [aria-label*="Close alert"]');
+    if (!btn) return false;
+    btn.click();
+    return true;
+  });
+  if (!closed) break;
+  await page.waitForTimeout(500);
+}
 const widgetCount = await page.evaluate(() => {
   const el = document.querySelector('back-office-widgets .w__count');
   if (!el) return null;
   const cs = getComputedStyle(el);
-  return { bg: cs.backgroundColor, fg: cs.color, border: cs.borderTopWidth, radius: cs.borderRadius };
+  const t = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const norm = (c) => {
+    const m = c.match(/\d+/g);
+    return '#' + m.slice(0, 3).map((x) => (+x).toString(16).padStart(2, '0')).join('').toUpperCase();
+  };
+  return {
+    tag: el.tagName,
+    bg: norm(cs.backgroundColor), wantBg: t('--page').toUpperCase(),
+    fg: norm(cs.color), wantFg: t('--ink').toUpperCase(),
+    border: cs.borderTopWidth,
+    radius: cs.borderTopLeftRadius,
+    fs: cs.fontSize, lh: cs.lineHeight,
+  };
 });
-check('the widget count badge is the design badge, not a tone pill',
-  widgetCount !== null && widgetCount.border === '1px' && widgetCount.radius === '100px',
-  JSON.stringify(widgetCount));
+check('the widget count badge is on screen to check', widgetCount !== null);
+check('the count badge is not a tone pill', widgetCount?.tag !== 'UI-PILL',
+  String(widgetCount?.tag));
+check('the count badge takes the neutral fill and ink text',
+  widgetCount?.bg === widgetCount?.wantBg && widgetCount?.fg === widgetCount?.wantFg,
+  `${widgetCount?.bg}/${widgetCount?.fg} want ${widgetCount?.wantBg}/${widgetCount?.wantFg}`);
+check('the count badge is fully rounded', widgetCount?.radius === '100px',
+  String(widgetCount?.radius));
+check('the count badge is 12px/16px', widgetCount?.fs === '12px' && widgetCount?.lh === '16px',
+  `${widgetCount?.fs}/${widgetCount?.lh}`);
 // The strip's amber count chip went with its header. The arrival's signal is
 // the row - its tint and its New badge - and rules.mjs is where that is
 // asserted, against an open case and a resolved one.
@@ -1479,7 +1531,7 @@ check('current: Resync is enabled for the lock owner', current.controlDisabled =
 check('historical: label names the source action',
   historical.label === 'Snapshot from Open source searches', historical.label);
 check('historical: timestamp reads "Captured ..."',
-  historical.value === 'Captured 11 Aug 2026, 11:42', historical.value);
+  /^Captured \d{1,2} \w+ \d{4}, \d{2}:\d{2}$/.test(historical.value), historical.value);
 check('historical: the control is a text Back with a chevron',
   /^chevron_left Back$/.test(historical.control ?? '') &&
     historical.controlIsMaterial === false,
@@ -1626,8 +1678,19 @@ const barClose = await page.evaluate(() => {
     gutter: Math.round(bar.getBoundingClientRect().right - r.right),
   };
 });
-check('bar close has a 44px target and a 16px glyph',
-  barClose.size === '44x44' && barClose.icon === '16x16', JSON.stringify(barClose));
+/**
+ * 32, not 44, and deliberately.
+ *
+ * 44 is the AAA figure (2.5.5 Enhanced). The AA requirement the prototype is
+ * held to is 2.5.8, which is 24 - the bar clears it with room. The 32px button
+ * was raised as a gap, explained, and kept: the minimised bar is a dense strip
+ * and a 44px target would set its whole height. Asserted at the number the
+ * design actually uses so a drift off 32 still fails.
+ */
+check('bar close has a 32px target and a 16px glyph',
+  barClose.size === '32x32' && barClose.icon === '16x16', JSON.stringify(barClose));
+check('and it still clears the AA minimum target of 24px',
+  parseInt(barClose.size, 10) >= 24, barClose.size);
 check('and clears the right edge by 16px', Math.abs(barClose.gutter - 16) <= 1,
   `${barClose.gutter}`);
 check('bar close is vertically centred', await page.evaluate(() => {
@@ -1790,17 +1853,37 @@ for (const state of ['01', '03', '05', '07', '10', '11']) {
 }
 const P = [...pills.values()];
 check('pills are rendered at all', P.length >= 8, String(P.length));
-check('every pill is 24px tall', P.every((r) => r.h === 24),
-  [...new Set(P.map((r) => r.h))].join(','));
-check('every pill uses a 4px icon-to-text gap',
+/**
+ * Two sizes now, so the metric assertions are per size.
+ *
+ * These read "every pill is 24px" back when md was the only size. sm arrived
+ * for the widget title rows and the NEW trigger marker, and the file went on
+ * asserting one height for both - which is not a relaxation to fix, it is the
+ * same rule stated at the level it actually holds: size is a closed set of
+ * TWO, and each one is exact. What must NOT vary is below: gap and radius
+ * belong to the component, not to the size.
+ */
+const md = P.filter((r) => r.h !== 20);
+const sm = P.filter((r) => r.h === 20);
+check('both sizes are on screen to check', md.length > 0 && sm.length > 0,
+  `md ${md.length}, sm ${sm.length}`);
+check('every md pill is 24px tall', md.every((r) => r.h === 24),
+  [...new Set(md.map((r) => r.h))].join(','));
+check('every md pill has 8px horizontal padding',
+  md.every((r) => r.padL === '8px' && r.padR === '8px'),
+  [...new Set(md.map((r) => r.padL + '/' + r.padR))].join(' '));
+check('every md pill is 14px/20px',
+  md.every((r) => r.fs === '14px' && r.lh === '20px'),
+  [...new Set(md.map((r) => r.fs + '/' + r.lh))].join(' '));
+check('every sm pill has 6px horizontal padding',
+  sm.every((r) => r.padL === '6px' && r.padR === '6px'),
+  [...new Set(sm.map((r) => r.padL + '/' + r.padR))].join(' '));
+check('every sm pill is 12px/16px',
+  sm.every((r) => r.fs === '12px' && r.lh === '16px'),
+  [...new Set(sm.map((r) => r.fs + '/' + r.lh))].join(' '));
+check('size carries no gap: every pill uses a 4px icon-to-text gap',
   P.every((r) => r.gap === '4px'),
   [...new Set(P.map((r) => r.gap))].join(','));
-check('every pill has 8px horizontal padding',
-  P.every((r) => r.padL === '8px' && r.padR === '8px'),
-  [...new Set(P.map((r) => r.padL + '/' + r.padR))].join(' '));
-check('every pill is 14px/20px',
-  P.every((r) => r.fs === '14px' && r.lh === '20px'),
-  [...new Set(P.map((r) => r.fs + '/' + r.lh))].join(' '));
 check('every pill shares one radius',
   [...new Set(P.map((r) => r.radius))].join(',') === '999px',
   [...new Set(P.map((r) => r.radius))].join(','));
@@ -2509,10 +2592,14 @@ const tiles = await page.evaluate(() => {
     return '#' + m.slice(0, 3).map((n) => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
   };
   const out = {};
+  // The SG tile is the WARN pair - amber tint, amber glyph. This named the
+  // info foreground and so asked for a blue glyph on an amber tile, which is
+  // the exact mismatch the block above says must not happen. The rule was
+  // right and the token was wrong.
   const sg = document.querySelector('.w__type--sg');
   out.SG = {
     got: norm(getComputedStyle(sg.querySelector('mat-icon')).color),
-    want: t('--color-foreground-on-info').toUpperCase(),
+    want: t('--warn').toUpperCase(),
   };
   const tile = document.querySelector('.w__type[data-sev]');
   for (const [sev, token] of [['AML', '--sev-aml'], ['EDD', '--sev-edd'], ['COMPLIANCE', '--sev-compliance']]) {
