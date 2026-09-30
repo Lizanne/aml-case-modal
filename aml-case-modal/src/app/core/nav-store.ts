@@ -6,6 +6,25 @@ export type AppView = 'player' | 'cases';
 /** Only two tabs carry content; Idle and Archive render disabled. */
 export type CasesTab = 'active' | 'compliance';
 
+/**
+ * What each queue is called, and its one-line description.
+ *
+ * Here rather than in either consumer, because the sidebar entry and the page
+ * heading have to say the same thing: an agent clicks "Compliance AML cases"
+ * and has to land somewhere that agrees it is the Compliance queue. Two
+ * hand-written copies of that word is how they stop agreeing.
+ */
+export const QUEUE_COPY: Readonly<Record<CasesTab, { title: string; sub: string }>> = {
+  active: {
+    title: 'AML cases',
+    sub: 'Open cases across the estate. Pick one, lock it, and open it.',
+  },
+  compliance: {
+    title: 'Compliance AML cases',
+    sub: 'High-sensitivity cases requiring compliance review. Pick one, lock it, and open it.',
+  },
+};
+
 export const CASES_TABS: readonly { id: string; label: string; enabled: boolean }[] = [
   { id: 'active', label: 'Active', enabled: true },
   { id: 'compliance', label: 'Compliance', enabled: true },

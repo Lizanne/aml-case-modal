@@ -680,8 +680,38 @@ export interface CaseRecord {
    * lines that are supposed to add up to it cannot be allowed to drift apart.
    */
   priority: Priority;
+  /**
+   * What the case is about, and how much has happened since.
+   *
+   * Ordered oldest first, so [0] is the INITIATING trigger - the one the case
+   * was opened for. The table shows that one and a count; the rest belong in
+   * the case, not in the queue.
+   */
+  triggers: TriggerRef[];
   linkedAccounts: number;
   actions: WorkItem[];
+}
+
+/**
+ * A trigger as the TABLE needs it: what fired and when.
+ *
+ * Deliberately thinner than the modal's trigger - no detail, no isNew - which
+ * is the difference between the queue and the case. The queue says a case
+ * exists and roughly how loud it is; what each trigger actually said is a
+ * reason to open it.
+ */
+export interface TriggerRef {
+  id: string;
+  name: string;
+  /**
+   * The modal's own trigger copy, carried through unchanged.
+   *
+   * Not a second string written for the table: the strip and the row have to
+   * describe the same event the same way, and the fixture already had this.
+   */
+  detail: string;
+  /** Materialised at seed time, like createdAt. */
+  at: string;
 }
 
 /** Sort choice, rule 6. Persists for the session. */

@@ -85,7 +85,7 @@
       "player": {
         "id": "208023002531575",
         "name": "Howard Williams",
-        "status": "PLAYER_VERIFY"
+        "status": "ENABLED"
       },
       "status": "OPEN",
       "severity": "EDD",
@@ -399,7 +399,7 @@
       "player": {
         "id": "364533553486397",
         "name": "Priya Raman",
-        "status": "ACTIVE"
+        "status": "PLAYER_REGISTERED"
       },
       "status": "OPEN",
       "severity": "AML",
@@ -469,7 +469,7 @@
       "player": {
         "id": "371795795761703",
         "name": "Tomasz Nowak",
-        "status": "SUSPENDED"
+        "status": "GAMSTOP_RESTRICTED"
       },
       "status": "OPEN",
       "severity": "EDD",
@@ -538,6 +538,13 @@
           "detail": "Payment instrument name does not match the registered player.",
           "atOffsetMinutes": 209,
           "isNew": false
+        },
+        {
+          "id": "4839-t5",
+          "name": "System - Mismatch",
+          "detail": "Declared source of funds does not match activity.",
+          "atOffsetMinutes": 53,
+          "isNew": false
         }
       ],
       "workflow": [],
@@ -556,7 +563,7 @@
       "player": {
         "id": "282904872116017",
         "name": "Grace Okafor",
-        "status": "ACTIVE"
+        "status": "PLAYER_DUPLICATE"
       },
       "status": "OPEN",
       "severity": "AML",
@@ -633,7 +640,7 @@
       "player": {
         "id": "368328851344256",
         "name": "Liam Byrne",
-        "status": "PLAYER_VERIFY"
+        "status": "ENABLED"
       },
       "status": "OPEN",
       "severity": "EDD",
@@ -687,13 +694,6 @@
           "detail": "Lifetime net loss checkpoint reached.",
           "atOffsetMinutes": 726,
           "isNew": false
-        },
-        {
-          "id": "4847-t4",
-          "name": "System - HVP",
-          "detail": "High value payout requested.",
-          "atOffsetMinutes": 689,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -701,7 +701,7 @@
       "pastCases": [],
       "starredCommentaries": [],
       "scoring": {
-        "pendingWithdrawals": 1650,
+        "pendingWithdrawals": 600,
         "amlRisk": "medium",
         "sgVulnerability": true,
         "complaint": false
@@ -712,7 +712,7 @@
       "player": {
         "id": "357147217660414",
         "name": "Elena Petrova",
-        "status": "SUSPENDED"
+        "status": "PLAYER_REGISTERED"
       },
       "status": "OPEN",
       "severity": "AML",
@@ -770,13 +770,6 @@
           "detail": "Lifetime net loss checkpoint reached.",
           "atOffsetMinutes": 1500,
           "isNew": false
-        },
-        {
-          "id": "4851-t2",
-          "name": "Manual - EDD",
-          "detail": "Raised by an agent during a routine review.",
-          "atOffsetMinutes": 1463,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -795,7 +788,7 @@
       "player": {
         "id": "207042797708071",
         "name": "Daniel Adeyemi",
-        "status": "ACTIVE"
+        "status": "GAMSTOP_RESTRICTED"
       },
       "status": "OPEN",
       "severity": "AML",
@@ -834,20 +827,6 @@
           "detail": "Activity resumed after an extended dormant period.",
           "atOffsetMinutes": 2013,
           "isNew": false
-        },
-        {
-          "id": "4856-t3",
-          "name": "Manual - EDD",
-          "detail": "Raised by an agent during a routine review.",
-          "atOffsetMinutes": 1976,
-          "isNew": false
-        },
-        {
-          "id": "4856-t4",
-          "name": "System - HVP",
-          "detail": "High value payout requested.",
-          "atOffsetMinutes": 1939,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -866,7 +845,7 @@
       "player": {
         "id": "339741900566509",
         "name": "Sofia Marchetti",
-        "status": "DORMANT"
+        "status": "PLAYER_DUPLICATE"
       },
       "status": "OPEN",
       "severity": "EDD",
@@ -916,13 +895,6 @@
           "detail": "Lifetime net loss checkpoint reached.",
           "atOffsetMinutes": 2300,
           "isNew": false
-        },
-        {
-          "id": "4860-t2",
-          "name": "System - HVP",
-          "detail": "High value payout requested.",
-          "atOffsetMinutes": 2263,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -941,7 +913,7 @@
       "player": {
         "id": "397480660596802",
         "name": "Marcus Hale",
-        "status": "ACTIVE"
+        "status": "ENABLED"
       },
       "status": "OPEN",
       "severity": "AML",
@@ -992,7 +964,7 @@
       "starredCommentaries": [],
       "scoring": {
         "pendingWithdrawals": 11300,
-        "amlRisk": "high",
+        "amlRisk": "low",
         "sgVulnerability": false,
         "complaint": false
       }
@@ -1002,7 +974,7 @@
       "player": {
         "id": "337855395750953",
         "name": "Ana Sousa",
-        "status": "SELF_EXCLUDED"
+        "status": "PLAYER_REGISTERED"
       },
       "status": "OPEN",
       "severity": "EDD",
@@ -1040,20 +1012,6 @@
           "detail": "Activity resumed after an extended dormant period.",
           "atOffsetMinutes": 3100,
           "isNew": false
-        },
-        {
-          "id": "4869-t2",
-          "name": "System - HVP",
-          "detail": "High value payout requested.",
-          "atOffsetMinutes": 3063,
-          "isNew": false
-        },
-        {
-          "id": "4869-t3",
-          "name": "System - Velocity",
-          "detail": "Deposit velocity above the rolling 24h threshold.",
-          "atOffsetMinutes": 3026,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -1061,7 +1019,7 @@
       "pastCases": [],
       "starredCommentaries": [],
       "scoring": {
-        "pendingWithdrawals": 250,
+        "pendingWithdrawals": 45,
         "amlRisk": "medium",
         "sgVulnerability": false,
         "complaint": false
@@ -1072,7 +1030,7 @@
       "player": {
         "id": "302819652515579",
         "name": "Viktor Lindqvist",
-        "status": "SUSPENDED"
+        "status": "GAMSTOP_RESTRICTED"
       },
       "status": "OPEN",
       "severity": "COMPLIANCE",
@@ -1119,6 +1077,27 @@
           "detail": "Payment instrument name does not match the registered player.",
           "atOffsetMinutes": 173,
           "isNew": false
+        },
+        {
+          "id": "4872-t3",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling threshold.",
+          "atOffsetMinutes": 105,
+          "isNew": false
+        },
+        {
+          "id": "4872-t4",
+          "name": "System - Mismatch",
+          "detail": "Declared source of funds does not match activity.",
+          "atOffsetMinutes": 70,
+          "isNew": false
+        },
+        {
+          "id": "4872-t5",
+          "name": "Declined deposits",
+          "detail": "Repeated declined deposit attempts.",
+          "atOffsetMinutes": 34,
+          "isNew": false
         }
       ],
       "workflow": [],
@@ -1137,7 +1116,7 @@
       "player": {
         "id": "391690127239889",
         "name": "Fatima Haddad",
-        "status": "PLAYER_VERIFY"
+        "status": "PLAYER_DUPLICATE"
       },
       "status": "OPEN",
       "severity": "COMPLIANCE",
@@ -1212,7 +1191,7 @@
       "player": {
         "id": "356388187925799",
         "name": "Noah Berger",
-        "status": "ACTIVE"
+        "status": "ENABLED"
       },
       "status": "OPEN",
       "severity": "COMPLIANCE",
@@ -1274,13 +1253,6 @@
           "detail": "Activity resumed after an extended dormant period.",
           "atOffsetMinutes": 2526,
           "isNew": false
-        },
-        {
-          "id": "4881-t4",
-          "name": "System - Threshold",
-          "detail": "Lifetime net loss checkpoint reached.",
-          "atOffsetMinutes": 2489,
-          "isNew": false
         }
       ],
       "workflow": [],
@@ -1299,7 +1271,7 @@
       "player": {
         "id": "304524520793114",
         "name": "Ingrid Halvorsen",
-        "status": "DORMANT"
+        "status": "PLAYER_REGISTERED"
       },
       "status": "OPEN",
       "severity": "COMPLIANCE",
@@ -1340,20 +1312,6 @@
           "name": "System - HVP",
           "detail": "High value payout requested.",
           "atOffsetMinutes": 4300,
-          "isNew": false
-        },
-        {
-          "id": "4888-t2",
-          "name": "System - Mismatch",
-          "detail": "Payment instrument name does not match the registered player.",
-          "atOffsetMinutes": 4263,
-          "isNew": false
-        },
-        {
-          "id": "4888-t3",
-          "name": "System - Threshold",
-          "detail": "Lifetime net loss checkpoint reached.",
-          "atOffsetMinutes": 4226,
           "isNew": false
         }
       ],

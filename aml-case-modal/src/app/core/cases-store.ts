@@ -58,6 +58,28 @@ export class CasesStore {
   /** Sort choice, rule 6. Persists for the session, not beyond it. */
   readonly sort = signal<TableSort>('priority');
 
+  /**
+   * Which way. Descending on load, for both columns: the highest score and the
+   * longest wait are the two things a queue is opened to find.
+   */
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
+
+  /**
+   * Click the active column to flip it; click the other to switch to it.
+   *
+   * Switching resets to descending rather than carrying the previous
+   * direction over - "sort by SLA" means the oldest first, and inheriting
+   * ascending from a priority sort would answer a question nobody asked.
+   */
+  toggleSort(col: TableSort): void {
+    if (this.sort() === col) {
+      this.sortDir.update((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      this.sort.set(col);
+      this.sortDir.set('desc');
+    }
+  }
+
   // ------------------------------------------------------------------ queues
   /** Open cases only. A resolved case leaves both tabs in the same tick, rule 3. */
   private readonly openCases = computed(() => this.cases().filter((c) => c.status === 'OPEN'));
@@ -81,8 +103,15 @@ export class CasesStore {
   private sorted(rows: CaseRecord[]): CaseRecord[] {
     const elapsed = (c: CaseRecord) => this.now() - Date.parse(c.createdAt);
     const bySla = (a: CaseRecord, b: CaseRecord) => elapsed(b) - elapsed(a);
-    return [...rows].sort((a, b) =>
-      this.sort() === 'sla' ? bySla(a, b) : b.priority.score - a.priority.score || bySla(a, b),
+    // The direction flips the WHOLE comparison, tiebreaker included: a list
+    // sorted ascending whose ties still break descending is two orderings.
+    const flip = this.sortDir() === 'asc' ? -1 : 1;
+    return [...rows].sort(
+      (a, b) =>
+        flip *
+        (this.sort() === 'sla'
+          ? bySla(a, b)
+          : b.priority.score - a.priority.score || bySla(a, b)),
     );
   }
 
@@ -268,12 +297,13 @@ function seedCases(): CaseRecord[] {
     const lock = c.lock ?? {};
     const owner = lock.owner ? (agents.find((a) => a.id === lock.owner.id) ?? lock.owner) : null;
     const scoring = c.scoring as CaseScoring;
+    const createdAt: string = c.createdAt ?? iso(c.createdAtOffsetMinutes);
     return {
       id: c.id,
       player: c.player,
       status: c.status,
       severity: c.severity as Severity,
-      createdAt: c.createdAt ?? iso(c.createdAtOffsetMinutes),
+      createdAt,
       lock: {
         state: lock.state as LockState,
         owner,
@@ -284,6 +314,33 @@ function seedCases(): CaseRecord[] {
       // authored priority data, so a score cannot disagree with the lines
       // that are meant to add up to it.
       priority: priorityOf(scoring),
+      /**
+       * THIS case's triggers, oldest first - so [0] is the one it was opened
+       * for and length is how much has happened since.
+       *
+       * Filtered from createdAt, not taken whole. A fixture's trigger array is
+       * the PLAYER's history: case 4821 carries twenty going back to July
+       * 2025 against a case opened in August 2026, so "the oldest trigger"
+       * was one from a year before the case existed, and the count was a year
+       * of unrelated noise. A trigger that predates the case did not initiate
+       * it.
+       *
+       * Sorted here rather than trusted from the fixture: "the initiating one"
+       * is a fact about the timestamps, and a hand-ordered array is free to
+       * disagree with them.
+       *
+       * The MODAL is unaffected - it reads the raw fixture through
+       * caseFixture(), and its strip is the player's history on purpose.
+       */
+      triggers: (c.triggers as any[])
+        .map((t) => ({
+          id: t.id as string,
+          name: t.name as string,
+          detail: t.detail as string,
+          at: t.at ?? iso(t.atOffsetMinutes),
+        }))
+        .filter((t) => Date.parse(t.at) >= Date.parse(createdAt))
+        .sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
       linkedAccounts: c.linkedAccounts,
       actions: c.actions as WorkItem[],
     } satisfies CaseRecord;

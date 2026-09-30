@@ -77,6 +77,21 @@ try {
   check('no case scores outside the matrix range of 10 to 200',
     all.every((c) => c.priority.score >= 10 && c.priority.score <= 200),
     all.map((c) => c.priority.score).sort((a, b) => a - b).join(','));
+  /**
+   * And none of them lands in 100-149.
+   *
+   * The band function COVERS that range - High runs to 149 as the documented
+   * stopgap - but the source document defines no tier for it, so no seeded
+   * case should sit there and invite a reader to take the stopgap for a
+   * decision. A fixture constraint, not a scoring rule: the day the range is
+   * defined, this check goes and the seed is free again.
+   */
+  check('and none sits in the 100-149 range the document leaves undefined',
+    all.every((c) => c.priority.score < 100 || c.priority.score > 149),
+    all.map((c) => c.priority.score).filter((n) => n >= 100 && n <= 149).join(',') || 'none');
+  check('every band floor is represented, so the boundaries are visible',
+    [10, 30, 60, 150].every((floor) => all.some((c) => c.priority.score === floor)),
+    [...new Set(all.map((c) => c.priority.score))].sort((a, b) => a - b).join(','));
   check('no case exceeds eight work items',
     fixture.cases.every((c) => c.actions.length <= 8));
   check('the band always agrees with the score it is derived from',
@@ -152,6 +167,27 @@ try {
     s.activeCases().map((c) => c.id).join() !== (s.sort.set('priority'),
       s.activeCases().map((c) => c.id).join()));
 
+  console.log('\nSort direction, rule 9');
+  s.sort.set('priority');
+  s.sortDir.set('desc');
+  const ids = () => s.activeCases().map((c) => c.id).join(',');
+  const descIds = ids();
+  s.toggleSort('priority');
+  check('clicking the active column flips its direction',
+    s.sortDir() === 'asc' && ids() === descIds.split(',').reverse().join(','),
+    `${s.sortDir()} / ${ids()}`);
+  // The flip covers the tiebreaker too: a list sorted ascending whose ties
+  // still break descending is two orderings, not one.
+  check('and the whole comparison flips, tiebreaker included',
+    s.activeCases().map((c) => c.priority.score)
+      .every((v, i, a) => i === 0 || a[i - 1] <= v));
+  s.toggleSort('sla');
+  check('switching column resets to descending',
+    s.sort() === 'sla' && s.sortDir() === 'desc');
+  s.toggleSort('priority');
+  check('and switching back does too', s.sort() === 'priority' && s.sortDir() === 'desc');
+  s.reseed();
+
   console.log('\nDerived bands, at their boundaries');
   check('11h59m is fresh, 12h is warn',
     s.slaBandOf({ createdAt: new Date(s.now() - (12 * H - 60_000)).toISOString() }) === 'fresh' &&
@@ -204,6 +240,25 @@ try {
     s.reseed();
     return ok;
   })());
+
+  console.log('\nTriggers belong to the CASE, not to the player');
+  check('every case has at least one trigger',
+    all.every((c) => c.triggers.length >= 1),
+    all.map((c) => `${c.id}:${c.triggers.length}`).join(' '));
+  check('none of them predates the case it opened',
+    all.every((c) => c.triggers.every((t) => Date.parse(t.at) >= Date.parse(c.createdAt))),
+    all.filter((c) => c.triggers.some((t) => Date.parse(t.at) < Date.parse(c.createdAt)))
+      .map((c) => c.id).join(',') || 'none');
+  check('they are ordered oldest first, so [0] is the initiating one',
+    all.every((c) => c.triggers.every((t, i) =>
+      i === 0 || Date.parse(c.triggers[i - 1].at) <= Date.parse(t.at))));
+  // The fixture has to show both the bare state and a busy one on first load.
+  check('counts span 1 to 5 across the seeded cases, both extremes present',
+    (() => {
+      const seeded = all.filter((c) => c.id !== '4821').map((c) => c.triggers.length);
+      return Math.min(...seeded) === 1 && Math.max(...seeded) === 5;
+    })(),
+    all.map((c) => `${c.id}:${c.triggers.length}`).join(' '));
 
   console.log('\nWork chips: to-do first, and nothing is dropped');
   check('to-do chips sort ahead of done', all.every((c) => {
