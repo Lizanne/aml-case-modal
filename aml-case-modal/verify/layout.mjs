@@ -2135,6 +2135,19 @@ const stripState = async () =>
     const count = gap?.querySelector('.strip__gap-count');
     return {
       text: el.textContent.replace(/\s+/g, ' ').trim(),
+      /**
+       * The same text with every timestamp removed.
+       *
+       * The count check below looks for the hidden figure in the strip and
+       * expects to find it once. Timestamps are live now - the fixture is
+       * rebased onto a window ending at load - so the minutes are whatever
+       * the clock says, and "08:17" made the figure 17 appear twice. The
+       * check failed one minute in sixty and passed the other fifty-nine,
+       * which is worse than failing outright.
+       */
+      textNoStamps: [...el.querySelectorAll('time')]
+        .reduce((acc, t) => acc.replace(t.textContent.replace(/\s+/g, ' ').trim(), ''),
+          el.textContent.replace(/\s+/g, ' ').trim()),
       hasBar: !!el.querySelector('.strip__bar'),
       hasBadge: !!el.querySelector('.strip__bar ui-pill'),
       hasNote: !!el.querySelector('.strip__count'),
@@ -2159,7 +2172,7 @@ check('collapsed: the divider names what it hides',
 check('collapsed: no "+N more" phrasing', !/\+\d+ more/.test(collapsed.text));
 // 17 hidden + the 2 anchors = 19. The figure appears once, in the divider.
 check('collapsed: the number appears exactly once',
-  (collapsed.text.match(/17/g) || []).length === 1, collapsed.text);
+  (collapsed.textNoStamps.match(/17/g) || []).length === 1, collapsed.textNoStamps);
 check('collapsed: the divider starts where the rows do', collapsed.alignsWithRows);
 
 await page.locator('trigger-strip .strip__gap').click();
