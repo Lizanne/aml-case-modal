@@ -9,8 +9,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
 import { CasesStore } from '../core/cases-store';
-import { CASES_TABS, CasesTab, NavStore } from '../core/nav-store';
-import { CaseRecord, lockStatusLine } from '../core/models';
+import { CASES_TABS, CasesTab, NavStore, QUEUE_COPY } from '../core/nav-store';
+import { CaseRecord, TriggerRef, lockStatusLine, relativeAge } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
 /**
@@ -55,10 +55,36 @@ import { PillComponent } from './ui-pill.component';
   template: `
     <section class="cases" aria-labelledby="cases-title">
       <header class="cases__head">
-        <h1 class="cases__title" id="cases-title">AML cases</h1>
-        <p class="cases__sub">
-          Open cases across the estate. Pick one, lock it, and open it.
-        </p>
+        <!-- Both come from QUEUE_COPY, which the sidebar entry reads too:
+             clicking "Compliance AML cases" has to land somewhere that agrees
+             it is the Compliance queue. -->
+        <h1 class="cases__title" id="cases-title">
+          {{ copy().title }}<a
+            class="th__info"
+            [href]="DOCS_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+            matTooltip="AML cases documentation"
+            aria-label="AML cases documentation, opens in new tab"
+          >
+            <svg
+              class="th__info-svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+          </a>
+        </h1>
+        <p class="cases__sub">{{ copy().sub }}</p>
       </header>
 
       <!--
@@ -128,6 +154,8 @@ import { PillComponent } from './ui-pill.component';
         -->
         <div
           class="table-scroll"
+          [class.is-scrolled]="scrolledX()"
+          (scroll)="onScroll($event)"
           cdkScrollable
           tabindex="0"
           role="region"
@@ -137,8 +165,7 @@ import { PillComponent } from './ui-pill.component';
             <colgroup>
               <col class="col-player" />
               <col class="col-sev" />
-              <col class="col-lock" />
-              <col class="col-linked" />
+              <col class="col-triggers" />
               <col class="col-prio" />
               <col class="col-sla" />
               <col class="col-work" />
@@ -146,12 +173,45 @@ import { PillComponent } from './ui-pill.component';
             </colgroup>
             <thead>
               <tr>
-                <th scope="col">Player</th>
+                <th scope="col" class="cell--player">Player</th>
                 <th scope="col">Severity</th>
-                <th scope="col">Lock</th>
-                <th scope="col" class="cell--num">Linked</th>
-                <th scope="col">
-                  Priority<a
+                <th scope="col">Triggers</th>
+                <th
+                  scope="col"
+                  [attr.aria-sort]="ariaSort('priority')"
+                >
+                  <!--
+                    A flex row, not inline children. Inline-level siblings
+                    share a baseline, so the 24px info button grew this cell's
+                    line box and pushed its sort arrow 0.8px above the SLA
+                    one - two headers, two arrow positions, from a sibling
+                    neither arrow knows about.
+                  -->
+                  <span class="th-inner">
+                  <!-- A real button inside the th: the header is the control,
+                       and a th is not focusable. -->
+                  <button class="th-sort" type="button" (click)="cases.toggleSort('priority')">
+                    Priority
+                    <svg
+                      class="th-sort__arrow"
+                      [class.th-sort__arrow--on]="cases.sort() === 'priority'"
+                      [class.th-sort__arrow--up]="
+                        cases.sort() === 'priority' && cases.sortDir() === 'asc'
+                      "
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="m19 12-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <a
                     class="th__info"
                     [href]="SCORING_URL"
                     target="_blank"
@@ -178,8 +238,31 @@ import { PillComponent } from './ui-pill.component';
                       <path d="M12 8h.01" />
                     </svg>
                   </a>
+                  </span>
                 </th>
-                <th scope="col">SLA</th>
+                <th scope="col" [attr.aria-sort]="ariaSort('sla')">
+                  <span class="th-inner">
+                  <button class="th-sort" type="button" (click)="cases.toggleSort('sla')">
+                    SLA
+                    <svg
+                      class="th-sort__arrow"
+                      [class.th-sort__arrow--on]="cases.sort() === 'sla'"
+                      [class.th-sort__arrow--up]="cases.sort() === 'sla' && cases.sortDir() === 'asc'"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="m19 12-7 7-7-7" />
+                    </svg>
+                  </button>
+                  </span>
+                </th>
                 <th scope="col">Work</th>
                 <th scope="col" class="cell--actions">Actions</th>
               </tr>
@@ -197,9 +280,12 @@ import { PillComponent } from './ui-pill.component';
                         (click)="openPlayer($event, c)"
                         >{{ c.player.id }}</a
                       >
-                      <ui-pill tone="outline" [title]="c.player.status">{{
+                      <!-- Text, not a pill. The status is a fact about the
+                           player, not a badge to scan for - and a pill on
+                           every row made the column read as two columns. -->
+                      <span class="player-status" [title]="c.player.status">{{
                         statusLabel(c.player.status)
-                      }}</ui-pill>
+                      }}</span>
                     </span>
                   </td>
 
@@ -208,28 +294,31 @@ import { PillComponent } from './ui-pill.component';
                   </td>
 
                   <!--
-                    State only. The buttons moved to the trailing Actions
-                    column, so this cell is read and never clicked: one place
-                    to look for what the lock IS, one place to act on it.
+                    The INITIATING trigger - what the case was opened for -
+                    and how much has happened since. Text, not chips: the Work
+                    column is chips, and two chip columns would read as one
+                    kind of thing said twice.
 
-                    Not locked carries no icon - an icon on the absence of a
-                    lock says "lock" to anyone scanning the column quickly,
-                    which is the opposite of what the row means.
+                    The count is not a control. What each trigger said is a
+                    reason to open the case, not something to unfold in a
+                    queue, so there is no popover and no cursor change.
                   -->
-                  <td class="cell--lock">
-                    @if (c.lock.state === 'unlocked') {
-                      <span class="lock lock--none">Not locked</span>
-                    } @else {
-                      <span class="lock" [attr.data-lock]="c.lock.state" [title]="lockLine(c)">
-                        <mat-icon class="lock__icon" aria-hidden="true">
-                          {{ c.lock.state === 'locked-to-me' ? 'lock' : 'lock_outline' }}
-                        </mat-icon>
-                        <span class="lock__text">{{ lockLine(c) }}</span>
+                  <td class="cell--triggers">
+                    <span class="trig">
+                      <span class="trig__line" [title]="initiating(c).name">
+                        <span class="trig__name">{{ initiating(c).name }}</span>
+                        <span class="trig__at" [title]="triggerStamp(c)"
+                          >· {{ triggerAge(c) }}</span
+                        >
+                        @if (c.triggers.length > 1) {
+                          <span class="trig__more">+{{ c.triggers.length - 1 }}</span>
+                        }
                       </span>
-                    }
+                      <span class="trig__detail" [title]="initiating(c).detail">{{
+                        initiating(c).detail
+                      }}</span>
+                    </span>
                   </td>
-
-                  <td class="cell--num">{{ c.linkedAccounts }}</td>
 
                   <!--
                     Neutral ink. Urgent is weight plus an icon, never a colour:
@@ -292,121 +381,146 @@ import { PillComponent } from './ui-pill.component';
                     </span>
                   </td>
 
-                  <td>
-                    <!-- The same pill as everything else; only the tone varies. -->
-                    <ui-pill [tone]="slaTone(c)">{{ cases.slaText(c) }}</ui-pill>
+                  <td class="cell--sla">
+                    <!-- The same pill as everything else. Only this column
+                         takes the dot: it is the one value in the row that is
+                         still moving while you read it. -->
+                    <ui-pill [tone]="slaTone(c)" dot>{{ cases.slaText(c) }}</ui-pill>
                   </td>
 
                   <!-- To-do first. Two chips, then the count. Nothing is actionable. -->
+                  <!--
+                    Text, not chips - D-12. Four pills a row read as four
+                    controls; the column is a statement about what is left to
+                    do, and the first item is the one to action.
+
+                    Order and WEIGHT carry the priority, never colour alone:
+                    green marks completion, which is a different fact.
+                  -->
                   <td class="cell--work">
-                    <span class="work-row">
-                    @for (w of visibleWork(c); track w.type) {
-                      <!-- The modal's required-action chip, same component and
-                           same tones: outline while to do, success with a tick
-                           once done. -->
-                      <ui-pill
-                        [tone]="w.state === 'done' ? 'success' : 'outline'"
-                        [title]="cases.workLabel(w.type)"
-                        [attr.aria-label]="
-                          cases.workLabel(w.type) + ': ' + (w.state === 'done' ? 'done' : 'to do')
-                        "
-                      >
-                        <mat-icon class="chip__icon" aria-hidden="true">{{
-                          w.state === 'done' ? 'check_circle' : 'radio_button_unchecked'
-                        }}</mat-icon>
-                        <span class="chip__label">{{ cases.workLabel(w.type) }}</span>
-                      </ui-pill>
-                    }
-                    @if (hiddenWork(c) > 0) {
-                      <!-- The pill on a button, rather than a button styled to
-                           look like the pill: same component, one extra job. -->
-                      <button
-                        class="chip-more-btn"
-                        type="button"
-                        #workTrigger="matMenuTrigger"
-                        [matMenuTriggerFor]="workMenu"
-                        [matMenuTriggerData]="{ c: c }"
-                        (keydown.escape)="workTrigger.closeMenu()"
-                        [attr.aria-label]="
-                          'Show all ' + c.actions.length + ' work items for player ' + c.player.id
-                        "
-                      >
-                        <ui-pill tone="neutral" class="chip--more"
-                          >+{{ hiddenWork(c) }} more</ui-pill
-                        >
-                      </button>
-                    }
+                    <span class="work-row" [attr.aria-label]="workSummary(c)">
+                      @if (cases.workOrdered(c).length === 0) {
+                        <span class="work__empty" aria-hidden="true">No work items</span>
+                      } @else {
+                        @for (w of visibleWork(c); track w.type; let i = $index) {
+                          @if (i > 0) {
+                            <span class="work__sep" aria-hidden="true">·</span>
+                          }
+                          <span
+                            class="work__item"
+                            [class.work__item--lead]="i === 0"
+                            [class.work__item--done]="w.state === 'done'"
+                            aria-hidden="true"
+                          >
+                            @if (w.state === 'done') {
+                              <mat-icon class="work__tick">check_circle</mat-icon>
+                            }
+                            {{ cases.workLabel(w.type) }}
+                          </span>
+                        }
+                        @if (hiddenWork(c) > 0) {
+                          <!-- The count is the way into the rest. The four
+                               inline items are the scan; this is the list. -->
+                          <button
+                            class="work__more"
+                            type="button"
+                            #workTrigger="matMenuTrigger"
+                            [matMenuTriggerFor]="workMenu"
+                            [matMenuTriggerData]="{ c: c }"
+                            (keydown.escape)="workTrigger.closeMenu()"
+                            [attr.aria-label]="
+                              'Show all ' + c.actions.length + ' work items for player ' + c.player.id
+                            "
+                          >
+                            +{{ hiddenWork(c) }}
+                          </button>
+                        }
+                      }
                     </span>
                   </td>
 
                   <!--
-                    Actions, trailing edge. One button, or two when the case is
-                    yours. Only Open case carries the primary token, and only
-                    on a row the agent can actually act on - which is what
-                    makes the fill mean something when it appears.
-
-                    Every button names the player in its aria-label: ten rows
-                    of "Lock" are indistinguishable to a screen reader
-                    otherwise, and the visible text cannot carry the id
-                    without repeating it down the column.
+                    Two controls on one 32px axis: the lock, then the way in.
+                    The lock left its own column - D-07 - because a whole
+                    column to hold one 32px control was a column of chrome,
+                    and the two things an agent does to a row belong together.
                   -->
                   <td class="cell--actions">
                     <span class="actions">
                       @switch (c.lock.state) {
                         @case ('locked-to-me') {
-                          <!--
-                            Unlock first in the DOM so the PRIMARY is last -
-                            rightmost on screen, and last in the tab order.
-                            Every row's trailing element is then the strongest
-                            action it has, and the one-button rows put their
-                            single button on that same edge.
-                          -->
+                          <!-- An avatar, not a padlock: who holds it is the
+                               fact, and the monogram says it in the space a
+                               glyph was using to say less. -->
                           <button
-                            mat-button
+                            class="lock-av lock-av--mine"
                             type="button"
-                            [attr.aria-label]="'Unlock case for player ' + c.player.id"
+                            aria-pressed="true"
+                            matTooltip="Locked by you · Click to unlock"
+                            aria-label="Locked by you, click to unlock"
                             (click)="cases.unlock(c.id)"
                           >
-                            Unlock
-                          </button>
-                          <!-- Rule 4: this exists ONLY on a row locked to me,
-                               and it is the one filled button in the table. -->
-                          <button
-                            mat-flat-button
-                            color="primary"
-                            type="button"
-                            [attr.aria-label]="'Open AML case for player ' + c.player.id"
-                            (click)="openCase(c)"
-                          >
-                            <mat-icon aria-hidden="true">open_in_new</mat-icon>
-                            Open case
+                            <span aria-hidden="true">{{ initials(cases.me().name) }}</span>
                           </button>
                         }
                         @case ('locked-to-other') {
-                          <!-- The modal's own danger button: red outline, red
-                               label, #FEE2E2 hover, all from .danger-button in
-                               styles.scss. No icon, because the modal's has
-                               none. -->
                           <button
-                            mat-stroked-button
-                            class="danger-button"
+                            class="lock-av lock-av--other"
                             type="button"
-                            [attr.aria-label]="'Force unlock case for player ' + c.player.id"
+                            [matTooltip]="lockedByTip(c)"
+                            [attr.aria-label]="lockedByLabel(c)"
                             (click)="cases.requestForceUnlock(c.id)"
                           >
-                            Force unlock
+                            <span aria-hidden="true">{{ initials(c.lock.owner?.name) }}</span>
                           </button>
                         }
                         @default {
                           <button
-                            mat-stroked-button
+                            class="lock-av lock-av--free"
                             type="button"
-                            [attr.aria-label]="'Lock case for player ' + c.player.id"
+                            matTooltip="Lock case"
+                            aria-label="Lock case"
                             (click)="cases.lock(c.id)"
                           >
-                            Lock
+                            <svg
+                              class="lock-av__svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.5"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <rect x="3" y="11" width="18" height="11" rx="2" />
+                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                            </svg>
                           </button>
                         }
+                      }
+
+                      @if (c.lock.state === 'locked-to-me') {
+                        <!-- Rule 4: only on a row locked to me. Icon only -
+                           the tooltip and the accessible name carry the words,
+                           and a labelled button beside a 32px avatar made the
+                           pair look like two different kinds of control. -->
+                        <button
+                          mat-flat-button
+                          color="primary"
+                          type="button"
+                          class="open-case"
+                          matTooltip="Open case"
+                          aria-label="Open AML case in new tab"
+                          (click)="openCase(c)"
+                        >
+                          <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                        </button>
+                      } @else {
+                        <!-- Holds the slot open. Without it the lock would
+                             slide right on every row that is not yours, and
+                             the column would be two widths. -->
+                        <span class="actions__slot" aria-hidden="true"></span>
                       }
                     </span>
                   </td>
@@ -429,6 +543,27 @@ import { PillComponent } from './ui-pill.component';
         them. Focus therefore stays on the trigger, Material's handler never
         sees the key, and the popover could only be dismissed by clicking away.
       -->
+      <mat-menu #workMenu="matMenu" class="pop pop--work">
+        <ng-template matMenuContent let-c="c">
+          <div class="pop__body" (click)="$event.stopPropagation()">
+            <p class="pop__head">Work</p>
+            <!-- ALL of them, in the SAME order the row shows: to-do first,
+                 then done. A reader should not have to reconcile two
+                 orderings of one list. -->
+            <ul class="pop__work">
+              @for (w of cases.workOrdered(c); track w.type) {
+                <li class="pop__work-item" [class.pop__work-item--done]="w.state === 'done'">
+                  @if (w.state === 'done') {
+                    <mat-icon class="work__tick" aria-hidden="true">check_circle</mat-icon>
+                  }
+                  {{ cases.workLabel(w.type) }}
+                </li>
+              }
+            </ul>
+          </div>
+        </ng-template>
+      </mat-menu>
+
       <mat-menu #prioMenu="matMenu" class="pop pop--prio">
         <ng-template matMenuContent let-c="c">
           <!-- stopPropagation: a mat-menu closes on any click inside it, and
@@ -436,7 +571,7 @@ import { PillComponent } from './ui-pill.component';
           <div class="pop__body" (click)="$event.stopPropagation()">
             <p class="pop__head">
               Priority {{ c.priority.score }}
-              <span class="pop__band">{{ cases.priorityText(c.priority).split(' ')[1] }}</span>
+              <span>{{ cases.priorityText(c.priority).split(' ')[1] }}</span>
             </p>
             <!--
               ONE grid for all the lines, not one per line. Three columns
@@ -468,28 +603,6 @@ import { PillComponent } from './ui-pill.component';
         </ng-template>
       </mat-menu>
 
-      <mat-menu #workMenu="matMenu" class="pop pop--work">
-        <ng-template matMenuContent let-c="c">
-          <div class="pop__body" (click)="$event.stopPropagation()">
-            <p class="pop__head">Work</p>
-            <!-- ALL of them, not just the hidden ones: the popover is the
-                 full list, and a reader should not have to join it to the two
-                 chips still visible behind the overlay. -->
-            <ul class="pop__work">
-              @for (w of cases.workOrdered(c); track w.type) {
-                <li>
-                  <ui-pill [tone]="w.state === 'done' ? 'success' : 'outline'">
-                    <mat-icon class="chip__icon" aria-hidden="true">{{
-                      w.state === 'done' ? 'check_circle' : 'radio_button_unchecked'
-                    }}</mat-icon>
-                    <span>{{ cases.workLabel(w.type) }}</span>
-                  </ui-pill>
-                </li>
-              }
-            </ul>
-          </div>
-        </ng-template>
-      </mat-menu>
     </section>
   `,
   styles: [
@@ -506,6 +619,9 @@ import { PillComponent } from './ui-pill.component';
         padding: 20px;
       }
       .cases__title {
+        display: flex;
+        align-items: center;
+        gap: 2px;
         margin: 0;
         font-size: 20px;
         line-height: 30px;
@@ -639,10 +755,78 @@ import { PillComponent } from './ui-pill.component';
        * be - and the id is the one value in the row you cannot infer.
        */
       .col-player {
-        width: 248px;
+        min-width: 184px;
+        width: 200px;
       }
+      /**
+       * One line, and the NAME is the part that gives.
+       *
+       * The time and the count are short and fixed; a squeezed column should
+       * eat the end of "Deposit velocity threshold" rather than push the
+       * count out of the row. Both keep their full text on the title.
+       */
+      .cell--triggers {
+        white-space: nowrap;
+      }
+      /**
+       * Two lines, the modal's strip format: what fired, and what it said.
+       *
+       * The name and its age are the scannable line; the detail beneath is
+       * why the case exists. Both nowrap with the full text on their title -
+       * a queue row is not where a sentence should wrap.
+       */
+      .trig {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        max-width: 100%;
+      }
+      .trig__line {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        min-width: 0;
+        font-size: 14px;
+        line-height: 20px;
+        white-space: nowrap;
+      }
+      .trig__name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .trig__at {
+        flex: none;
+        font-weight: 400;
+        color: var(--ink-3);
+      }
+      /* A count, not a label. Not interactive: nothing to open. */
+      .trig__more {
+        flex: none;
+        font-weight: 500;
+        color: var(--foreground-subtle);
+      }
+      .trig__detail {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 400;
+        color: var(--ink-3);
+      }
+
       .col-sev {
         width: 110px;
+      }
+      /* 200 is the brief's minimum; the widest initiating name plus its time
+         and count needs a little more. */
+      .col-triggers {
+        min-width: 200px;
+        width: 232px;
       }
       /**
        * Sized for the widest real cell, which is locked-to-me: a 102px status
@@ -653,27 +837,30 @@ import { PillComponent } from './ui-pill.component';
        */
       /* Read, not clicked: the sentence and nothing else. 160 fits
          "Locked to M. Torres - 1d" at 157 with the icon. */
-      .col-lock {
-        width: 160px;
-      }
-      .col-linked {
-        width: 80px;
-      }
+      /* 180 is the brief's minimum. The widest cell is the 32px padlock, an
+         8px gap and "Locked to M. Torres - 1d", plus 32 of cell padding. */
+
       /* 152: "200 Urgent" plus its info button is 116 - a 16px warning glyph,
          a 4px gap, the score, a 2px gap and the 24px button - plus 32 of cell
          padding. */
       .col-prio {
         width: 152px;
       }
-      /* The breached pill at four digits is 117, so 116 was one pixel short. */
+      /* The breached pill at four digits is 119 now the dot is in it - 120
+         left a single pixel, which is not slack, it is luck. */
       .col-sla {
-        width: 120px;
+        width: 132px;
       }
-      /* Measured, not guessed: 412 is the widest chip row on either tab.
-         Was 448, sized back when the chips were the lg pill - they went to md
-         and the column never followed. */
+      /**
+       * Measured, not guessed: 508 is the widest four-item row.
+       *
+       * It was 412, sized when the column held two chips and a button. Four
+       * inline labels need more, and a clipped work label is the one thing
+       * this column must not do - "Open source searche..." tells an agent
+       * nothing they did not already know.
+       */
       .col-work {
-        width: 412px;
+        width: 508px;
       }
       /**
        * Trailing edge. 180 was given as a MINIMUM, and the widest pair needs
@@ -684,9 +871,13 @@ import { PillComponent } from './ui-pill.component';
        * It was 208 while the buttons were a hand-built 28px size. Widening the
        * column is the cost of them being the modal's components instead.
        */
+      /* 140 is the brief's minimum. Open case is 125 plus 32 of padding, and
+         the column is empty on every row that is not mine. */
+      /* 120 is the brief's floor: two 32px controls, an 8px gap and the
+         cell's 32 of padding is 104. */
       .col-actions {
-        min-width: 180px;
-        width: 248px;
+        min-width: 120px;
+        width: 128px;
       }
 
       /**
@@ -721,13 +912,14 @@ import { PillComponent } from './ui-pill.component';
         /**
          * 12 top and bottom, which is what a 52px row costs now.
          *
-         * The tallest cell is the Actions column's button, and it is the
-         * modal's 32px - not a table-only size free to be chosen. 32 + 20 =
-         * 52. Every other cell is 24 or less and centres in the space via
-         * vertical-align. min-height on a tr is ignored by most engines, so
-         * this padding is what actually holds the row open.
+         * The tallest cell is the PLAYER column: a 24px id line (its hit
+         * area) over a 20px status, 44 in all. 44 + 8 = 52. Triggers is 40
+         * and the Actions controls 32, so both centre inside it. Every cell
+         * centres in the space via vertical-align. min-height on a tr is
+         * ignored by most engines, so this padding is what actually holds the
+         * row open.
          */
-        padding: 10px 16px;
+        padding: 4px 16px;
         text-align: left;
         vertical-align: middle;
         font-size: 14px;
@@ -738,15 +930,98 @@ import { PillComponent } from './ui-pill.component';
         padding-top: 10px;
         padding-bottom: 10px;
         background: var(--stream-bg);
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 600;
-        letter-spacing: 0.02em;
-        color: var(--ink-3);
-        text-transform: uppercase;
+        /* Title case, so the tracking that made caps legible is no longer
+           doing a job - at 14px it just loosens the words. */
+        letter-spacing: 0;
+        color: var(--ink);
         /* Headers read in full now the columns have room: the narrow tracks
            were clipping them to SEV and SLJ. */
         white-space: nowrap;
       }
+      /**
+       * A sortable header is a button, so it is reachable and Enter works.
+       *
+       * The arrow is always in the DOM and always takes its space - it fades
+       * in rather than appearing, or the label would shift sideways the
+       * moment a column became active.
+       */
+      /**
+       * The header's contents, centred as a row.
+       *
+       * A th cannot be a flex container without leaving table layout, so the
+       * flex lives on a wrapper inside it. This is what makes the sort arrow
+       * land in the same place whether or not the cell also holds an info
+       * icon - which is the whole reason it exists.
+       */
+      .th-inner {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .th-sort {
+        display: inline-flex;
+        align-items: center;
+        /**
+         * Centred on the line box, not sat on the baseline.
+         *
+         * These are inline-level, so by default they share a baseline with
+         * whatever else is in the cell - and the Priority header also holds a
+         * 24px info button, which grew the line box and pushed its sort button
+         * 1.6px higher than the SLA one. Two headers, two arrow positions,
+         * from a sibling neither arrow knows about.
+         */
+        vertical-align: middle;
+        gap: 4px;
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: inherit;
+        text-transform: inherit;
+        letter-spacing: inherit;
+        cursor: pointer;
+      }
+      .th-sort:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+      /**
+       * Always visible, never hover-only.
+       *
+       * At 0 opacity the affordance existed solely for a pointer that happened
+       * to be over the header - invisible to anyone scanning the table and to
+       * anyone not using a pointer at all. Half strength says "this sorts";
+       * full says "this is the sort".
+       */
+      .th-sort__arrow {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        color: var(--ink);
+        opacity: 0.5;
+        transition: opacity 150ms ease;
+      }
+      .table th:hover .th-sort__arrow {
+        opacity: 0.75;
+      }
+      .th-sort__arrow--on,
+      .table th:hover .th-sort__arrow--on {
+        opacity: 1;
+      }
+      /**
+       * No nudge, and that is the fix rather than the absence of one.
+       *
+       * The 1.5px here was tuned against the ink centre of the word
+       * "Priority" - which its descender drags below the cap band. Aligning
+       * to the CAP BAND instead (cap top to baseline, identical in both
+       * headers) puts the arrow where it belongs with no correction at all.
+       */
+      .th-sort__arrow--up {
+        transform: rotate(180deg);
+      }
+
       /* Nothing in the header row is underlined. */
       .table th a {
         text-decoration: none;
@@ -769,6 +1044,9 @@ import { PillComponent } from './ui-pill.component';
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        /* Same reason as .th-sort: centred on the line box, so its own height
+           cannot move the thing beside it. */
+        vertical-align: middle;
         flex: none;
         width: 24px;
         height: 24px;
@@ -810,10 +1088,37 @@ import { PillComponent } from './ui-pill.component';
         outline: 2px solid var(--primary);
         outline-offset: 2px;
       }
+      .prio__info {
+        margin-left: 0;
+      }
       .th__info-svg,
       .prio__info-svg {
         width: 16px;
         height: 16px;
+        /**
+         * Half a pixel down, and it is an OPTICAL correction.
+         *
+         * The button box is centred on the line box, which is what
+         * align-items does - but a line box is not where the text's ink is.
+         * Measured off the rendered pixels rather than the box model: the
+         * glyph sat 0.5px above the cap-height band beside the page title and
+         * 1px above it beside the score. Both now read on the same line.
+         */
+        transform: translateY(0.5px);
+      }
+      .prio__info-svg {
+        transform: translateY(1px);
+      }
+      /**
+       * The column header is 14px title case, not the 20px page title the
+       * shared nudge above was measured against - so it gets its own. Measured
+       * off the rendered pixels: the glyph sat 1px below the header's ink.
+       */
+      thead .th__info-svg {
+        /* The column header is 14px title case, not the 20px page title the
+           shared nudge was measured against - and the target is the cap band,
+           which needs none. */
+        transform: none;
       }
       @media (prefers-reduced-motion: reduce) {
         .th__info,
@@ -821,19 +1126,163 @@ import { PillComponent } from './ui-pill.component';
           transition: none;
         }
       }
-      /* The "+N more" pill, made operable without being restyled. */
-      .chip-more-btn {
+      /**
+       * A text button on the chips' 24px axis.
+       *
+       * Material's text button is 32px at 14/600 with 8px of side padding and
+       * a 4px radius, so every one of those is set. The height is the load
+       * bearing one: the pills beside it are 24, and a 32px control in the row
+       * would break the rhythm the Work column reads on.
+       *
+       * No border and no fill at rest - it is the only thing in this column
+       * that is not a statement about the case, and it should look like it.
+       */
+      /**
+       * Neutral ink. Urgent is weight plus an icon, never a colour: SLA is the
+       * row's only traffic light.
+       */
+      .prio-cell {
         display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        /* Squeezed, "200 Urgent" broke over two lines and took its row to
+           61px - a taller row, not a visible overflow, which is the failure
+           that hides. */
+        white-space: nowrap;
+      }
+      /* Inert: a score is a value, and the affordance is the icon beside it. */
+      .prio {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--ink);
+      }
+      .prio--urgent {
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .prio__icon {
+        flex: none;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+
+      /**
+       * The lock control: one 32px disc, three states.
+       *
+       * Free is an open padlock; held is a monogram. An avatar says WHO in the
+       * space a padlock was using to say only "someone", and the full name is
+       * on the tooltip and the accessible name - the initials are decoration,
+       * which is why they are aria-hidden.
+       */
+      .lock-av {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 32px;
+        height: 32px;
         padding: 0;
         border: 0;
+        border-radius: 50%;
         background: none;
         font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
         cursor: pointer;
+        transition: background-color 150ms ease;
       }
-      .chip-more-btn:focus-visible {
+      .lock-av:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
-        border-radius: 999px;
+      }
+      .lock-av__svg {
+        width: 16px;
+        height: 16px;
+      }
+      .lock-av--free {
+        color: var(--ink);
+      }
+      .lock-av--mine {
+        background: var(--success-bg-subtle);
+        color: var(--success);
+      }
+      .lock-av--other {
+        background: var(--surface-subtle);
+        color: var(--ink);
+      }
+      .lock-av:hover {
+        background: var(--surface-hover);
+      }
+
+      /**
+       * Open case, icon only - square, on the same 32px axis as the lock.
+       *
+       * Material sizes its buttons from the label box, so with no label the
+       * min-width has to go or a 32px button comes out 64 wide.
+       */
+      .open-case.mat-mdc-unelevated-button {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        min-width: 0;
+        padding: 0;
+      }
+      .open-case .mat-icon {
+        margin: 0;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+
+      /**
+       * Flush right, so the trailing edge of the table is one line however
+       * many buttons a row has.
+       */
+      /**
+       * Two fixed slots: the lock, then the way in.
+       *
+       * A grid rather than a flex row, because the lock must not move. With
+       * flex, a row without Open case pulled its padlock 40px right and the
+       * column read as two different columns depending on who held the case.
+       */
+      .actions {
+        display: grid;
+        grid-template-columns: 32px 32px;
+        align-items: center;
+        justify-content: end;
+        gap: 8px;
+      }
+      .actions__slot {
+        width: 32px;
+        height: 32px;
+      }
+      /**
+       * Open case arrives rather than appears. Removal is instant - the
+       * element is gone, and there is nothing left to fade - so this is an
+       * entry animation, not a two-way transition.
+       */
+      @media (prefers-reduced-motion: no-preference) {
+        .open-case {
+          animation: open-case-in 150ms ease;
+        }
+      }
+      @keyframes open-case-in {
+        from {
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .lock-btn,
+        .lock-btn--free,
+        .lock--none {
+          transition: none;
+        }
       }
 
       /* ---- popovers: priority breakdown and the full work list --------- */
@@ -843,18 +1292,21 @@ import { PillComponent } from './ui-pill.component';
            click target the way a menu of items does. */
         cursor: default;
       }
+      /**
+       * 14/20, title case. It was 12/16 uppercase with tracking - the table
+       * header's treatment, borrowed - which made a panel heading read like a
+       * column label for the panel's own rows.
+       *
+       * The band no longer needs a rule of its own: it existed only to undo
+       * the uppercase on "Urgent", and there is nothing left to undo.
+       */
       .pop__head {
         margin: 0 0 8px;
-        font-size: 12px;
-        line-height: 16px;
+        font-size: 14px;
+        line-height: 20px;
         font-weight: 600;
-        letter-spacing: 0.02em;
-        color: var(--ink-3);
-        text-transform: uppercase;
-      }
-      .pop__band {
-        text-transform: none;
         letter-spacing: 0;
+        color: var(--ink);
       }
       .pop__lines {
         display: grid;
@@ -889,6 +1341,25 @@ import { PillComponent } from './ui-pill.component';
         color: var(--ink);
         white-space: nowrap;
       }
+      .pop__work {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .pop__work-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--ink-3);
+      }
+      .pop__work-item--done {
+        color: var(--foreground-success);
+      }
       .pop__link {
         display: inline-flex;
         align-items: center;
@@ -916,15 +1387,6 @@ import { PillComponent } from './ui-pill.component';
         height: 14px;
         line-height: 14px;
       }
-      .pop__work {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
       @media (prefers-reduced-motion: reduce) {
         .pop__link {
           transition: none;
@@ -933,17 +1395,11 @@ import { PillComponent } from './ui-pill.component';
       /**
        * Qualified by .table, and that is a regression being closed.
        *
-       * These were .cell--num and .cell--actions, at 0-1-0. When the element
-       * rules above were scoped to .table to keep them out of the popover,
-       * they went from 0-0-1 to 0-1-1 - and quietly started winning. The
-       * Linked column reverted to left-aligned, which put its number three
-       * pixels from the end of the lock sentence beside it and read as a
-       * stray value on the end of the lock cell.
+       * This was .cell--actions at 0-1-0. When the element rules above were
+       * scoped to .table to keep them out of the popover, they went from
+       * 0-0-1 to 0-1-1 - and quietly started winning, silently un-aligning
+       * whatever relied on a bare modifier class.
        */
-      .table .cell--num {
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-      }
       .table .cell--actions {
         text-align: right;
       }
@@ -955,6 +1411,87 @@ import { PillComponent } from './ui-pill.component';
        * contents sat about 11px above every other cell in the row. The td
        * stays a table-cell and centres; the wrapper does the stacking.
        */
+      /**
+       * The Player column stays put while the rest scrolls.
+       *
+       * The background is NOT decoration: a sticky cell is transparent by
+       * default and the other columns scroll straight through it. The header
+       * sits one above the body so it stays on top at the corner where the two
+       * stickies meet.
+       */
+      .table .cell--player {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: var(--surface-default);
+      }
+      .table thead .cell--player {
+        z-index: 11;
+        background: var(--surface-header);
+      }
+      /**
+       * The edge, drawn as a pseudo-element rather than a box-shadow.
+       *
+       * box-shadow on a table cell is NOT PAINTED when the table is
+       * border-collapse: collapse - Chrome computes it and renders nothing.
+       * Measured: with collapse the pixels right of the boundary are pure
+       * white; flip the same page to separate and the falloff appears. And
+       * collapse cannot go, because it is the only thing that lets a tr carry
+       * the row divider.
+       *
+       * So the falloff is painted by hand, just outside the cell's right edge:
+       * 4px of 6% black fading out, which is what 2px 0 4px rgba(0,0,0,.06)
+       * looks like. The cell is position: sticky, so it is already the
+       * containing block this needs.
+       *
+       * It appears only once something is hidden behind the column. Flush
+       * left it would be a line promising a column that is already in view.
+       */
+      .table .cell--player::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 4px;
+        transform: translateX(100%);
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0));
+        opacity: 0;
+        transition: opacity 100ms ease;
+        pointer-events: none;
+      }
+      .table-scroll.is-scrolled .cell--player::after {
+        opacity: 1;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .table .cell--player::after {
+          transition: none;
+        }
+      }
+
+      /**
+       * Row hover: background ONLY.
+       *
+       * Every cell, the sticky one included, or the highlight would stop dead
+       * at the Player column's edge. 100ms rather than 200: the queue is
+       * scanned quickly and a slow fade trails the pointer.
+       *
+       * Nothing else moves - not the text, not a pill, not the padlock - and
+       * the row keeps the default cursor. Only the controls inside it are
+       * pointers, because only they do anything.
+       */
+      .table tbody td {
+        transition: background-color 100ms ease;
+      }
+      .table tbody tr:hover td {
+        background: var(--surface-hover);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .table tbody td {
+          transition: none;
+        }
+      }
+
       .cell--player {
         white-space: nowrap;
       }
@@ -969,48 +1506,26 @@ import { PillComponent } from './ui-pill.component';
        * allowed the pill drops to a second line instead, which is the layout
        * this replaces.
        */
+      /**
+       * Two lines, the same rhythm as Triggers: the identifier, then what it
+       * is. Inline with a pill the column read as two, and the id - the one
+       * value you cannot infer - shared its line with a badge.
+       */
       .player-line {
         display: flex;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 8px;
+        flex-direction: column;
         min-width: 0;
       }
-      .player-line .linkish {
-        /* The id yields the space. Its own title carries the full number, so
-           the digits lost to the ellipsis are still readable on hover. */
+      .player-status {
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        display: inline-block;
-        line-height: 24px;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 400;
+        color: var(--ink-3);
       }
-      .player-line ui-pill {
-        /* Never the one that gives: a truncated status is not a status. */
-        flex: none;
-      }
-      /**
-       * Work chips stay on ONE line and on one axis.
-       *
-       * flex with a gap rather than margins between siblings, so the chips and
-       * the "+N more" badge sit on a single baseline and the badge needs no
-       * adjustment of its own to line up.
-       */
-      /* Same rule as the player cell: the td stays a table-cell so it fills
-         the row and centres, and the wrapper is what holds the chips on one
-         axis. */
-      .cell--work {
-        overflow: hidden;
-      }
-      .work-row {
-        display: flex;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 6px;
-        min-width: 0;
-      }
-
       .linkish {
         /* The hit area is the ID, not the glyph box it happens to occupy. */
         display: inline-flex;
@@ -1021,8 +1536,7 @@ import { PillComponent } from './ui-pill.component';
         background: none;
         font: inherit;
         font-weight: 600;
-        /* Tabular figures, so the rule under the id is the same width on every
-           row rather than ragging with the digits above it. */
+        /* Tabular figures, so the ids stack in a column rather than ragging. */
         font-variant-numeric: tabular-nums;
         color: var(--link);
         text-decoration: underline;
@@ -1031,10 +1545,10 @@ import { PillComponent } from './ui-pill.component';
         cursor: pointer;
         /**
          * Colour only, and fast. This is a high-frequency target in a list an
-         * agent scans, so an animated underline or a scale would be movement
-         * on every pass down the column. transition-property is named rather
-         * than a blanket all, precisely so nothing else can start animating
-         * later without someone deciding to.
+         * agent scans, so an animated underline would be movement on every
+         * pass down the column. The property is named rather than a blanket
+         * all, precisely so nothing else can start animating later without
+         * someone deciding to.
          */
         transition-property: color;
         transition-duration: 120ms;
@@ -1054,225 +1568,105 @@ import { PillComponent } from './ui-pill.component';
           transition: none;
         }
       }
-      /* The header's text link is gone - an icon carries it now. This style
-         returns when the priority breakdown popover lands, which is where the
-         spec puts "How scoring works" for good. */
-
-      /* Lock: the widget's vocabulary, unchanged. */
-      .lock {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
+      .player-line .linkish {
+        /* The id yields the space. Its own title carries the full number, so
+           the digits lost to the ellipsis are still readable on hover. */
         min-width: 0;
-        max-width: 100%;
-        color: var(--ink-2);
-      }
-      /**
-       * NO size, colour or type rules here, and that is the point.
-       *
-       * These are the modal's buttons - mat-flat-button, mat-stroked-button,
-       * mat-button, plus .danger-button for the destructive one - so their
-       * 32px height, 0-16px padding, 14px/600 label, 1.25px tracking, 4px
-       * radius and every hover, focus and pressed state arrive from Material
-       * and styles.scss exactly as they do in the case header.
-       *
-       * The previous version was a hand-built .row-btn at 28px on 13px, which
-       * matched the modal on nothing - not even letter-spacing, which it had
-       * zeroed while every button in the modal carries 1.25px.
-       *
-       * The one rule left is the icon, and the modal's own components each
-       * carry the same: Material's default glyph is 18px and the buttons this
-       * table borrows from were set to 16.
-       */
-      /* A label that wraps is not a shorter button, it is a taller one - and
-         a taller one silently breaks the 52px row. Wider is the honest
-         failure: it shows up as overflow and gets the column resized. */
-      .actions .mat-mdc-button-base {
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
-        /* flex: none as well as nowrap. As a shrinkable flex child the button
-           was squeezed to the column rather than overflowing it, which read as
-           "it fits" to every measurement while the label wrapped. */
-        flex: none;
+        display: inline-block;
+        line-height: 24px;
       }
-      /* Material gives a text button 8px of side padding against 16 on the
-         filled and outlined ones, so Unlock sat narrower than Open case
-         beside it. dialog-shell corrects the same thing for the same reason;
-         this is that correction, not a table-only size. */
-      .actions .mat-mdc-button:not(.mat-mdc-unelevated-button):not(.mat-mdc-outlined-button) {
-        padding-left: 16px;
-        padding-right: 16px;
-      }
-      .actions .mat-mdc-button-base .mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
-      }
-
       /**
-       * Flush right, so the trailing edge of the table is one line however
-       * many buttons a row has. The wrapper carries the flex, never the td -
-       * see the note on .cell--player for what that costs.
+       * Work chips stay on ONE line and on one axis.
+       *
+       * flex with a gap rather than margins between siblings, so the chips and
+       * the "+N more" badge sit on a single baseline and the badge needs no
+       * adjustment of its own to line up.
        */
-      .actions {
+      /* Same rule as the player cell: the td stays a table-cell so it fills
+         the row and centres, and the wrapper is what holds the chips on one
+         axis. */
+      /**
+       * One line of TEXT, ordered so the first item is the one to action.
+       *
+       * Weight and position carry that, never colour alone: green means DONE,
+       * which is a different fact, and an agent who cannot see green still
+       * reads the order.
+       */
+      .cell--work {
+        overflow: hidden;
+      }
+      .work-row {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
         flex-wrap: nowrap;
         gap: 8px;
+        min-width: 0;
+        font-size: 14px;
+        line-height: 20px;
+        white-space: nowrap;
       }
-      .lock {
+      .work__item {
         display: inline-flex;
         align-items: center;
         gap: 4px;
         min-width: 0;
-        max-width: 100%;
-        color: var(--ink-2);
-      }
-      /**
-       * The row button. 28px on 13px - its own scale, not the widget's 32/14.
-       *
-       * The widget's button sits alone in a card; these sit ten deep in a
-       * column, where 32px of chrome per row reads as a toolbar rather than a
-       * list. Same family, tighter step.
-       */
-      /**
-       * Never wraps, never widens the column: past its cap the agent's name
-       * ellipsises and the full sentence is on the title - the same rule the
-       * widget applies when its own cell runs short.
-       */
-      .lock__text {
-        /**
-         * flex: none, and it is a sub-pixel bug that put it there.
-         *
-         * As a shrinkable flex item this box came out at 83.19px for text that
-         * measures 83.42 - a quarter of a pixel short, with 48px of unused
-         * room in the cell. That is enough for the renderer to ellipse, so
-         * "Locked to you" drew as "Locked to y...". scrollWidth and clientWidth
-         * both round to 83, which is why an integer overflow check called it
-         * clean; the range measures the real width and does not.
-         *
-         * Sized to content now, and capped by max-width, so the ellipsis only
-         * appears when the name genuinely exceeds 160px.
-         */
-        flex: none;
-        max-width: 160px;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .lock[data-lock='locked-to-me'] {
-        color: var(--foreground-success);
-        font-weight: 600;
-      }
-      .lock--none {
+        font-weight: 400;
         color: var(--ink-3);
       }
-      .lock__icon {
+      /* The one to action. */
+      .work__item--lead {
+        font-weight: 600;
+        color: var(--ink);
+      }
+      /* Done, wherever it lands in the order. */
+      .work__item--done {
+        color: var(--foreground-success);
+      }
+      .work__tick {
         flex: none;
         font-size: 16px;
         width: 16px;
         height: 16px;
         line-height: 16px;
       }
-
-      /**
-       * Priority carries NO colour. Row order already says what is urgent -
-       * it is the sort - so a second signal here would compete with the SLA
-       * traffic light, which is the one that earns it.
-       */
-      /**
-       * Inert, and deliberately so.
-       *
-       * This was the popover trigger - a button that read as text, with a
-       * pointer cursor and a hover underline. A score is a value, and dressing
-       * a value as a control means every row offers something to click that
-       * does nothing a reader wants. The affordance moved to the icon beside
-       * it, which is what an affordance is for.
-       */
-      .prio-cell {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        /* Squeezed, "200 Urgent" broke over two lines and took its row to
-           61px - a taller row rather than a visibly overflowing one, which is
-           the failure that hides. */
-        white-space: nowrap;
-      }
-      /**
-       * Inert, and deliberately so. A score is a value; the affordance is the
-       * icon beside it.
-       */
-      .prio {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        color: var(--ink);
-      }
-      /* The row icon IS the header's icon - both take the .th__info rules
-         below. Only the open state is its own: an icon whose panel is up
-         stays at full strength so the source of the popover is obvious. */
-      .prio__info[aria-expanded='true'] {
-        color: var(--ink);
-      }
-      .prio--urgent {
-        font-weight: 700;
-        color: var(--ink);
-      }
-      .prio__icon {
+      .work__sep {
         flex: none;
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
+        color: var(--foreground-subtle);
       }
-
-      /* SLA is a ui-pill now - its four bands are tones on the shared
-         component, not a local pill drawn to look like one. */
-
-      /**
-       * The chip itself must NOT clip - that would eat its own padding and cut
-       * the pill's right edge. Only the label clips, and it ellipsises rather
-       * than slicing a glyph in half. The full text is on the title.
-       */
-      .work-row ui-pill {
-        overflow: visible;
-        /**
-         * ui-pill is flex: none by default, which is right everywhere else.
-         * Here the chips may give a little if a future label outgrows the
-         * column - and min-width: 0 is what lets the label ellipsise rather
-         * than the chip simply overflowing its cell.
-         */
-        min-width: 0;
-        flex-shrink: 1;
+      /* A control, but the quietest in the row: the four inline items are the
+         scan, and this is only the way to the rest. */
+      .work__more {
+        display: inline-flex;
+        align-items: center;
+        flex: none;
+        /* min-height, not height: the control may never be shorter than 32,
+           and a fixed height would stop it growing if the text ever reflows. */
+        min-height: 32px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground-subtle);
+        cursor: pointer;
+        transition: background-color 150ms ease;
       }
-      /* The count never gives: it is the thing that says work is hidden. */
-      .chip--more {
-        flex-shrink: 0;
+      .work__more:hover {
+        background: var(--surface-hover);
+        color: var(--ink);
       }
-      /**
-       * No width cap. A chip is as wide as its label needs.
-       *
-       * The cap was the bug: it cut "Open source searches" - the longest of the
-       * six work types - even when the column had room for it. Overflow and
-       * ellipsis stay as a LAST RESORT, for a label longer than any that
-       * exists today; they should never fire on the current six.
-       */
-      .chip__label {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      .work__more:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
-      /* Never shrinks, so the label is the only thing that gives. */
-      mat-icon.chip__icon {
-        flex-shrink: 0;
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
-      }
-      .chip--more {
+      .work__empty {
         color: var(--ink-3);
       }
 
@@ -1302,7 +1696,98 @@ export class CasesTableComponent {
    * Placeholder. The real Confluence page is not linked from anywhere in the
    * repo yet - swap this for the actual URL before the walkthrough.
    */
+  /** Placeholder, like SCORING_URL: the docs page does not exist yet. */
+  readonly DOCS_URL = '#docs-url-pending';
+
   readonly SCORING_URL = 'https://confluence.example.com/aml-priority-scoring';
+
+  /** "A. Kowalski" -> "AK". Whatever separates the parts, take their firsts. */
+  initials(name: string | null | undefined): string {
+    return (name ?? '?')
+      .split(/[\s.]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('');
+  }
+
+  /** "Locked by M. Torres · 1d ago" - the tooltip's words. */
+  lockedByTip(c: CaseRecord): string {
+    const age = c.lock.since ? relativeAge(c.lock.since, this.cases.now()) : '';
+    return `Locked by ${c.lock.owner?.name ?? 'another agent'}${age ? ` · ${age} ago` : ''}`;
+  }
+
+  /**
+   * The same fact, spelled out. A screen reader saying "1d" reads it as the
+   * letter d; the visible tooltip can be terse because the eye supplies the
+   * rest.
+   */
+  lockedByLabel(c: CaseRecord): string {
+    const who = c.lock.owner?.name ?? 'another agent';
+    const age = c.lock.since ? relativeAge(c.lock.since, this.cases.now()) : '';
+    const spelled = age.replace(/^(\d+)m$/, '$1 minutes').replace(/^(\d+)h$/, '$1 hours')
+      .replace(/^1d$/, '1 day').replace(/^(\d+)d$/, '$1 days')
+      .replace(/^(\d+)mo$/, '$1 months').replace(/^(\d+)y$/, '$1 years');
+    return `Locked by ${who}${spelled ? ` ${spelled} ago` : ''}, click to force unlock`;
+  }
+
+  /** aria-sort for a header: the active column says which way, the other none. */
+  ariaSort(col: 'priority' | 'sla'): 'ascending' | 'descending' | 'none' {
+    if (this.cases.sort() !== col) return 'none';
+    return this.cases.sortDir() === 'asc' ? 'ascending' : 'descending';
+  }
+
+  /** The trigger the case was opened for. The store sorts oldest first. */
+  initiating(c: CaseRecord): TriggerRef {
+    return c.triggers[0];
+  }
+
+  triggerAge(c: CaseRecord): string {
+    return `${relativeAge(this.initiating(c).at, this.cases.now())} ago`;
+  }
+
+  /** The absolute stamp behind "2d ago", which is the wrong precision to
+   *  decide anything on. */
+  triggerStamp(c: CaseRecord): string {
+    return new Date(this.initiating(c).at).toLocaleString('en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
+  /**
+   * What the Work column says to a screen reader.
+   *
+   * One sentence for the whole cell, because the spans inside it are
+   * aria-hidden: read one at a time they are a list of fragments, and the
+   * order - which is the whole point of the column - does not survive.
+   */
+  workSummary(c: CaseRecord): string {
+    const all = this.cases.workOrdered(c);
+    if (all.length === 0) return 'No work items';
+    const todo = all.filter((w) => w.state === 'todo').length;
+    const shown = this.visibleWork(c).map((w) => this.cases.workLabel(w.type));
+    const hidden = this.hiddenWork(c);
+    const first = shown.length ? `, first: ${shown.join(', ')}` : '';
+    const more = hidden > 0 ? `, and ${hidden} more` : '';
+    return `${all.length} work items, ${todo} to do${first}${more}`;
+  }
+
+  /**
+   * The full name and an absolute stamp, for when the name has ellipsed - and
+   * because "2d ago" is the wrong precision for deciding anything.
+   */
+  triggerTitle(c: CaseRecord): string {
+    const t = this.initiating(c);
+    const more = c.triggers.length - 1;
+    return (
+      `${t.name} - ${new Date(t.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` +
+      (more > 0 ? ` (+${more} since)` : '')
+    );
+  }
+
+  /** Heading and strapline for whichever queue is showing. */
+  readonly copy = computed(() => QUEUE_COPY[this.nav.tab()]);
 
   readonly rows = computed(() =>
     this.nav.tab() === 'compliance' ? this.cases.complianceCases() : this.cases.activeCases(),
@@ -1334,11 +1819,10 @@ export class CasesTableComponent {
    * end sends; the raw enum is still on the title for anyone who needs it.
    */
   private static readonly STATUS_LABELS: Record<string, string> = {
-    PLAYER_VERIFY: 'Verify',
-    SELF_EXCLUDED: 'Self excluded',
-    ACTIVE: 'Active',
-    SUSPENDED: 'Suspended',
-    DORMANT: 'Dormant',
+    PLAYER_DUPLICATE: 'Duplicate',
+    PLAYER_REGISTERED: 'Registered',
+    GAMSTOP_RESTRICTED: 'GAMSTOP restricted',
+    ENABLED: 'Enabled',
   };
 
   statusLabel(status: string): string {
@@ -1367,12 +1851,13 @@ export class CasesTableComponent {
   }
 
   /** Two chips, then a count. To-do first. */
+  /** Up to four inline; the rest become a count. */
   visibleWork(c: CaseRecord) {
-    return this.cases.workOrdered(c).slice(0, 2);
+    return this.cases.workOrdered(c).slice(0, 4);
   }
 
   hiddenWork(c: CaseRecord): number {
-    return Math.max(0, c.actions.length - 2);
+    return Math.max(0, c.actions.length - 4);
   }
 
   /**
@@ -1392,6 +1877,19 @@ export class CasesTableComponent {
     // this the details page would open on whichever case was there before.
     this.modal.loadCase(c.id);
     this.nav.showPlayer();
+  }
+
+  /**
+   * Whether the table has scrolled off its left edge.
+   *
+   * Drives the sticky column's shadow, and only that: flush left there is
+   * nothing behind the Player column, so an edge there would promise a hidden
+   * column that is in fact in view.
+   */
+  readonly scrolledX = signal(false);
+
+  onScroll(event: Event): void {
+    this.scrolledX.set((event.target as HTMLElement).scrollLeft > 0);
   }
 
   /**

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CasesStore } from '../core/cases-store';
-import { CasesTab, NavStore } from '../core/nav-store';
+import { CasesTab, NavStore, QUEUE_COPY } from '../core/nav-store';
 
 interface NavItem {
   label: string;
@@ -173,8 +173,8 @@ export class SideNavComponent {
         { label: 'SG Snoozes' },
         // The table's only entry point - player details and the modal do not
         // link back, so these two are how an agent returns to the queue.
-        { label: 'AML cases', liveCount: 'active', goto: 'active' },
-        { label: 'Compliance AML cases', liveCount: 'compliance', goto: 'compliance' },
+        { label: QUEUE_COPY.active.title, liveCount: 'active', goto: 'active' },
+        { label: QUEUE_COPY.compliance.title, liveCount: 'compliance', goto: 'compliance' },
         { label: 'Sessions' },
         { label: 'Documents', count: 8 },
         { label: 'Timers' },

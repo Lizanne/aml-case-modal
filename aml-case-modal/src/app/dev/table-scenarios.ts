@@ -61,7 +61,7 @@ export const TABLE_SCENARIOS: readonly TableScenario[] = [
   {
     id: 'T-03',
     label: 'T-03 - Row locked to me',
-    hint: 'Top Active row locked to you: Unlock and Open AML Case both offered.',
+    hint: 'Top Active row locked to you: green padlock unlocks, Open case in Actions.',
     apply: (c, n) => {
       reseed(c, 'active', n);
       const top = c.activeCases()[0];
@@ -71,7 +71,7 @@ export const TABLE_SCENARIOS: readonly TableScenario[] = [
   {
     id: 'T-04',
     label: 'T-04 - Row locked to another agent',
-    hint: 'Top Active row held by M. Torres. Force unlock goes through the widget confirm.',
+    hint: 'Top Active row held by M. Torres. The padlock opens the force-unlock confirm.',
     apply: (c, n) => {
       reseed(c, 'active', n);
       const top = c.activeCases()[0];
@@ -82,18 +82,6 @@ export const TABLE_SCENARIOS: readonly TableScenario[] = [
     id: 'T-05',
     label: 'T-05 - Priority breakdown popover',
     hint: 'Click any Priority score to open its breakdown. Escape closes it.',
-    apply: (c, n) => reseed(c, 'active', n),
-  },
-  {
-    id: 'T-06',
-    label: 'T-06 - Work "+N more" popover',
-    hint: 'Click any "+N more" chip for the full work list. Escape closes it.',
-    apply: (c, n) => reseed(c, 'active', n),
-  },
-  {
-    id: 'T-07',
-    label: 'T-07 - New trigger on a row',
-    hint: 'Not built yet - the amber row flash is step 6.',
     apply: (c, n) => reseed(c, 'active', n),
   },
   {

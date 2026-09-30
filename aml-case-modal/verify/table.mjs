@@ -12,6 +12,7 @@
  * called it clean. Ranges measure the real width; integers do not.
  */
 import { chromium } from 'playwright';
+import { decodePng } from './_png.mjs';
 
 const BASE = 'http://localhost:4200';
 let failed = 0;
@@ -38,10 +39,12 @@ try {
       .map((r) => Math.round(r.getBoundingClientRect().height)))],
     btnHeights: [...new Set([...document.querySelectorAll('.actions button')]
       .map((e) => Math.round(e.getBoundingClientRect().height)))],
-    btnLines: [...document.querySelectorAll('.actions button')].map((e) => {
-      const label = e.querySelector('.mdc-button__label') ?? e;
-      return Math.round(label.getBoundingClientRect().height / 20);
-    }),
+    // Both Actions controls are icon-only and square now, so there is no
+    // label to wrap - what matters is that neither has grown off its axis.
+    actionSquares: [...new Set([...document.querySelectorAll('.actions button')].map((e) => {
+      const r = e.getBoundingClientRect();
+      return `${Math.round(r.width)}x${Math.round(r.height)}`;
+    }))],
     axisSpread: Math.max(...[...document.querySelectorAll('.table tbody tr')].map((r) => {
       const mids = [...r.querySelectorAll('td')].map((td) => {
         const k = td.firstElementChild;
@@ -55,17 +58,336 @@ try {
       Math.round(a.closest('td').getBoundingClientRect().right - a.getBoundingClientRect().right)))],
   }));
   check('every pill in the table is 24px', geom.pillHeights.join() === '24', geom.pillHeights.join());
+  /**
+   * The SLA dot, per Figma 24029:714 - a 12px halo at 6% and a 6px core, both
+   * from currentColor so one rule serves every tone. It is the only column
+   * that takes it: the rest of the row states facts, this one reports a
+   * condition that is still moving while you read it.
+   */
+  const dot = await page.evaluate(() => {
+    const sla = [...document.querySelectorAll('.table tbody .cell--sla ui-pill')];
+    const d = sla[0].querySelector('.pill__dot');
+    const cs = getComputedStyle(d);
+    const core = getComputedStyle(d, '::before');
+    const alpha = (v) => {
+      const m = v.match(/[\d.]+\s*\)\s*$/);
+      return m ? Number(m[0].replace(/[)\s]/g, '')) : 1;
+    };
+    return {
+      onEverySla: sla.every((e) => !!e.querySelector('.pill__dot')),
+      andNowhereElse: document.querySelectorAll('.table .pill__dot').length === sla.length,
+      halo: `${Math.round(d.getBoundingClientRect().width)}x${Math.round(d.getBoundingClientRect().height)}`,
+      haloAlpha: alpha(cs.backgroundColor),
+      core: core.width,
+      gap: getComputedStyle(sla[0]).gap,
+      // Per tone, because the rims are per tone - and the solid one has none.
+      byTone: Object.fromEntries(sla.map((e) => {
+        const cs = getComputedStyle(e);
+        return [e.getAttribute('data-tone'), {
+          border: cs.borderTopColor, width: cs.borderTopWidth, text: cs.color,
+          dot: getComputedStyle(e.querySelector('.pill__dot'), '::before').backgroundColor }];
+      })),
+      // The tones the SLA column shares with the rest of the table must NOT
+      // have followed it: a work chip is not a status pill.
+      /**
+       * The player's status pill: a tone consumer OUTSIDE the SLA column.
+       *
+       * This used to compare against a Work chip, but Work is text now - D-12
+       * - so the subject had to move rather than the rule. What is being
+       * proved is unchanged: the dot and the rim are scoped to the dotted
+       * pill, so a pill that merely shares a tone does not grow either.
+       */
+      /**
+       * The severity pill: the only pill left OUTSIDE the SLA column, now the
+       * player's status is plain text. The subject has moved twice as the
+       * table changed; the rule has not. The dot and the rim are scoped to the
+       * dotted pill, so no other pill grows either.
+       */
+      elsewhere: (() => {
+        const chip = document.querySelector('.table tbody ui-pill[data-sev]');
+        return chip ? { sev: chip.getAttribute('data-sev'),
+          border: getComputedStyle(chip).borderTopColor,
+          dot: !!chip.querySelector('.pill__dot') } : null;
+      })(),
+      borderWidths: [...new Set(sla.map((e) => getComputedStyle(e).borderTopWidth))],
+      heights: [...new Set(sla.map((e) => Math.round(e.getBoundingClientRect().height)))],
+      overflow: sla.filter((e) => e.getBoundingClientRect().width > e.closest('td').clientWidth + 0.5).length,
+    };
+  });
+  check('the SLA pills carry the dot, and nothing else does',
+    dot.onEverySla && dot.andNowhereElse, JSON.stringify(dot));
+  check('a 12px halo at 6% with a 6px core',
+    dot.halo === '12x12' && Math.abs(dot.haloAlpha - 0.06) < 0.005 && dot.core === '6px',
+    JSON.stringify(dot));
+  check('the dot does not change the pill height or its 4px gap',
+    dot.heights.join() === '24' && dot.gap === '4px', JSON.stringify(dot));
+  const t = dot.byTone;
+  check('the tinted pills take their own subdued rim',
+    t.warn?.border === 'rgb(253, 230, 138)' &&
+    t.success?.border === 'rgb(187, 247, 208)' &&
+    t.danger?.border === 'rgb(254, 202, 202)',
+    JSON.stringify({ warn: t.warn?.border, success: t.success?.border, danger: t.danger?.border }));
+  // A rim on a saturated red would be a second edge fighting the first, and
+  // the Figma node is a flat fill with no stroke.
+  check('the solid pill has no rim at all',
+    t['danger-solid']?.border === 'rgba(0, 0, 0, 0)', t['danger-solid']?.border);
+  check('breached-but-not-solid takes the deepest red for its label AND its dot',
+    t.danger?.text === 'rgb(127, 29, 29)' && t.danger?.dot === 'rgb(127, 29, 29)',
+    JSON.stringify(t.danger));
+  check('and a pill outside the column grows neither dot nor rim',
+    dot.elsewhere?.dot === false && dot.elsewhere?.border !== 'rgb(253, 230, 138)' &&
+    dot.elsewhere?.border !== 'rgb(187, 247, 208)' && dot.elsewhere?.border !== 'rgb(254, 202, 202)',
+    JSON.stringify(dot.elsewhere));
+  check('and the column still fits them', dot.overflow === 0, String(dot.overflow));
   check('rows are 52px plus the 1px divider', geom.rowHeights.join() === '53', geom.rowHeights.join());
   // 32, and not a number chosen for the table: these are the modal's own
   // mat-flat/mat-stroked/mat-button components, so the height is whatever the
   // case header's buttons are. A 28 here would mean someone re-sized them.
   check('every action button is the modal\'s 32px', geom.btnHeights.join() === '32',
     geom.btnHeights.join());
-  check('no action label wraps - a wrapped button is a taller row, silently',
-    geom.btnLines.every((n) => n === 1), geom.btnLines.join(','));
+  check('both Actions controls are square and on one 32px axis',
+    geom.actionSquares.join() === '32x32', geom.actionSquares.join(' '));
   check('all cells share one vertical axis', geom.axisSpread <= 1.5, String(geom.axisSpread));
   check('the action group is flush right on every row',
     geom.trailing.length === 1, geom.trailing.join());
+
+  console.log('\nThe page says which queue it is, in the sidebar\'s own words');
+  const heading = await page.evaluate(() => {
+    const title = document.querySelector('.cases__title').textContent.trim();
+    return { title, sub: document.querySelector('.cases__sub').textContent.replace(/\s+/g, ' ').trim(),
+      // Clicking "AML cases" has to land somewhere that agrees it is that queue.
+      inSidebar: [...document.querySelectorAll('[class*=nav__]')]
+        .some((n) => n.textContent.trim().startsWith(title)) };
+  });
+  check('the Active heading is the sidebar entry that leads to it',
+    heading.title === 'AML cases' && heading.inSidebar, JSON.stringify(heading));
+
+  console.log('\nTriggers: what opened the case, and how much has happened since');
+  const trig = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const cells = [...document.querySelectorAll('.cell--triggers')];
+    const one = cells[0].querySelector('.trig');
+    return {
+      headerAfterSeverity: (() => {
+        const h = [...document.querySelectorAll('thead th')].map((t) => t.textContent.trim());
+        return h[h.indexOf('Severity') + 1] === 'Triggers';
+      })(),
+      counts: cells.map((c) => c.querySelectorAll('.trig__more').length),
+      withCount: cells.filter((c) => c.querySelector('.trig__more')).length,
+      withoutCount: cells.filter((c) => !c.querySelector('.trig__more')).length,
+      colours: {
+        name: cs(one.querySelector('.trig__name')).color,
+        at: cs(one.querySelector('.trig__at')).color,
+        more: (() => {
+          const m = document.querySelector('.trig__more');
+          return m ? { colour: cs(m).color, weight: cs(m).fontWeight } : null;
+        })(),
+      },
+      // A count, not a control.
+      interactive: cells.filter((c) => c.querySelector('a,button,[tabindex],[role=button]')).length,
+      cursors: [...new Set(cells.map((c) => cs(c.querySelector('.trig')).cursor))],
+      nowrap: [...new Set(cells.map((c) => cs(c).whiteSpace))],
+      lines: cells[0].querySelector('.trig').children.length,
+      name: { weight: cs(cells[0].querySelector('.trig__name')).fontWeight,
+        fs: cs(cells[0].querySelector('.trig__name')).fontSize },
+      detail: { fs: cs(cells[0].querySelector('.trig__detail')).fontSize,
+        lh: cs(cells[0].querySelector('.trig__detail')).lineHeight,
+        weight: cs(cells[0].querySelector('.trig__detail')).fontWeight,
+        text: cells[0].querySelector('.trig__detail').textContent.trim() },
+      stampTitle: cells[0].querySelector('.trig__at').getAttribute('title'),
+      detailsTitled: cells.every((c) => !!c.querySelector('.trig__detail').getAttribute('title')),
+      nameClipped: cells.filter((c) => {
+        const e = c.querySelector('.trig__name');
+        const rg = document.createRange();
+        rg.selectNodeContents(e);
+        return rg.getBoundingClientRect().width > e.getBoundingClientRect().width + 0.01;
+      }).length,
+      overflow: cells.filter((c) =>
+        c.querySelector('.trig').getBoundingClientRect().width > c.clientWidth + 0.5).length,
+      minWidth: cs(document.querySelector('.col-triggers')).minWidth,
+      // The initiating trigger cannot predate the case it opened.
+      allAfterOpen: cells.length > 0,
+    };
+  });
+  check('Triggers sits directly after Severity', trig.headerAfterSeverity);
+  check('one initiating trigger per row, never more', trig.counts.every((n) => n <= 1),
+    trig.counts.join(','));
+  check('both states are visible on first load - some with +N, some without',
+    trig.withCount > 0 && trig.withoutCount > 0,
+    `${trig.withCount} with, ${trig.withoutCount} without`);
+  check('name in default ink, age muted, count subtler than both',
+    trig.colours.name === 'rgb(9, 9, 11)' && trig.colours.at === 'rgb(82, 82, 91)' &&
+    trig.colours.more?.colour === 'rgb(111, 111, 120)' && trig.colours.more?.weight === '500',
+    JSON.stringify(trig.colours));
+  check('nothing in the column is interactive',
+    trig.interactive === 0 && trig.cursors.join() === 'auto',
+    `${trig.interactive} controls, cursors ${trig.cursors.join()}`);
+  check('two lines: what fired, and what it said',
+    trig.lines === 2 && trig.detail.text.length > 0, JSON.stringify(trig.detail));
+  check('both lines are 14/20; the name leads at 600, the detail follows at 400',
+    trig.name.weight === '600' && trig.name.fs === '14px' &&
+    trig.detail.fs === '14px' && trig.detail.lh === '20px' && trig.detail.weight === '400',
+    JSON.stringify({ name: trig.name, detail: trig.detail }));
+  check('the name never clips, and the detail carries its full text on title',
+    trig.nameClipped === 0 && trig.detailsTitled,
+    `${trig.nameClipped} names clipped`);
+  check('the absolute stamp is on the time span', /\d+ \w+ \d{4}/.test(trig.stampTitle ?? ''),
+    trig.stampTitle);
+  check('the column holds the brief\'s 200px floor', trig.minWidth === '200px', trig.minWidth);
+
+  console.log('\nThe Player column stays put, and the row highlight crosses it');
+  const stick = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const td = document.querySelector('tbody .cell--player');
+    const th = document.querySelector('thead .cell--player');
+    return {
+      td: { pos: cs(td).position, left: cs(td).left, z: cs(td).zIndex, bg: cs(td).backgroundColor },
+      th: { pos: cs(th).position, z: cs(th).zIndex, bg: cs(th).backgroundColor },
+      shadowFlush: cs(td).boxShadow,
+      x: Math.round(td.getBoundingClientRect().left),
+    };
+  });
+  // Transparent is the default for a sticky cell, and the other columns would
+  // scroll straight through it.
+  check('the Player cells are sticky and painted, header above body',
+    stick.td.pos === 'sticky' && stick.td.left === '0px' && Number(stick.td.z) === 10 &&
+    stick.td.bg !== 'rgba(0, 0, 0, 0)' && stick.th.pos === 'sticky' &&
+    Number(stick.th.z) > Number(stick.td.z) && stick.th.bg !== 'rgba(0, 0, 0, 0)',
+    JSON.stringify(stick));
+  check('flush left there is no edge - nothing is hidden behind it yet',
+    stick.shadowFlush === 'none', stick.shadowFlush);
+
+  const scrolled = await page.evaluate(async () => {
+    const w = document.querySelector('.table-scroll');
+    const playerX = () => Math.round(document.querySelector('tbody .cell--player').getBoundingClientRect().left);
+    const nextX = () => Math.round(document.querySelector('tbody td:nth-child(2)').getBoundingClientRect().left);
+    const before = { player: playerX(), next: nextX() };
+    /**
+     * Scroll to the END rather than to a chosen number.
+     *
+     * A fixed 360 assumed more room than the viewport has: max scroll here is
+     * about 186, so the value clamped and the neighbouring column had not
+     * passed the sticky one. The check was comparing against how far it
+     * happened to get, which is a property of the window, not of the code.
+     */
+    w.scrollLeft = w.scrollWidth;
+    await new Promise((r) => setTimeout(r, 300));
+    const td = document.querySelector('tbody .cell--player');
+    const out = {
+      scrolledBy: w.scrollLeft,
+      flagged: w.classList.contains('is-scrolled'),
+      heldX: playerX() === before.player,
+      // The neighbour moved left by exactly what the container scrolled.
+      neighbourMoved: before.next - nextX() === w.scrollLeft,
+    };
+    w.scrollLeft = 0;
+    await new Promise((r) => setTimeout(r, 300));
+    out.shadowGoneAgain = !w.classList.contains('is-scrolled');
+    return out;
+  });
+  check('scrolled, the column holds its place while the rest moves under it',
+    scrolled.scrolledBy > 0 && scrolled.heldX && scrolled.neighbourMoved,
+    JSON.stringify(scrolled));
+  /**
+   * PAINTED, not computed - and that distinction is the whole check.
+   *
+   * The edge was first written as box-shadow on the sticky cell.
+   * getComputedStyle reported it, this suite passed, and Chrome rendered
+   * nothing: box-shadow on a cell is silently dropped when the table is
+   * border-collapse: collapse, which this one must be for tr to carry the row
+   * divider. Nobody caught it until someone looked at the screen.
+   */
+  const paint = await (async () => {
+    const boundary = await page.evaluate(() => {
+      const td = document.querySelector('tbody .cell--player').getBoundingClientRect();
+      const row = document.querySelector('tbody tr:nth-child(2)').getBoundingClientRect();
+      const w = document.querySelector('.table-scroll');
+      /**
+       * Sample near the TOP of the row, not its middle.
+       *
+       * The mid-line is where every cell's text and pills sit, and the columns
+       * scrolling under the sticky one put their glyphs right against its
+       * edge - so those pixels are dark whether an edge is painted or not,
+       * and a check reading them passes either way. A row is 53px and its
+       * content is a 24px band through the centre; 5px down is empty.
+       */
+      return { x: Math.round(td.right), y: Math.round(row.top + 5),
+        maxScroll: w.scrollWidth - w.clientWidth };
+    });
+    const sample = async () => {
+      const png = decodePng(await page.screenshot({ type: 'png' }));
+      // Just outside the cell, where the falloff lands.
+      return [1, 2, 3].map((d) => png.at(boundary.x + d, boundary.y)[0]);
+    };
+    await page.evaluate(() => { document.querySelector('.table-scroll').scrollLeft = 0; });
+    await page.waitForTimeout(300);
+    const flush = await sample();
+    await page.evaluate(() => {
+      const w = document.querySelector('.table-scroll');
+      w.scrollLeft = Math.min(300, w.scrollWidth - w.clientWidth);
+    });
+    await page.waitForTimeout(400);
+    const moved = await sample();
+    await page.evaluate(() => { document.querySelector('.table-scroll').scrollLeft = 0; });
+    await page.waitForTimeout(300);
+    return { flush, moved, maxScroll: boundary.maxScroll };
+  })();
+  check('and only then does the edge appear - in the PIXELS, not the computed style',
+    paint.maxScroll > 0 &&
+    // Nothing at all flush left...
+    paint.flush.every((v) => v === 255) &&
+    // ...a real falloff once scrolled: darkest against the cell, fading out.
+    paint.moved[0] < 252 && paint.moved[0] < paint.moved[2] && paint.moved[2] >= 252,
+    `flush ${paint.flush.join(',')} scrolled ${paint.moved.join(',')}`);
+  check('the flag still tracks the scroll position',
+    scrolled.flagged && scrolled.shadowGoneAgain, JSON.stringify(scrolled));
+  // A box-shadow here would compute and never paint. Fail loudly if one returns.
+  check('the edge is not a box-shadow, which this table cannot render',
+    await page.evaluate(() =>
+      getComputedStyle(document.querySelector('tbody .cell--player')).boxShadow === 'none'));
+
+  const atRest = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const row = document.querySelector('tbody tr:nth-child(2)');
+    return { link: cs(row.querySelector('.linkish')).color,
+      pill: cs(row.querySelector('ui-pill')).backgroundColor,
+      lock: cs(row.querySelector('.lock-av')).backgroundColor };
+  });
+  await page.hover('tbody tr:nth-child(2) .cell--sla');
+  await page.waitForTimeout(250);
+  const hover = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const row = document.querySelector('tbody tr:nth-child(2)');
+    const other = document.querySelector('tbody tr:nth-child(3)');
+    const tds = [...row.querySelectorAll('td')];
+    return {
+      backgrounds: [...new Set(tds.map((t) => cs(t).backgroundColor))],
+      transition: `${cs(tds[0]).transitionProperty} ${cs(tds[0]).transitionDuration}`,
+      rowCursor: cs(row).cursor,
+      /**
+       * Background ONLY - compared against the SAME row's resting values,
+       * captured before the hover. Comparing row 2 to row 3 was meaningless:
+       * they hold different lock states, so their padlocks are different
+       * colours whether anything is hovered or not.
+       */
+      link: cs(row.querySelector('.linkish')).color,
+      pill: cs(row.querySelector('ui-pill')).backgroundColor,
+      lock: cs(row.querySelector('.lock-av')).backgroundColor,
+    };
+  });
+  check('every cell takes the hover, the sticky one included',
+    hover.backgrounds.length === 1, hover.backgrounds.join(' '));
+  check('at 100ms on background alone',
+    hover.transition === 'background-color 0.1s', hover.transition);
+  check('the row keeps the default cursor - only its controls are pointers',
+    hover.rowCursor === 'auto', hover.rowCursor);
+  check('and nothing else in the row changes',
+    hover.link === atRest.link && hover.pill === atRest.pill &&
+    hover.lock === atRest.lock,
+    `rest ${JSON.stringify(atRest)} hover ${JSON.stringify(hover)}`);
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(200);
+
 
   console.log('\nNothing truncates that has room (sub-pixel, not rounded)');
   const clipped = await page.evaluate(() => {
@@ -83,52 +405,92 @@ try {
   check('no label is cut off', clipped.length === 0, clipped.join('; '));
 
   console.log('\nRules 4 and 5: the lock state decides the control');
-  const counts = () => page.evaluate(() => ({
-    notLocked: document.querySelectorAll('.lock--none').length,
-    mine: document.querySelectorAll('.lock[data-lock="locked-to-me"]').length,
-    other: document.querySelectorAll('.lock[data-lock="locked-to-other"]').length,
-    lock: document.querySelectorAll('[aria-label^="Lock case"]').length,
-    unlock: document.querySelectorAll('[aria-label^="Unlock case"]').length,
-    open: document.querySelectorAll('[aria-label^="Open AML case"]').length,
-    force: document.querySelectorAll('[aria-label^="Force unlock"]').length,
-    lockCellButtons: document.querySelectorAll('.cell--lock button').length,
-    solidFills: [...document.querySelectorAll('.actions button')]
-      .filter((b) => getComputedStyle(b).backgroundColor === 'rgb(26, 115, 201)').length,
-    iconOnNotLocked: document.querySelectorAll('.lock--none mat-icon').length,
-    iconOnLocked: document.querySelectorAll('.lock[data-lock] .lock__icon').length,
-  }));
+  const counts = () => page.evaluate(() => {
+    const disc = (e) => {
+      const r = e.getBoundingClientRect();
+      return `${Math.round(r.width)}x${Math.round(r.height)}/` +
+        getComputedStyle(e).borderTopLeftRadius;
+    };
+    const o = document.querySelector('.open-case');
+    const or = o?.getBoundingClientRect();
+    return {
+      notLocked: document.querySelectorAll('.lock-av--free').length,
+      mine: document.querySelectorAll('.lock-av--mine').length,
+      other: document.querySelectorAll('.lock-av--other').length,
+      open: document.querySelectorAll('.open-case').length,
+      solidFills: [...document.querySelectorAll('.actions button')]
+        .filter((b) => getComputedStyle(b).backgroundColor === 'rgb(26, 115, 201)').length,
+      shapes: [...new Set([...document.querySelectorAll('.lock-av')].map(disc))],
+      // The monogram is decoration: the button's name carries who holds it.
+      initialsHidden: [...document.querySelectorAll('.lock-av--mine, .lock-av--other')]
+        .every((e) => !!e.querySelector('[aria-hidden="true"]')),
+      freeName: document.querySelector('.lock-av--free')?.getAttribute('aria-label'),
+      mineName: document.querySelector('.lock-av--mine')?.getAttribute('aria-label'),
+      minePressed: document.querySelector('.lock-av--mine')?.getAttribute('aria-pressed'),
+      otherName: document.querySelector('.lock-av--other')?.getAttribute('aria-label'),
+      openName: o?.getAttribute('aria-label'),
+      openSize: or ? `${Math.round(or.width)}x${Math.round(or.height)}` : null,
+      noLockColumn: ![...document.querySelectorAll('thead th')]
+        .some((h) => h.textContent.trim() === 'Lock'),
+      /**
+       * Two fixed slots. With a flex row, a case nobody holds pulled its
+       * padlock 40px right and the column read as two different columns
+       * depending on who held what.
+       */
+      lockXs: [...new Set([...document.querySelectorAll('.lock-av')]
+        .map((e) => Math.round(e.getBoundingClientRect().left)))].length,
+      actionWidths: [...new Set([...document.querySelectorAll('.actions')]
+        .map((a) => Math.round(a.getBoundingClientRect().width)))],
+    };
+  });
   const c0 = await counts();
-  check('a free row offers Lock and nothing else', c0.lock === c0.notLocked, `${c0.lock}/${c0.notLocked}`);
-  check('Open case appears once per row locked to me, and nowhere else',
-    c0.open === c0.mine && c0.unlock === c0.mine, `${c0.open}/${c0.unlock}/${c0.mine}`);
-  check('Force unlock appears only on a row held by someone else',
-    c0.force === c0.other, `${c0.force}/${c0.other}`);
-  check('the Lock column carries no controls at all', c0.lockCellButtons === 0, String(c0.lockCellButtons));
+
+  /**
+   * The lock control lives in ACTIONS now - D-07 - as one 32px disc in three
+   * states, sized to match Open case beside it. A whole column to hold one
+   * control was a column of chrome, and the two things an agent does to a row
+   * belong together.
+   */
+  check('the Lock column is gone; its control is a 32px disc in Actions',
+    c0.noLockColumn && c0.shapes.join() === '32x32/50%',
+    `noLockColumn ${c0.noLockColumn} / ${c0.shapes.join()}`);
+  check('the initials are decoration - the name carries the person',
+    c0.initialsHidden, String(c0.initialsHidden));
+  check('each state names itself in full',
+    c0.freeName === 'Lock case' && c0.mineName === 'Locked by you, click to unlock' &&
+    /^Locked by .+ \d+ \w+ ago, click to force unlock$/.test(c0.otherName ?? ''),
+    JSON.stringify({ free: c0.freeName, mine: c0.mineName, other: c0.otherName }));
+  check('yours reports itself pressed', c0.minePressed === 'true', c0.minePressed);
+  check('Open case is icon-only on the same axis, named, and only where rule 4 allows it',
+    c0.openSize === '32x32' && c0.openName === 'Open AML case in new tab' &&
+    c0.open === c0.mine, JSON.stringify({ size: c0.openSize, name: c0.openName,
+      open: c0.open, mine: c0.mine }));
   check('Open case is the ONLY filled button in the table',
     c0.solidFills === c0.mine, `${c0.solidFills} filled vs ${c0.mine} mine`);
-  check('no lock glyph on "Not locked", one on each locked row',
-    c0.iconOnNotLocked === 0 && c0.iconOnLocked === c0.mine + c0.other,
-    `${c0.iconOnNotLocked} / ${c0.iconOnLocked}`);
+  check('the lock sits at one x on every row, whoever holds the case',
+    c0.lockXs === 1 && c0.actionWidths.length === 1,
+    `${c0.lockXs} positions, widths ${c0.actionWidths.join()}`);
 
-  await page.locator('[aria-label^="Lock case"]').first().click();
+  // The disc is the control: clicking it locks, clicking again releases.
+  await page.locator('.lock-av--free').first().click();
   await page.waitForTimeout(400);
   const c1 = await counts();
-  check('locking a row grows Open case onto it',
+  check('the disc locks the row, and Open case arrives with it',
     c1.mine === c0.mine + 1 && c1.open === c0.open + 1, `${c1.mine}/${c1.open}`);
-  await page.locator('[aria-label^="Unlock case"]').first().click();
+  await page.locator('.lock-av--mine').first().click();
   await page.waitForTimeout(400);
   const c2 = await counts();
-  check('unlocking puts it back', c2.mine === c0.mine && c2.open === c0.open, `${c2.mine}/${c2.open}`);
+  check('and clicking your own releases it', c2.mine === c0.mine && c2.open === c0.open,
+    `${c2.mine}/${c2.open}`);
 
   console.log('\nForce unlock goes through the modal confirm, not straight through');
-  await page.locator('[aria-label^="Force unlock"]').first().click();
+  await page.locator('.lock-av--other').first().click();
   await page.waitForTimeout(450);
   const dialog = await page.evaluate(() => {
     const d = document.querySelector('confirm-unlock-dialog');
     if (!d) return null;
     return {
       lead: d.querySelector('.lead')?.textContent.replace(/\s+/g, ' ').trim(),
-      buttons: [...d.querySelectorAll('button')].map((b) => b.textContent.trim()),
       focused: document.activeElement?.textContent?.trim(),
     };
   });
@@ -144,6 +506,121 @@ try {
   check('confirming releases the lock', c3.other === otherBefore - 1, `${c3.other}`);
   check('and does NOT hand it to me - taking it is a separate act',
     c3.mine === c2.mine, `${c3.mine} vs ${c2.mine}`);
+
+  const head2 = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const ths = [...document.querySelectorAll('thead th')];
+    /**
+     * Measure the TEXT, not the cell. The sticky Player header carries a 4px
+     * edge pseudo-element that sits outside its padding box and inflates
+     * scrollWidth - reading that as a clip is a false positive.
+     */
+    const clipped = ths.filter((t) => {
+      const rg = document.createRange();
+      rg.selectNodeContents(t);
+      return rg.getBoundingClientRect().width > t.clientWidth - 32 + 0.5;
+    }).map((t) => t.textContent.trim());
+    return { fs: [...new Set(ths.map((t) => cs(t).fontSize))],
+      colour: [...new Set(ths.map((t) => cs(t).color))],
+      transform: [...new Set(ths.map((t) => cs(t).textTransform))],
+      clipped };
+  });
+  check('the header is 14px title case in full ink',
+    head2.fs.join() === '14px' && head2.colour.join() === 'rgb(9, 9, 11)' &&
+    head2.transform.join() === 'none', JSON.stringify(head2));
+  check('and no header text is cut off', head2.clipped.length === 0, head2.clipped.join());
+  /**
+   * Both sortable headers must place their arrow identically.
+   *
+   * They did not: inline-level children share a baseline, so the 24px info
+   * button in the Priority cell grew its line box and pushed that arrow 0.8px
+   * above the SLA one - a difference caused by a sibling neither arrow knows
+   * about. The flex wrapper is what makes them agree.
+   */
+  const arrows = await page.evaluate(() => {
+    const pos = (m) => {
+      const th = [...document.querySelectorAll('thead th')]
+        .find((t) => t.textContent.trim().startsWith(m));
+      const r = th.getBoundingClientRect();
+      const a = th.querySelector('.th-sort__arrow').getBoundingClientRect();
+      return +(a.top + a.height / 2 - r.top).toFixed(2);
+    };
+    return { priority: pos('Priority'), sla: pos('SLA') };
+  });
+  check('both sort arrows sit at the same height, whatever else is in the cell',
+    arrows.priority === arrows.sla, JSON.stringify(arrows));
+  // The link's own rule was lost once in a style edit and the browser default
+  // (#0000EE) took over. Asserted as the token's value, not "not default".
+  const link = await page.evaluate(async () => {
+    const a = document.querySelector('.linkish');
+    const rest = getComputedStyle(a);
+    const out = { colour: rest.color, weight: rest.fontWeight,
+      numeric: rest.fontVariantNumeric, underline: rest.textDecorationLine };
+    return out;
+  });
+  check('the player id keeps the link treatment - #1D4ED8, 600, tabular, underlined',
+    link.colour === 'rgb(29, 78, 216)' && link.weight === '600' &&
+    link.numeric === 'tabular-nums' && link.underline === 'underline',
+    JSON.stringify(link));
+  await page.hover('.linkish');
+  await page.waitForTimeout(250);
+  check('and #1E40AF on hover',
+    (await page.evaluate(() => getComputedStyle(document.querySelector('.linkish')).color))
+      === 'rgb(30, 64, 175)');
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(200);
+
+  console.log('\nSorting: Priority and SLA, direction and aria-sort together');
+  const sortState = () => page.evaluate(() => ({
+    scores: [...document.querySelectorAll('.prio')].map((e) => Number(e.textContent.match(/\d+/)[0])),
+    sorts: [...document.querySelectorAll('thead th')]
+      .map((h) => h.getAttribute('aria-sort')).filter((v) => v !== null),
+    activeUp: [...document.querySelectorAll('.th-sort__arrow--on')]
+      .map((a) => a.classList.contains('th-sort__arrow--up')),
+    buttons: document.querySelectorAll('.th-sort').length,
+    // Only the two sortable headers get an arrow or a name.
+    arrowsInHeader: document.querySelectorAll('thead .th-sort__arrow').length,
+    opacities: [...document.querySelectorAll('.th-sort__arrow')]
+      .map((a) => getComputedStyle(a).opacity),
+  }));
+  const desc = (a) => a.every((v, i) => i === 0 || a[i - 1] >= v);
+  const asc = (a) => a.every((v, i) => i === 0 || a[i - 1] <= v);
+
+  const s0 = await sortState();
+  check('two sortable headers, and only those two carry an arrow',
+    s0.buttons === 2 && s0.arrowsInHeader === 2, JSON.stringify(s0));
+  // A control that only appears under the pointer is invisible to anyone
+  // scanning, and to anyone not using a pointer at all.
+  check('the inactive sort arrow is visible at rest, not hover-only',
+    s0.opacities.every((o) => Number(o) > 0) &&
+    s0.opacities.filter((o) => o === '1').length === 1,
+    s0.opacities.join(','));
+  check('on load: priority descending, and the header says so',
+    desc(s0.scores) && s0.sorts.join() === 'descending,none' && s0.activeUp.join() === 'false',
+    JSON.stringify(s0));
+
+  await page.locator('.th-sort').first().click();
+  await page.waitForTimeout(400);
+  const s1 = await sortState();
+  check('clicking the active column flips it, arrow and aria-sort with it',
+    asc(s1.scores) && s1.sorts.join() === 'ascending,none' && s1.activeUp.join() === 'true',
+    JSON.stringify(s1));
+
+  await page.locator('.th-sort').nth(1).click();
+  await page.waitForTimeout(400);
+  const s2 = await sortState();
+  // Switching resets to descending: "sort by SLA" means the oldest first, and
+  // inheriting ascending would answer a question nobody asked.
+  check('switching column moves the sort and resets to descending',
+    s2.sorts.join() === 'none,descending' && s2.activeUp.join() === 'false',
+    JSON.stringify(s2));
+
+  await page.evaluate(() => document.querySelector('.th-sort').focus());
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(400);
+  const s3 = await sortState();
+  check('and the headers are operable from the keyboard',
+    s3.sorts.join() === 'descending,none' && desc(s3.scores), JSON.stringify(s3));
 
   console.log('\nT-05 and T-06: the two popovers');
   await page.reload({ waitUntil: 'networkidle' });
@@ -236,6 +713,9 @@ try {
           max: c.maxWidth, overflow: c.overflow, clipped: p.scrollWidth > p.clientWidth };
       })(),
       bodyPad: getComputedStyle(p.querySelector('.pop__body')).padding,
+      contentPad: getComputedStyle(p.querySelector('.mat-mdc-menu-content')).padding,
+      gapAboveHead: Math.round(p.querySelector('.pop__head').getBoundingClientRect().top -
+        p.getBoundingClientRect().top),
       // One grid for every line is what makes the columns line up; a grid per
       // row would align nothing to anything.
       amountEdges: [...new Set([...p.querySelectorAll('.pop__amount')]
@@ -260,10 +740,20 @@ try {
       target: p.querySelector('.pop__link')?.getAttribute('target'),
       rel: p.querySelector('.pop__link')?.getAttribute('rel'),
       labelCase: cs(p.querySelector('.pop__label')).textTransform,
+      headStyle: (() => {
+        const h = cs(p.querySelector('.pop__head'));
+        return { transform: h.textTransform, fs: h.fontSize, lh: h.lineHeight, colour: h.color };
+      })(),
     };
   });
   check('the header reads "Priority <score> <band>"',
     /^Priority \d+ (Low|Medium|High|Urgent)$/.test(prio.head), prio.head);
+  // Title case at 14/20 - it was 12/16 uppercase, the table header's
+  // treatment, which made a panel heading read as a column label.
+  check('and it is title case at 14/20, not a column label',
+    prio.headStyle.transform === 'none' && prio.headStyle.fs === '14px' &&
+    prio.headStyle.lh === '20px' && prio.headStyle.colour === 'rgb(9, 9, 11)',
+    JSON.stringify(prio.headStyle));
   check('every line is label, amount and points',
     prio.lines.length > 0 && prio.lines.every((l) => l.length === 3), JSON.stringify(prio.lines[0]));
   check("exactly the matrix's four categories, in its order",
@@ -307,6 +797,14 @@ try {
     prio.pointsStyle.numeric === 'tabular-nums', JSON.stringify(prio.pointsStyle));
   check('16px of padding all round, 16 above the link',
     prio.bodyPad === '16px' && prio.linkGap === 16, `${prio.bodyPad} / ${prio.linkGap}`);
+  /**
+   * Material pads its menu content 8px top and bottom for a list of menu
+   * items. These panels are documents with their own 16, so the 8 was landing
+   * on top of it - 24px above the heading where 16 was meant.
+   */
+  check('and Material\'s own list padding is not stacked on top of it',
+    prio.contentPad === '0px' && prio.gapAboveHead === 16,
+    `${prio.contentPad} / ${prio.gapAboveHead}`);
   check('nothing inside truncates', prio.truncated === 0, String(prio.truncated));
 
   // Escape is the one that broke first: MatMenu binds its handler to the PANEL
@@ -366,48 +864,96 @@ try {
   await page.waitForTimeout(350);
 
   // The header link survives too, and is the other route to the same doc.
+  // Scoped to the TABLE header: the page title carries an icon of its own
+  // now, and it is earlier in the DOM.
   const head = await page.evaluate(() => {
-    const a = document.querySelector('.th__info');
-    return a ? { href: a.getAttribute('href'), target: a.getAttribute('target') } : null;
+    const pick = (sel) => {
+      const a = document.querySelector(sel);
+      return a ? { href: a.getAttribute('href'), target: a.getAttribute('target'),
+        name: a.getAttribute('aria-label'),
+        glyph: Math.round(a.querySelector('svg').getBoundingClientRect().width) } : null;
+    };
+    return { column: pick('thead .th__info'), page: pick('.cases__title .th__info') };
   });
   check('the column header still carries the scoring link',
-    !!head && /confluence|scoring/.test(head.href ?? '') && head.target === '_blank',
-    JSON.stringify(head));
+    /confluence|scoring/.test(head.column?.href ?? '') && head.column?.target === '_blank',
+    JSON.stringify(head.column));
+  check('and the page title carries the documentation link, same icon',
+    head.page?.target === '_blank' && head.page?.glyph === 16 &&
+    head.page?.name === 'AML cases documentation, opens in new tab' &&
+    head.page?.glyph === head.column?.glyph,
+    JSON.stringify(head.page));
 
-  await page.locator('.chip-more-btn').first().click();
-  await page.waitForTimeout(450);
-  check('the work popover opens', await openPanel());
+  /**
+   * Work is TEXT now - D-12. Four pills a row read as four controls, and the
+   * column is a statement, not a set of buttons. The popover went with them:
+   * work detail belongs in the case, not the queue.
+   */
   const work = await page.evaluate(() => {
-    const p = document.querySelector('.mat-mdc-menu-panel');
-    const row = document.querySelector('.table tbody .work-row');
+    const cs = (e) => getComputedStyle(e);
+    const rows = [...document.querySelectorAll('.work-row')];
+    const items = [...rows[0].querySelectorAll('.work__item')];
+    const done = document.querySelector('.work__item--done');
     return {
-      inPopover: p.querySelectorAll('.pop__work li').length,
-      inFixture: Number(document.querySelector('.chip-more-btn')
-        .getAttribute('aria-label').match(/all (\d+)/)[1]),
-      visibleChips: row.querySelectorAll('ui-pill').length,
-      pillHeights: [...new Set([...p.querySelectorAll('ui-pill')]
-        .map((e) => Math.round(e.getBoundingClientRect().height)))],
-      todoFirst: (() => {
-        const tones = [...p.querySelectorAll('.pop__work ui-pill')]
-          .map((e) => e.getAttribute('data-tone'));
-        return tones.indexOf('success') === -1 ||
-          tones.lastIndexOf('outline') < tones.indexOf('success');
+      anyPill: document.querySelectorAll('.cell--work ui-pill').length,
+      controls: [...new Set(rows.flatMap((r) =>
+        [...r.querySelectorAll('a,button,[tabindex],[role=button]')]
+          .map((e) => e.className.split(' ').find((c) => c.startsWith('work__')) ?? e.className)))],
+      maxInline: Math.max(...rows.map((r) => r.querySelectorAll('.work__item').length)),
+      gap: cs(rows[0]).gap,
+      lead: { weight: cs(items[0]).fontWeight, colour: cs(items[0]).color },
+      second: items[1] ? { weight: cs(items[1]).fontWeight, colour: cs(items[1]).color } : null,
+      done: done ? { colour: cs(done).color, tick: !!done.querySelector('.work__tick') } : null,
+      // The spans are fragments; the wrapper carries the sentence.
+      // Everything EXCEPT the count button: a control cannot be hidden from
+      // the reader who has to press it.
+      spansHidden: rows.every((r) => [...r.children]
+        .filter((c) => !c.classList.contains('work__more'))
+        .every((c) => c.getAttribute('aria-hidden') === 'true')),
+      moreNamed: [...document.querySelectorAll('.work__more')]
+        .every((b) => /^Show all \d+ work items/.test(b.getAttribute('aria-label') ?? '')),
+      labels: rows.map((r) => r.getAttribute('aria-label')),
+      more: (() => {
+        const m = document.querySelector('.work__more');
+        if (!m) return null;
+        const r = m.getBoundingClientRect();
+        const item = m.closest('.work-row').querySelector('.work__item').getBoundingClientRect();
+        const c = getComputedStyle(m);
+        return { h: Math.round(r.height), pad: c.padding, fs: c.fontSize,
+          onAxis: Math.abs((r.top + r.height / 2) - (item.top + item.height / 2)) < 1 };
       })(),
+      clipped: [...document.querySelectorAll('.work__item')].filter((e) => {
+        const rg = document.createRange();
+        rg.selectNodeContents(e);
+        return rg.getBoundingClientRect().width > e.getBoundingClientRect().width + 0.01;
+      }).length,
     };
   });
-  check('it lists ALL the work, not just the hidden remainder',
-    work.inPopover === work.inFixture, `${work.inPopover} of ${work.inFixture}`);
-  check('to-do still sorts ahead of done', work.todoFirst);
-  check('its pills are the same 24px pill as the row', work.pillHeights.join() === '24',
-    work.pillHeights.join());
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(400);
-  check('Escape closes the work popover', !(await openPanel()));
-
-  await page.evaluate(() => document.querySelector('.chip-more-btn').focus());
-  await page.keyboard.press('Enter');
-  await page.waitForTimeout(450);
-  check('the popover is reachable from the keyboard alone', await openPanel());
+  // Text, not pills - but the count IS a control: it is the way to the rest
+  // of the list, and the only thing in the column that does anything.
+  // The count is a real target, not a scrap of text: 32px minimum, so it
+  // clears 2.5.8 with room and sits on the same axis as the items beside it.
+  check('the count is at least 32px tall with 8px sides at 14px',
+    work.more.h >= 32 && work.more.pad === '0px 8px' && work.more.fs === '14px' &&
+    work.more.onAxis, JSON.stringify(work.more));
+  check('Work is text, and the only control in it is the count',
+    work.anyPill === 0 &&
+    work.controls.every((c) => c === 'work__more'), JSON.stringify(work.controls));
+  check('up to four inline, a middle dot and 8px between them',
+    work.maxInline <= 4 && work.gap === '8px', `${work.maxInline} inline, gap ${work.gap}`);
+  check('the first item leads at 600 in default ink, the rest muted at 400',
+    work.lead.weight === '600' && work.lead.colour === 'rgb(9, 9, 11)' &&
+    work.second?.weight === '400' && work.second?.colour === 'rgb(82, 82, 91)',
+    JSON.stringify({ lead: work.lead, second: work.second }));
+  // Colour is never the only carrier: green says DONE, order says what is next.
+  check('a completed item keeps its tick and its green wherever it lands',
+    work.done?.tick === true && work.done?.colour === 'rgb(21, 128, 61)',
+    JSON.stringify(work.done));
+  check('no work label is cut off', work.clipped === 0, String(work.clipped));
+  check('the descriptive spans are hidden, the count keeps its own name',
+    work.spansHidden && work.moreNamed &&
+    work.labels.every((l) => /^\d+ work items, \d+ to do, first: /.test(l ?? '') || l === 'No work items'),
+    work.labels[0]);
 
   console.log('\nNo console errors along the way');
   check('the page threw nothing', errors.length === 0, errors.slice(0, 2).join(' | '));

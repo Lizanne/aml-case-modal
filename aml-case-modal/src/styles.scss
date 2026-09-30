@@ -26,6 +26,12 @@
   --page: #FAFAFA;
   --panel: #ffffff;
   /**
+   * The third surface: a step down from --page, for a chip or a control that
+   * has to read as filled against a white card without carrying a colour.
+   * The neutral pill and the widget's demoted Force unlock both sit on it.
+   */
+  --background-tertiary: #F4F4F5;
+  /**
    * The workflow stream's ground, and the one surface that is NOT --page.
    *
    * The stream is a recessed well inside a --panel card, so it needs to read
@@ -137,7 +143,13 @@
   /* The PRESSED step, one deeper again. Shares a value with --sev-edd, and is
      deliberately NOT aliased to it: severity tokens are only ever for
      severity, so a button must not start depending on one. */
-  --danger-pressed: #7F1D1D;
+  /**
+   * The darkest step of the danger family, named for what it IS rather than
+   * for the one state that first needed it: the SLA pill's text and dot take
+   * it as well as the pressed button. One hex, two meaningful names.
+   */
+  --danger-deep: #7F1D1D;
+  --danger-pressed: var(--danger-deep);
   --danger-bg-strong: #FEE2E2;
   /* Same tone as --sev-edd, and moved with it: 9.16:1 on the tint, and
      10.02:1 for white text on a solid --warn fill (the NEW badge). Note that
@@ -146,6 +158,43 @@
      and copy are what separate them. */
   --warn: #78350F;
   --warn-bg: #FEF3C7;
+  /**
+   * Subdued rims for the tinted status pills. Deliberately low contrast
+   * against both their own fill and the page - they define an edge, they do
+   * not carry meaning. The fill and the label do that, which is why 1.4.11
+   * does not bite here.
+   */
+  /**
+   * The wash a control takes under the pointer. One name, so a hover is the
+   * same step everywhere rather than whatever surface was nearest to hand.
+   */
+  --surface-hover: var(--background-tertiary);
+  /**
+   * The two surfaces a table row sits on. Aliases, not new colours: a sticky
+   * cell MUST paint an opaque background or the rows scroll through it, and
+   * "whatever the row happens to be on" is not something a stylesheet can ask
+   * for. Naming them is what makes the sticky column possible.
+   */
+  /**
+   * The quietest readable ink. Used for the Triggers column's "+N", which is
+   * a count rather than a label - it should recede behind the trigger name and
+   * its time, and still be read when wanted.
+   *
+   * #6F6F78 is the lightest grey that clears 4.5:1 on BOTH surfaces a row
+   * sits on: 4.98 on white, 4.53 on the hover wash. A step lighter (#71717A)
+   * passes on white and fails at 4.40 the moment the row is hovered.
+   */
+  --foreground-subtle: #6F6F78;
+  /**
+   * A neutral disc a monogram can sit on. --line's value, not a new colour:
+   * it is the lightest step that still reads as a shape against --panel.
+   */
+  --surface-subtle: #E4E4E7;
+  --surface-default: var(--panel);
+  --surface-header: var(--stream-bg);
+  --border-warning-subdued: #FDE68A;
+  --border-success-subdued: #BBF7D0;
+  --border-negative-subdued: #FECACA;
 }
 
 /* --------------------------------------------------------------------------
@@ -571,4 +620,14 @@ button .mat-icon,
   /* Nothing is hidden and nothing scrolls: past max-width the label wraps and
      the panel grows taller, which is what "never truncates" means here. */
   overflow: visible;
+
+  /**
+   * Material pads its menu content 8px top and bottom, for a list of menu
+   * items that needs breathing room above the first one. These panels are
+   * documents with their own 16px, so the 8 was landing on top of it - a 24px
+   * gap above the heading where 16 was intended, and the same underneath.
+   */
+  .mat-mdc-menu-content {
+    padding: 0;
+  }
 }

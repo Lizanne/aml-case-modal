@@ -386,6 +386,23 @@ const TAB_LABEL: Record<InfoTab, string> = {
         line-height: 20px;
         flex: none;
       }
+      /**
+       * Resync's glyph at 16 - Material's 18 overridden. The same size Add
+       * action, Add files, View snapshot and Adjust severity carry; the 18 was
+       * only ever the default nobody had set.
+       *
+       * Scoped to the BUTTON, not to .snapshot-head. Written against the
+       * wrapper it also matched the back chevron, at equal specificity to that
+       * element's own rule and later in the file, so it silently took the
+       * chevron from 20px to 16.
+       */
+      .snapshot-head .mat-mdc-outlined-button mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        flex: none;
+      }
       .warn-note {
         display: flex;
         align-items: flex-start;

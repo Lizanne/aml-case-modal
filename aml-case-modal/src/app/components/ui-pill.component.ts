@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, booleanAttribute } from '@angular/core';
 
 /**
  * The one pill. Severity pills, status pills, count chips, required-action
@@ -50,11 +50,15 @@ export type PillTone =
   selector: 'ui-pill',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<ng-content />`,
+  template: `@if (dot) {
+      <span class="pill__dot" aria-hidden="true"></span>
+    }
+    <ng-content />`,
   host: {
     '[attr.data-tone]': 'severity ? null : tone',
     '[attr.data-sev]': 'severity',
     '[attr.data-size]': 'size',
+    '[attr.data-dot]': 'dot ? "" : null',
   },
   styles: [
     `
@@ -79,6 +83,73 @@ export type PillTone =
         color: var(--ink);
       }
 
+      /**
+       * The leading dot, per Figma 24029:714.
+       *
+       * A 12px halo at 6% and a 6px core, which is the design's own
+       * construction: its SVG draws r=6 white at fill-opacity .6 inside a
+       * group at opacity .1 - 0.6 x 0.1 = 0.06 - and r=3 solid on top. Built
+       * from currentColor rather than a per-tone colour, so one rule serves
+       * every tone: white on the solid red, the tone's own ink on the tints.
+       *
+       * Opt-in. Off everywhere it is not asked for, because a dot on a pill
+       * that is not reporting a status is decoration.
+       */
+      .pill__dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: color-mix(in srgb, currentColor 6%, transparent);
+      }
+      .pill__dot::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      /* The halo scales with the pill; the core does not - at sm it would be
+         two pixels and read as grit rather than a dot. */
+      :host([data-size='sm']) .pill__dot {
+        width: 10px;
+        height: 10px;
+      }
+
+      /**
+       * Rims, on a dotted pill only - which is to say the SLA column.
+       *
+       * Scoped to [data-dot] rather than set on the tones, and that is not
+       * fussiness: warn and success are worn by the work chips, the severity
+       * dialog and the case header, none of which should grow an edge because
+       * the SLA column wanted one.
+       *
+       * The solid pill has none. Its Figma node is a flat fill with no stroke,
+       * and a rim on a saturated red would be a second edge fighting the first.
+       */
+      :host([data-dot][data-tone='warn']) {
+        border-color: var(--border-warning-subdued);
+      }
+      :host([data-dot][data-tone='success']) {
+        border-color: var(--border-success-subdued);
+      }
+      /**
+       * Breached-but-not-yet-solid takes the deepest red in the family for its
+       * label AND its dot - the dot is currentColor, so one declaration moves
+       * both. It reads 9.16:1 on the tint, against 5.91 for the --danger it
+       * replaces.
+       */
+      :host([data-dot][data-tone='danger']) {
+        border-color: var(--border-negative-subdued);
+        color: var(--danger-deep);
+      }
+      :host([data-dot][data-tone='danger-solid']) {
+        border-color: transparent;
+      }
+
       /* The small step. Size carries no colour and colour carries no size, so
          sm composes with every tone and every severity without a matrix. */
       :host([data-size='sm']) {
@@ -89,6 +160,18 @@ export type PillTone =
       }
 
       /* ---- tones. Colours are unchanged from the blocks these replaced. ---- */
+      /**
+       * Neutral is the default tone, so before this it fell through to the
+       * base and took --page. On a white panel #FAFAFA is 2% off its ground,
+       * which reads as a rendering artefact rather than a filled chip.
+       * --background-tertiary is the surface that step is actually for.
+       *
+       * Severity pills are unaffected: the host binding sets data-tone OR
+       * data-sev, never both, so a severity pill never matches this.
+       */
+      :host([data-tone='neutral']) {
+        background: var(--background-tertiary);
+      }
       :host([data-tone='info']) {
         background: var(--color-background-info-subdued);
         color: var(--color-foreground-on-info);
@@ -164,6 +247,15 @@ export type PillTone =
 })
 export class PillComponent {
   @Input() tone: PillTone = 'neutral';
+
+  /**
+   * A leading status dot and a matching rim - Figma 24029:714.
+   *
+   * Opt-in, and the SLA column is the only caller. Every other pill in the
+   * table states a fact about the case; the SLA pill reports a condition that
+   * is changing while you look at it, and the dot is what says so.
+   */
+  @Input({ transform: booleanAttribute }) dot = false;
   /** When set, the severity language applies and `tone` is ignored. */
   @Input() severity: string | null = null;
   /** md unless asked otherwise, so every existing call site is unchanged. */
