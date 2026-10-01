@@ -170,7 +170,7 @@ let previewSeq = 0;
         width: 20px;
         height: 20px;
         line-height: 20px;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /* min-width: 0 is what lets the title ellipsise instead of pushing
          Download and Close off the end of the header. */
@@ -181,7 +181,7 @@ let previewSeq = 0;
         font-size: 15px;
         line-height: 22px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -190,7 +190,7 @@ let previewSeq = 0;
         flex: none;
         font-size: 13px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
       .panel__action {
@@ -204,12 +204,12 @@ let previewSeq = 0;
         border: 0;
         border-radius: 8px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .panel__action:hover {
         background: rgba(0, 0, 0, 0.05);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .panel__action mat-icon {
         font-size: 20px;

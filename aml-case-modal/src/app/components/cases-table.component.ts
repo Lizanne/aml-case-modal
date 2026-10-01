@@ -626,13 +626,13 @@ import { PillComponent } from './ui-pill.component';
         font-size: 20px;
         line-height: 30px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .cases__sub {
         margin: 2px 0 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
 
       /* The panel's own rule: the bar sits on a hairline. Everything else
@@ -795,12 +795,12 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .trig__at {
         flex: none;
         font-weight: 400;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       /* A count, not a label. Not interactive: nothing to open. */
       .trig__more {
@@ -816,7 +816,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 400;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
 
       .col-sev {
@@ -924,7 +924,7 @@ import { PillComponent } from './ui-pill.component';
         vertical-align: middle;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       .table th {
         padding-top: 10px;
@@ -935,7 +935,7 @@ import { PillComponent } from './ui-pill.component';
         /* Title case, so the tracking that made caps legible is no longer
            doing a job - at 14px it just loosens the words. */
         letter-spacing: 0;
-        color: var(--ink);
+        color: var(--foreground-primary);
         /* Headers read in full now the columns have room: the narrow tracks
            were clipping them to SEV and SLJ. */
         white-space: nowrap;
@@ -999,7 +999,7 @@ import { PillComponent } from './ui-pill.component';
         flex: none;
         width: 16px;
         height: 16px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         opacity: 0.5;
         transition: opacity 150ms ease;
       }
@@ -1031,7 +1031,7 @@ import { PillComponent } from './ui-pill.component';
        *
        * This used to be currentColor at opacity .5, which composited #52525B
        * over the #F4F5F7 header to #A3A4A9: 2.28:1, under the 3:1 that 1.4.11
-       * requires of a non-text control. Solid --ink-2 is the SAME token the
+       * requires of a non-text control. Solid --foreground-secondary is the SAME token the
        * header already carries, at full strength, and measures 7.09:1.
        *
        * The hit area is 24px square for 2.5.8 (the glyph stays 16), which is
@@ -1055,7 +1055,7 @@ import { PillComponent } from './ui-pill.component';
         border: 0;
         background: none;
         border-radius: 50%;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         cursor: pointer;
         /* Colour alone, per the link treatment: nothing here moves or
            resizes on hover. */
@@ -1063,18 +1063,18 @@ import { PillComponent } from './ui-pill.component';
       }
       .th__info:hover,
       .prio__info:hover {
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /**
        * Pressed: the full-strength colour plus a state layer on the HIT AREA,
        * not on the glyph - a wash over the 24px box is what reads as a press.
-       * Mixed from --ink rather than given a hex of its own, at the 0.08 the
+       * Mixed from --foreground-primary rather than given a hex of its own, at the 0.08 the
        * outlined buttons already use for their pressed layer.
        */
       .th__info:active,
       .prio__info:active {
-        color: var(--ink);
-        background: color-mix(in srgb, var(--ink) 8%, transparent);
+        color: var(--foreground-primary);
+        background: color-mix(in srgb, var(--foreground-primary) 8%, transparent);
       }
       /**
        * Focus is the ring and ONLY the ring - the icon keeps its resting
@@ -1145,11 +1145,11 @@ import { PillComponent } from './ui-pill.component';
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .prio--urgent {
         font-weight: 700;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .prio__icon {
         flex: none;
@@ -1194,7 +1194,7 @@ import { PillComponent } from './ui-pill.component';
         height: 16px;
       }
       .lock-av--free {
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .lock-av--mine {
         background: var(--success-bg-subtle);
@@ -1202,7 +1202,7 @@ import { PillComponent } from './ui-pill.component';
       }
       .lock-av--other {
         background: var(--surface-subtle);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .lock-av:hover {
         background: var(--surface-hover);
@@ -1299,7 +1299,7 @@ import { PillComponent } from './ui-pill.component';
         line-height: 20px;
         font-weight: 600;
         letter-spacing: 0;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .pop__lines {
         display: grid;
@@ -1312,7 +1312,7 @@ import { PillComponent } from './ui-pill.component';
       .pop__label {
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         /* Nothing truncates. Past the panel's max-width the label wraps and
            the panel grows taller instead. */
         overflow-wrap: anywhere;
@@ -1321,7 +1321,7 @@ import { PillComponent } from './ui-pill.component';
       .pop__amount {
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
       }
@@ -1331,7 +1331,7 @@ import { PillComponent } from './ui-pill.component';
         text-align: right;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
       }
       .pop__work {
@@ -1348,7 +1348,7 @@ import { PillComponent } from './ui-pill.component';
         gap: 6px;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .pop__work-item--done {
         color: var(--foreground-success);
@@ -1502,7 +1502,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 400;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .linkish {
         /* The hit area is the ID, not the glyph box it happens to occupy. */
@@ -1589,12 +1589,12 @@ import { PillComponent } from './ui-pill.component';
         overflow: hidden;
         text-overflow: ellipsis;
         font-weight: 400;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       /* The one to action. */
       .work__item--lead {
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /* Done, wherever it lands in the order. */
       .work__item--done {
@@ -1633,14 +1633,14 @@ import { PillComponent } from './ui-pill.component';
       }
       .work__more:hover {
         background: var(--surface-hover);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .work__more:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
       }
       .work__empty {
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
 
       .cases__empty {
@@ -1650,7 +1650,7 @@ import { PillComponent } from './ui-pill.component';
         margin: 0;
         padding: 32px 0;
         font-size: 14px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
 
       /**

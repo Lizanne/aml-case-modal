@@ -128,7 +128,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 20px;
         line-height: 30px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         letter-spacing: -0.01em;
       }
       .sg__btn {
@@ -141,7 +141,7 @@ import { PillComponent } from './ui-pill.component';
         border: 0;
         border-radius: 8px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .sg__btn:first-of-type {
@@ -149,7 +149,7 @@ import { PillComponent } from './ui-pill.component';
       }
       .sg__btn:hover {
         background: rgba(0, 0, 0, 0.05);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .sg__btn mat-icon {
         font-size: 16px;
@@ -176,13 +176,13 @@ import { PillComponent } from './ui-pill.component';
         margin: 0;
         font-size: 12px;
         font-weight: 600;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       .sg__note-body {
         margin: 4px 0 0;
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .sg__row {
         display: flex;

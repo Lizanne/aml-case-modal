@@ -92,7 +92,7 @@ import { PillComponent } from './ui-pill.component';
         border: 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       /**
        * Wraps, at every width - not just on mobile.
@@ -115,7 +115,7 @@ import { PillComponent } from './ui-pill.component';
       .row__icon,
       .row__arrow {
         flex: none;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         font-size: 16px;
         width: 16px;
         height: 16px;
@@ -131,7 +131,7 @@ import { PillComponent } from './ui-pill.component';
       /* 16px, matching the direction arrow. They are a pair on the same line
          and were a step apart at 14 and 16. */
       .row__arrow {
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-size: 16px;
         width: 16px;
         height: 16px;
@@ -139,7 +139,7 @@ import { PillComponent } from './ui-pill.component';
       .row__label {
         flex: none;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /**
        * The reason: its own line, full width, two lines then ellipsis.
@@ -157,7 +157,7 @@ import { PillComponent } from './ui-pill.component';
       .row__reason {
         margin: 0;
         min-width: 0;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -172,7 +172,7 @@ import { PillComponent } from './ui-pill.component';
         text-align: right;
         white-space: nowrap;
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
 
       /**

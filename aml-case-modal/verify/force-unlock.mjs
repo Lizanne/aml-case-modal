@@ -207,13 +207,13 @@ await closePanel();
 await page.mouse.move(0, 0);
 await page.waitForTimeout(150);
 
-// The claim is "this button rests on --ink", so --ink is what it is compared
+// The claim is "this button rests on --foreground-primary", so --foreground-primary is what it is compared
 // against - resolved from the page, not spelled out again here. Written out as
-// a hex it was a second copy of the token, and it broke the moment --ink was
+// a hex it was a second copy of the token, and it broke the moment --foreground-primary was
 // darkened, reporting a palette change as a regression in this button.
 const rest = await page.evaluate(() => {
   const probe = document.createElement('span');
-  probe.style.color = 'var(--ink)';
+  probe.style.color = 'var(--foreground-primary)';
   document.body.appendChild(probe);
   const ink = getComputedStyle(probe).color;
   probe.remove();
@@ -228,7 +228,7 @@ const rest = await page.evaluate(() => {
   };
 });
 check('rest background is the tertiary grey', rest.bg === 'rgb(244, 244, 245)', rest.bg);
-check('rest text is --ink, not danger', rest.color === rest.ink, `${rest.color} vs ${rest.ink}`);
+check('rest text is --foreground-primary, not danger', rest.color === rest.ink, `${rest.color} vs ${rest.ink}`);
 check('no visible border', rest.borderColor === 'rgba(0, 0, 0, 0)', rest.borderColor);
 check('the icon takes the text colour too', rest.icon === rest.ink, `${rest.icon} vs ${rest.ink}`);
 check(

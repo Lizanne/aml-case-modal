@@ -8,17 +8,22 @@ restate a value; every hex in a component stylesheet is a bug waiting to drift.
 
 | Token | Meaning |
 |---|---|
-| `--ink` | Primary text |
-| `--ink-2` | Secondary text |
-| `--ink-3` | Muted text, placeholders, timestamps |
+| `--foreground-primary` | Primary text |
+| `--foreground-secondary` | Secondary and muted text, placeholders, timestamps |
 | `--line` | Default hairline |
 | `--line-strong` | Input borders, dashed placeholder borders |
 
-> `--ink-3` is currently the same value as `--ink-2`. It was darkened because
-> the original was 4.83:1 on `--panel` but only 4.43:1 on `--page` and 4.32:1 on
-> the warn tint — both under AA, and muted text lands on those surfaces
-> constantly. Keep the two names: they carry different intent, and `--ink-3` may
-> lighten again if the surfaces it sits on do.
+> Secondary and muted text were two tokens, `--ink-2` and `--ink-3`, on one
+> value. They were folded into `--foreground-secondary`.
+>
+> They converged by accident, not design: `--ink-3` was darkened from `#71717A`
+> to `#52525B` because the original was 4.83:1 on `--panel` but only 4.43:1 on
+> `--page` and 4.32:1 on the warn tint — both under AA, and muted text lands on
+> those surfaces constantly. That fix landed it on the secondary value.
+>
+> This doc previously said to keep both names, on the grounds that muted text
+> might lighten again if its surfaces changed. Folding gives that up: splitting
+> them later means re-deciding 46 call sites by hand.
 
 ## Surfaces
 

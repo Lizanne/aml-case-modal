@@ -245,7 +245,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       }
       .segments__group ::ng-deep .mat-button-toggle-checked .mat-button-toggle-label-content {
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .segments__group ::ng-deep .mat-pseudo-checkbox {
         display: none;

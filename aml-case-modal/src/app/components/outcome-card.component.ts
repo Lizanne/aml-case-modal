@@ -197,12 +197,12 @@ import { AttachmentListComponent } from './attachment-list.component';
         font-size: 16px;
         line-height: 24px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .card__meta {
         margin: 0;
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .card__note {
         /* Long unbroken tokens (a URL, a reference) must not set the floor. */
@@ -210,7 +210,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         margin: 8px 0 0;
         font-size: 14px;
         line-height: 1.55;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         white-space: pre-wrap;
       }
       /**

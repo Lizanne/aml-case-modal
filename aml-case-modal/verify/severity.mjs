@@ -93,11 +93,11 @@ check('no direction arrow, only the between-pills one', await page.evaluate(() =
   return icons.length === 1 && icons[0] === 'arrow_forward';
 }));
 // Primary ink, per 22319:5225 - the label is the row's heading now that the
-// row is a card, and --ink-2 made it read as secondary to its own reason line.
+// row is a card, and --foreground-secondary made it read as secondary to its own reason line.
 // The pills are the only coloured parts now.
 check('the label is primary ink',
   (await page.evaluate(() =>
-    getComputedStyle(document.querySelector('event-row:has(ui-pill) .row__label')).color)) === (await token('--ink')));
+    getComputedStyle(document.querySelector('event-row:has(ui-pill) .row__label')).color)) === (await token('--foreground-primary')));
 
 console.log('\nThe severity dialog: AML -> EDD with an Escalation badge');
 await go('01'); // pre-escalation, so current severity is AML

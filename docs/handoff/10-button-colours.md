@@ -171,7 +171,7 @@ reads inside the box. There is no bare `outline: none` anywhere.
 Worth a decision, neither is a contrast problem:
 
 1. **Outlined and text labels are pure `#000000`** — Material's default
-   `--mdc-outlined-button-label-text-color: black`, not `--ink` (`#09090B`).
+   `--mdc-outlined-button-label-text-color: black`, not `--foreground-primary` (`#09090B`).
 2. **The outlined border is `rgba(0,0,0,.12)`** — Material's default, not
    `--line` (`#E4E4E7`).
 

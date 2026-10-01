@@ -86,7 +86,7 @@ interface NavGroup {
         font-size: 14px;
         line-height: 24px;
         font-weight: 700;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .nav__heading:first-child {
         margin-top: 4px;
@@ -109,7 +109,7 @@ interface NavGroup {
         font: inherit;
         font-size: 16px;
         line-height: 24px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         text-align: left;
         cursor: pointer;
       }
@@ -152,7 +152,7 @@ interface NavGroup {
         font-size: 20px;
         width: 20px;
         height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
     `,
   ],

@@ -64,12 +64,12 @@ import { ActionTypeId } from '../core/models';
         margin: 0;
         font-size: 14px;
         font-weight: 600;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       .slot__reason {
         margin: 4px 0 0;
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       /* Narrow: a single row - label left, Record right. The box is now
          identical to the wide slot, so the padding is inherited rather than
@@ -82,7 +82,7 @@ import { ActionTypeId } from '../core/models';
         font-size: 14px;
         line-height: 20px;
         font-weight: 400;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
     `,
   ],

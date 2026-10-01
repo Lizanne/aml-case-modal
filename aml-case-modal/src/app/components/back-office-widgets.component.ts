@@ -322,7 +322,7 @@ import { PillComponent } from './ui-pill.component';
        * severity palette living in one component.
        *
        * COMPLIANCE was not in the brief; it takes its own foreground token by
-       * the same rule, rather than being the only tile left on --ink.
+       * the same rule, rather than being the only tile left on --foreground-primary.
        */
       /**
        * SG is amber, not blue.
@@ -420,7 +420,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -435,7 +435,7 @@ import { PillComponent } from './ui-pill.component';
         background: var(--page);
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -451,7 +451,7 @@ import { PillComponent } from './ui-pill.component';
         min-width: 0;
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -473,7 +473,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -558,7 +558,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
         cursor: pointer;
       }
@@ -601,7 +601,7 @@ import { PillComponent } from './ui-pill.component';
       .w__btn--danger {
         border-color: transparent;
         background: var(--colors-background-background-tertiary, #f4f4f5);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /* One rule for both, deliberately: the button must read the same to a
          pointer and to a keyboard, and the focus ring is what the keyboard

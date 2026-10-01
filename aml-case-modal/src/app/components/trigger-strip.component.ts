@@ -430,7 +430,7 @@ let stripSeq = 0;
         border-bottom: 1px solid var(--line);
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         /* The strip's tint shows through. The cell painted --panel while the
            row had no box of its own - display: contents - so white came from
            here rather than from the row. */
@@ -475,11 +475,11 @@ let stripSeq = 0;
       .cell--name {
         padding: 0 20px 0 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .cell--detail {
         padding: 0 12px 0 0;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       /* Timestamp only, hard right, with nothing beside it. */
       .cell--meta {
@@ -489,7 +489,7 @@ let stripSeq = 0;
         padding: 0 20px 0 0;
       }
       .cell__at {
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
       }
@@ -503,12 +503,12 @@ let stripSeq = 0;
       .trigger--new .cell {
         background: var(--warn-bg);
       }
-      /* --ink-3 is only 4.32:1 on the amber tint. The muted detail steps up to
-         --ink-2 (6.92:1) on a highlighted row rather than the tint being
+      /* --foreground-secondary is only 4.32:1 on the amber tint. The muted detail steps up to
+         --foreground-secondary (6.92:1) on a highlighted row rather than the tint being
          lightened, which would weaken the rule-11 signal. */
       .trigger--new .cell--detail,
       .trigger--new .cell__at {
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
 
       /**

@@ -72,7 +72,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .field__input {
         width: 100%;
@@ -82,7 +82,7 @@ import { DialogShellComponent } from './dialog-shell.component';
         border-radius: 8px;
         font: inherit;
         font-size: 14px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         resize: vertical;
       }
       .field__input:focus-visible {
@@ -123,7 +123,7 @@ import { DialogShellComponent } from './dialog-shell.component';
       .consequence {
         margin: 16px 0 0px;
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         line-height: 1.5;
       }
     `,

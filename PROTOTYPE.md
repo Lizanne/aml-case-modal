@@ -20,9 +20,8 @@ section "[Desktop Mobile] - AML Case Modal". Frames 00a-10 map to the states bel
 
 ```css
 :root {
-  --ink: #18181B;        /* primary text */
-  --ink-2: #52525B;      /* secondary text */
-  --ink-3: #71717A;      /* muted text, placeholders */
+  --foreground-primary: #18181B;        /* primary text */
+  --foreground-secondary: #52525B;      /* secondary and muted text, placeholders */
   --line: #E3E6EA;       /* default hairline */
   --line-strong: #C9CED6;/* input borders, emphasised dividers */
   --page: #F4F5F7;       /* page background */

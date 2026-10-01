@@ -12,15 +12,17 @@
  *   - Text on tinted backgrounds uses the darkest tone of the same family.
  * ------------------------------------------------------------------------ */
 :root {
-  --ink: #09090B;
-  --ink-2: #52525B;
+  --foreground-primary: #09090B;
   /**
+   * Secondary and muted text both, since they were folded: the two were
+   * separate names on one value, and the value is what either meant.
+   *
    * Was #71717A, which is 4.83:1 on --panel but only 4.43:1 on --page and
    * 4.32:1 on the warn tint - both under AA, and muted text lands on those
    * surfaces constantly (file sizes, timestamps, empty states). Darkened to
    * clear 4.5:1 on every surface it is used on.
    */
-  --ink-3: #52525B;
+  --foreground-secondary: #52525B;
   --line: #E4E4E7;
   --line-strong: #A1A1AA;
   --page: #FAFAFA;
@@ -325,7 +327,7 @@ html.panel-open body {
 
 body {
   background: var(--page);
-  color: var(--ink);
+  color: var(--foreground-primary);
   font-family: 'Source Sans Pro', sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;

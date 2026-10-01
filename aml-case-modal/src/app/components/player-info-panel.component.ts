@@ -333,7 +333,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         margin: 0;
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -343,7 +343,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -429,13 +429,13 @@ const TAB_LABEL: Record<InfoTab, string> = {
         border-radius: 10px;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .empty {
         margin: 0;
         font-size: 14px;
         font-weight: 600;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       /**
        * Figma node 22224:18922.
@@ -467,7 +467,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         text-transform: capitalize;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -478,7 +478,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         margin-left: auto;
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
       }
@@ -486,7 +486,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         margin: 2px 0 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         /**
          * ONE LINE, ALWAYS - see the note on row height in this file.
          *
@@ -555,7 +555,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         font-weight: 600;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .past__sev {
         display: flex;
@@ -572,7 +572,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         min-width: 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .past__date {
         flex: none;
@@ -581,7 +581,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         white-space: nowrap;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
 
@@ -619,14 +619,14 @@ const TAB_LABEL: Record<InfoTab, string> = {
         grid-area: 1 / 1;
         font-size: 12px;
         line-height: 16px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
       .timeline__what {
         grid-area: 2 / 1;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         /**
          * ONE LINE, ALWAYS - see the note on row height in this file.
          *
@@ -648,7 +648,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
         grid-area: 2 / 2;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         text-align: right;
         white-space: nowrap;
         text-transform: capitalize;

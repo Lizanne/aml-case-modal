@@ -78,7 +78,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -122,12 +122,12 @@ import { PillComponent } from './ui-pill.component';
            take. The bar's own 12 is the card tier; its controls are not cards. */
         border-radius: 4px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .bar__icon-btn:hover {
         background-color: rgba(0, 0, 0, 0.06);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .bar__icon-btn:focus-visible {
         outline: 2px solid var(--primary);

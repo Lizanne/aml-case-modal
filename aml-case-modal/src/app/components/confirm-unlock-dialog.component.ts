@@ -58,10 +58,10 @@ import { DialogShellComponent } from './dialog-shell.component';
         margin: 4px 0 14px;
         font-size: 14px;
         line-height: 1.55;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       .lead strong {
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .danger-note {
         display: flex;

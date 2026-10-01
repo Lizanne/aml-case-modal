@@ -1192,8 +1192,8 @@ await page.waitForTimeout(500);
 await page.click('player-info-panel .mat-mdc-tab:has-text("Starred")');
 await page.waitForSelector('.starred__row', { timeout: 15000 });
 await page.waitForTimeout(450);
-const ST_INK = await tokenRgb('--ink');
-const ST_INK_3 = await tokenRgb('--ink-3');
+const ST_FG_PRIMARY = await tokenRgb('--foreground-primary');
+const ST_FG_SECONDARY = await tokenRgb('--foreground-secondary');
 const ST_LINE = await tokenRgb('--line');
 const st = await page.evaluate(() => {
   const row = document.querySelector('.starred__row');
@@ -1270,13 +1270,13 @@ check('starred: the commentary spans the full gutter',
   st.textLeft === 20 && st.textRight === 20, `${st.textLeft} / ${st.textRight}`);
 check('starred: author is 14px/20px semibold full ink',
   st.who.size === '14px' && st.who.line === '20px' && st.who.weight === '600' &&
-    st.who.colour === ST_INK,
+    st.who.colour === ST_FG_PRIMARY,
   `${st.who.size}/${st.who.line} w${st.who.weight} ${st.who.colour}`);
 check('starred: timestamp is 12px/16px muted',
-  st.at.size === '12px' && st.at.line === '16px' && st.at.colour === ST_INK_3,
+  st.at.size === '12px' && st.at.line === '16px' && st.at.colour === ST_FG_SECONDARY,
   `${st.at.size}/${st.at.line} ${st.at.colour}`);
 check('starred: commentary is 14px/20px muted',
-  st.text.size === '14px' && st.text.line === '20px' && st.text.colour === ST_INK_3,
+  st.text.size === '14px' && st.text.line === '20px' && st.text.colour === ST_FG_SECONDARY,
   `${st.text.size}/${st.text.line} ${st.text.colour}`);
 // Sorted on the parsed timestamp, so an entry with an offset cannot slip in
 // out of order the way a string compare would allow.
@@ -1303,8 +1303,8 @@ check('starred: every tag is a real severity',
 // the actor right-aligned on the second of them.
 await page.click('player-info-panel .mat-mdc-tab:has-text("Timeline")');
 await page.waitForTimeout(450);
-const INK = await tokenRgb('--ink');
-const INK_3 = await tokenRgb('--ink-3');
+const FG_PRIMARY = await tokenRgb('--foreground-primary');
+const FG_SECONDARY = await tokenRgb('--foreground-secondary');
 const LINE = await tokenRgb('--line');
 const tl = await page.evaluate(() => {
   const rows = [...document.querySelectorAll('.timeline__item')];
@@ -1347,13 +1347,13 @@ check('timeline: both left lines sit on the 20px gutter',
   tl.atLeft === 20 && tl.whatLeft === 20, `${tl.atLeft} / ${tl.whatLeft}`);
 check('timeline: the actor ends 20px from the right edge', tl.whoRight === 20, String(tl.whoRight));
 check('timeline: timestamp is 12px/16px muted',
-  tl.at.size === '12px' && tl.at.line === '16px' && tl.at.colour === INK_3,
+  tl.at.size === '12px' && tl.at.line === '16px' && tl.at.colour === FG_SECONDARY,
   `${tl.at.size}/${tl.at.line} ${tl.at.colour}`);
 check('timeline: what happened is 14px/20px full ink',
-  tl.what.size === '14px' && tl.what.line === '20px' && tl.what.colour === INK,
+  tl.what.size === '14px' && tl.what.line === '20px' && tl.what.colour === FG_PRIMARY,
   `${tl.what.size}/${tl.what.line} ${tl.what.colour}`);
 check('timeline: the actor is 14px/20px muted',
-  tl.who.size === '14px' && tl.who.line === '20px' && tl.who.colour === INK_3,
+  tl.who.size === '14px' && tl.who.line === '20px' && tl.who.colour === FG_SECONDARY,
   `${tl.who.size}/${tl.who.line} ${tl.who.colour}`);
 check('timeline: timestamp sits above what happened', tl.atAboveWhat);
 // Auto-placement would push the actor onto a third row of its own; the cells
@@ -1456,7 +1456,7 @@ const widgetCount = await page.evaluate(() => {
   return {
     tag: el.tagName,
     bg: norm(cs.backgroundColor), wantBg: t('--page').toUpperCase(),
-    fg: norm(cs.color), wantFg: t('--ink').toUpperCase(),
+    fg: norm(cs.color), wantFg: t('--foreground-primary').toUpperCase(),
     border: cs.borderTopWidth,
     radius: cs.borderTopLeftRadius,
     fs: cs.fontSize, lh: cs.lineHeight,
@@ -1821,14 +1821,13 @@ check('locked to you says only the fact, stamp on hover',
     /^Locked to you since /.test(byName['locked to you'].title ?? ''),
   `${byName['locked to you'].text} | title=${byName['locked to you'].title}`);
 check('locked to you offers Unlock', byName['locked to you'].button === 'Unlock');
-// Tokens again, not hexes: what matters is that the neutral row uses --ink-2
+// Tokens again, not hexes: what matters is that the neutral row uses --foreground-secondary
 // and the destructive button uses --danger, whatever those hold.
-const INK_2 = await tokenRgb('--ink-2');
 check('locked to other is neutral text with a red Force unlock',
-  byName['locked to other'].textColour === INK_2 &&
+  byName['locked to other'].textColour === FG_SECONDARY &&
     byName['locked to other'].button === 'Force unlock' &&
     byName['locked to other'].btnColour === DANGER,
-  `${byName['locked to other'].textColour} / ${byName['locked to other'].btnColour} (want ${INK_2} / ${DANGER})`);
+  `${byName['locked to other'].textColour} / ${byName['locked to other'].btnColour} (want ${FG_SECONDARY} / ${DANGER})`);
 
 console.log('\nOne pill component: uniform box, colours preserved');
 const pills = new Map();

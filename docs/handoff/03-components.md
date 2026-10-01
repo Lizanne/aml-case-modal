@@ -40,7 +40,7 @@ minimise and close.
 |---|---|
 | Height | 65 (`padding: 16px 20px`) |
 | Title row | 1038 × 32, `gap: 8px`, `flex-wrap: nowrap` |
-| Case number | 20px / 30px, 600, `--ink` |
+| Case number | 20px / 30px, 600, `--foreground-primary` |
 | Badges | `ui-pill` `md` — 24 tall, `0 8px`, 14/20, 600 |
 | Lock text | 14px / 20px, `gap: 4px` to its 20px icon |
 | Lock action | Material smallest density (32) |
@@ -228,7 +228,7 @@ goes transparent, and the button reads `Viewing`).
 | Property | Value |
 |---|---|
 | Item | Material smallest density (32), radius 8, `padding: 6px 8px`, `gap: 8px` |
-| Filename / size | both 14px / 20px, size in `--ink-3` |
+| Filename / size | both 14px / 20px, size in `--foreground-secondary` |
 | Remove button | 20 × 20, radius 6, compact danger hover |
 
 `<ul>` / `<li>` with the button inside each `<li>`; the `<li>` is never the click

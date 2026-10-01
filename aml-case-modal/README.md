@@ -101,7 +101,7 @@ not just on white. Four originally did not:
 | `--sev-edd` / `--warn` on their tint | 3.83:1 | 5.66:1 |
 | `--primary` on `--primary-bg` | 4.28:1 | `--primary-ink`, 5.74:1 |
 | white on a solid `--warn` (NEW badge) | 4.28:1 | 6.32:1 |
-| `--ink-3` on `--page` and the warn tint | 4.43 / 4.32:1 | 5.28 / 4.73:1 |
+| `--foreground-secondary` on `--page` and the warn tint | 4.43 / 4.32:1 | 5.28 / 4.73:1 |
 
 `--primary` is still the fill and border colour; `--primary-ink` is the darker
 tone for text on the tint, per the spec's "text on tinted backgrounds uses the

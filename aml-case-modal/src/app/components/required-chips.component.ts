@@ -79,7 +79,7 @@ import { PillComponent } from './ui-pill.component';
         font-weight: 600;
         letter-spacing: 0.02em;
         text-transform: uppercase;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         margin-right: 4px;
       }
       /* Success green is the only "you can act here" / completed signal. */

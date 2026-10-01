@@ -72,11 +72,11 @@ import { ActionTypeId } from '../core/models';
       }
       .item__label {
         font-size: 14px;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .item__hint {
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
     `,
   ],

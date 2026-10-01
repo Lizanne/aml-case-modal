@@ -134,7 +134,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         font-size: 16px;
         line-height: 24px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .warn-note {
         display: flex;
@@ -166,7 +166,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         padding: 0;
       }
       .field__hint,
@@ -174,13 +174,13 @@ import { AttachmentListComponent } from './attachment-list.component';
         font-weight: 400;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         margin-left: 2px;
       }
       .field__hint {
         margin: 0;
         font-size: 12px;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
       }
       .field__input {
         width: 100%;
@@ -190,7 +190,7 @@ import { AttachmentListComponent } from './attachment-list.component';
         border-radius: 8px;
         font: inherit;
         font-size: 14px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         background: var(--panel);
         resize: vertical;
       }

@@ -110,7 +110,7 @@ let dialogSeq = 0;
         font-size: 18px;
         line-height: 28px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .panel__close {
         display: inline-flex;
@@ -124,7 +124,7 @@ let dialogSeq = 0;
            closes something reads the same. */
         border-radius: 4px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .panel__close mat-icon {
@@ -135,7 +135,7 @@ let dialogSeq = 0;
       }
       .panel__close:hover {
         background: rgba(0, 0, 0, 0.05);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .panel__body {
         flex: 1 1 auto;

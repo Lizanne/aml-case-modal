@@ -80,7 +80,7 @@ export type PillTone =
         letter-spacing: 0.01em;
         white-space: nowrap;
         background: var(--page);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
 
       /**
@@ -208,12 +208,12 @@ export type PillTone =
       }
       :host([data-tone='outline']) {
         background: var(--panel);
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         border-color: var(--line);
       }
       :host([data-tone='dashed']) {
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         border-style: dashed;
         border-color: var(--line-strong);
       }

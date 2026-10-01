@@ -93,7 +93,7 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         line-height: 16px;
       }
       .pair__arrow {
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-size: 18px;
         width: 18px;
         height: 18px;
@@ -112,7 +112,7 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         font-size: 14px;
         line-height: 20px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .field__input {
         width: 100%;
@@ -122,7 +122,7 @@ const ALL_SEVERITIES: readonly Severity[] = SEVERITY_ORDER;
         border-radius: 8px;
         font: inherit;
         font-size: 14px;
-        color: var(--ink);
+        color: var(--foreground-primary);
         resize: vertical;
       }
       .field__input:focus-visible {

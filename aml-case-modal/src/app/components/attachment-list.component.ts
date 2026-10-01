@@ -118,7 +118,7 @@ import { Attachment, AttachmentError } from '../core/models';
         background: var(--page);
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       /* The tint belongs to the whole chip, but only the open button earns it -
          hovering the remove X is aiming at something else and gets its own
@@ -151,10 +151,10 @@ import { Attachment, AttachmentError } from '../core/models';
         height: 20px;
         line-height: 20px;
         flex: none;
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       .file__name {
-        color: var(--ink);
+        color: var(--foreground-primary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -167,7 +167,7 @@ import { Attachment, AttachmentError } from '../core/models';
         text-decoration: underline;
       }
       .file__size {
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
       .file__remove,
@@ -181,12 +181,12 @@ import { Attachment, AttachmentError } from '../core/models';
         border: 0;
         border-radius: 6px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .file__remove:hover {
         background: rgba(0, 0, 0, 0.06);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /* Not in the rule above: the dismiss is red at rest, and the shared
          neutral hover was quietly turning it grey on the way to being

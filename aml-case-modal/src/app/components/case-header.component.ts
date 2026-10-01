@@ -229,7 +229,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 20px;
         line-height: 30px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--foreground-primary);
         letter-spacing: -0.01em;
       }
       .head__pills {
@@ -303,7 +303,7 @@ import { PillComponent } from './ui-pill.component';
            surfaces. */
         border-radius: 4px;
         background: transparent;
-        color: var(--ink-3);
+        color: var(--foreground-secondary);
         cursor: pointer;
       }
       .head__close mat-icon {
@@ -314,7 +314,7 @@ import { PillComponent } from './ui-pill.component';
       }
       .head__close:hover {
         background: rgba(0, 0, 0, 0.05);
-        color: var(--ink);
+        color: var(--foreground-primary);
       }
       /**
        * In the row, not under it. No fixed height any more: the band needed one
@@ -340,7 +340,7 @@ import { PillComponent } from './ui-pill.component';
         font-size: 20px;
         width: 20px;
         height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
       }
       /* Success green is the only "you can act here" signal. */
       .head__lock[data-lock='locked-to-me'] .head__lock-icon {
@@ -351,7 +351,7 @@ import { PillComponent } from './ui-pill.component';
         margin: 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--ink-2);
+        color: var(--foreground-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
