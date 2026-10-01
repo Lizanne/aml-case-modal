@@ -482,19 +482,17 @@ import { PillComponent } from './ui-pill.component';
                             aria-label="Lock case"
                             (click)="cases.lock(c.id)"
                           >
+                            <!-- Material lock_open, the glyph the modal draws. It is a fill, not a
+                                 stroke, so the colour rides on fill="currentColor" and the stroke
+                                 attributes the old outline icon needed would only thicken it. -->
                             <svg
                               class="lock-av__svg"
                               viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="1.5"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
+                              fill="currentColor"
                               aria-hidden="true"
                               focusable="false"
                             >
-                              <rect x="3" y="11" width="18" height="11" rx="2" />
-                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                              <path d="M12 17.5C13.1 17.5 14 16.6 14 15.5C14 14.4 13.1 13.5 12 13.5C10.9 13.5 10 14.4 10 15.5C10 16.6 10.9 17.5 12 17.5ZM18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5H8.9C8.9 4.79 10.29 3.4 12 3.4C13.71 3.4 15.1 4.79 15.1 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM18 20.5H6V10.5H18V20.5Z" />
                             </svg>
                           </button>
                         }
