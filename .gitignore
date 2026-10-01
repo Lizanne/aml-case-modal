@@ -16,3 +16,6 @@ Thumbs.db
 *.log
 .idea/
 .vscode/
+
+# Vendored agent skills — fetched content, pinned by skills-lock.json
+.agents/
