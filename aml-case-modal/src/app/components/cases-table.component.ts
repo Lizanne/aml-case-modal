@@ -1199,11 +1199,24 @@ import { PillComponent } from './ui-pill.component';
         color: var(--success);
       }
       .lock-av--other {
-        background: var(--surface-subtle);
+        background: var(--background-tertiary);
         color: var(--foreground-primary);
       }
       .lock-av:hover {
         background: var(--surface-hover);
+      }
+      /**
+       * Held by someone else: a darker step on hover, not the same grey.
+       *
+       * The disc rests on --background-tertiary, which is also what
+       * --surface-hover resolves to - so the shared hover painted this one
+       * state the colour it already was, and the click that opens force
+       * unlock felt inert. An alpha over whatever the disc sits on reads as
+       * one step down from it wherever the row is. Declared after the shared
+       * hover because the two selectors tie on specificity.
+       */
+      .lock-av--other:hover {
+        background: var(--colors-alpha-alpha-soft-hover, rgba(0, 0, 0, 0.06));
       }
 
       /**
