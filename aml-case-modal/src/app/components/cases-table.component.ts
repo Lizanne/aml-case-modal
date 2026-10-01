@@ -958,7 +958,7 @@ import { PillComponent } from './ui-pill.component';
       .th-inner {
         display: flex;
         align-items: center;
-        gap: 2px;
+        gap: 4px;
       }
       .th-sort {
         display: inline-flex;
@@ -1036,8 +1036,9 @@ import { PillComponent } from './ui-pill.component';
        *
        * The hit area is 24px square for 2.5.8 (the glyph stays 16), which is
        * also what gives the pressed layer something to paint. The glyph is
-       * centred in it, so the margin is 2 rather than 6 - the box contributes
-       * the other 4 and the optical gap is unchanged.
+       * spacing is the flex parent's job, not a margin here: .th-inner owns
+       * the 4px gap, so one declaration spaces every header the same way and
+       * no sibling needs an override to cancel it.
        */
       .th__info,
       .prio__info {
@@ -1051,8 +1052,6 @@ import { PillComponent } from './ui-pill.component';
         width: 24px;
         height: 24px;
         padding: 0;
-        margin-left: 2px;
-        vertical-align: middle;
         border: 0;
         background: none;
         border-radius: 50%;
@@ -1087,9 +1086,6 @@ import { PillComponent } from './ui-pill.component';
       .prio__info:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
-      }
-      .prio__info {
-        margin-left: 0;
       }
       .th__info-svg,
       .prio__info-svg {
