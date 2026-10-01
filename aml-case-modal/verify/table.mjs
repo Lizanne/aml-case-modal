@@ -428,6 +428,8 @@ try {
       mineName: document.querySelector('.lock-av--mine')?.getAttribute('aria-label'),
       minePressed: document.querySelector('.lock-av--mine')?.getAttribute('aria-pressed'),
       otherName: document.querySelector('.lock-av--other')?.getAttribute('aria-label'),
+      mineTip: document.querySelector('.lock-av--mine')?.getAttribute('ng-reflect-message'),
+      otherTip: document.querySelector('.lock-av--other')?.getAttribute('ng-reflect-message'),
       openName: o?.getAttribute('aria-label'),
       openSize: or ? `${Math.round(or.width)}x${Math.round(or.height)}` : null,
       noLockColumn: ![...document.querySelectorAll('thead th')]
@@ -457,10 +459,15 @@ try {
   check('the initials are decoration - the name carries the person',
     c0.initialsHidden, String(c0.initialsHidden));
   check('each state names itself in full',
-    c0.freeName === 'Lock case' && c0.mineName === 'Locked by you, click to unlock' &&
-    /^Locked by .+ \d+ \w+ ago, click to force unlock$/.test(c0.otherName ?? ''),
+    c0.freeName === 'Lock case' && c0.mineName === 'Locked to you, click to unlock' &&
+    /^Locked to .+ \d+ \w+ ago, click to force unlock$/.test(c0.otherName ?? ''),
     JSON.stringify({ free: c0.freeName, mine: c0.mineName, other: c0.otherName }));
   check('yours reports itself pressed', c0.minePressed === 'true', c0.minePressed);
+  // One vocabulary for one fact: the panel says "Locked to", so the table must
+  // not say "Locked by". Composed from lockStatusLine() rather than retyped.
+  check('the lock vocabulary is the widget\'s - "Locked to", never "Locked by"',
+    !/Locked by/.test([c0.freeName, c0.mineName, c0.otherName, c0.mineTip, c0.otherTip].join(' ')),
+    JSON.stringify({ mine: c0.mineTip, other: c0.otherTip }));
   check('Open case is icon-only on the same axis, named, and only where rule 4 allows it',
     c0.openSize === '32x32' && c0.openName === 'Open AML case in new tab' &&
     c0.open === c0.mine, JSON.stringify({ size: c0.openSize, name: c0.openName,

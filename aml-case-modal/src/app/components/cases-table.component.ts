@@ -456,8 +456,8 @@ import { PillComponent } from './ui-pill.component';
                             class="lock-av lock-av--mine"
                             type="button"
                             aria-pressed="true"
-                            matTooltip="Locked by you · Click to unlock"
-                            aria-label="Locked by you, click to unlock"
+                            [matTooltip]="lockTip(c) + ' · Click to unlock'"
+                            [attr.aria-label]="lockTip(c) + ', click to unlock'"
                             (click)="cases.unlock(c.id)"
                           >
                             <span aria-hidden="true">{{ initials(cases.me().name) }}</span>
@@ -467,8 +467,8 @@ import { PillComponent } from './ui-pill.component';
                           <button
                             class="lock-av lock-av--other"
                             type="button"
-                            [matTooltip]="lockedByTip(c)"
-                            [attr.aria-label]="lockedByLabel(c)"
+                            [matTooltip]="lockTip(c)"
+                            [attr.aria-label]="lockedToLabel(c)"
                             (click)="cases.requestForceUnlock(c.id)"
                           >
                             <span aria-hidden="true">{{ initials(c.lock.owner?.name) }}</span>
@@ -1120,12 +1120,6 @@ import { PillComponent } from './ui-pill.component';
            which needs none. */
         transform: none;
       }
-      @media (prefers-reduced-motion: reduce) {
-        .th__info,
-        .prio__info {
-          transition: none;
-        }
-      }
       /**
        * A text button on the chips' 24px axis.
        *
@@ -1277,13 +1271,16 @@ import { PillComponent } from './ui-pill.component';
         }
       }
 
-      @media (prefers-reduced-motion: reduce) {
-        .lock-btn,
-        .lock-btn--free,
-        .lock--none {
-          transition: none;
-        }
-      }
+      /**
+       * The hover and fade transitions, off.
+       *
+       * This block named .lock-btn, .lock-btn--free and .lock--none - three
+       * classes from the padlock-in-its-own-column design, deleted when the
+       * lock moved into Actions. It had been guarding nothing for several
+       * changes, while the controls that replaced them transitioned
+       * unguarded. The backgrounds still CHANGE under reduced motion; they
+       * just stop easing.
+       */
 
       /* ---- popovers: priority breakdown and the full work list --------- */
       .pop__body {
@@ -1387,11 +1384,6 @@ import { PillComponent } from './ui-pill.component';
         height: 14px;
         line-height: 14px;
       }
-      @media (prefers-reduced-motion: reduce) {
-        .pop__link {
-          transition: none;
-        }
-      }
       /**
        * Qualified by .table, and that is a regression being closed.
        *
@@ -1463,11 +1455,6 @@ import { PillComponent } from './ui-pill.component';
       .table-scroll.is-scrolled .cell--player::after {
         opacity: 1;
       }
-      @media (prefers-reduced-motion: reduce) {
-        .table .cell--player::after {
-          transition: none;
-        }
-      }
 
       /**
        * Row hover: background ONLY.
@@ -1485,11 +1472,6 @@ import { PillComponent } from './ui-pill.component';
       }
       .table tbody tr:hover td {
         background: var(--surface-hover);
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .table tbody td {
-          transition: none;
-        }
       }
 
       .cell--player {
@@ -1562,11 +1544,6 @@ import { PillComponent } from './ui-pill.component';
         outline: 2px solid var(--primary);
         outline-offset: 2px;
         border-radius: 2px;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .linkish {
-          transition: none;
-        }
       }
       .player-line .linkish {
         /* The id yields the space. Its own title carries the full number, so
@@ -1679,6 +1656,34 @@ import { PillComponent } from './ui-pill.component';
         font-size: 14px;
         color: var(--ink-3);
       }
+
+      /**
+       * Every easing in this component, off - in ONE place, at the end.
+       *
+       * These were six blocks scattered through the file, and scattering is
+       * what broke them: a guard at line 1290 cannot override a rule declared
+       * at 1653, so the Work count kept easing under reduced motion while its
+       * guard sat 360 lines too early. One block last in the cascade cannot
+       * lose that way, and the policy is readable in one read.
+       *
+       * Backgrounds and colours still CHANGE; they stop easing. The two
+       * exceptions are above and deliberate: Refresh swaps its spin for a
+       * pulse, and Open case only animates in when motion is welcome.
+       */
+      @media (prefers-reduced-motion: reduce) {
+        .linkish,
+        .th__info,
+        .prio__info,
+        .th-sort__arrow,
+        .lock-av,
+        .work__more,
+        .pop__link,
+        .table tbody td,
+        .table .cell--player::after {
+          transition: none;
+        }
+      }
+
     `,
   ],
 })
@@ -1711,10 +1716,16 @@ export class CasesTableComponent {
       .join('');
   }
 
-  /** "Locked by M. Torres · 1d ago" - the tooltip's words. */
-  lockedByTip(c: CaseRecord): string {
-    const age = c.lock.since ? relativeAge(c.lock.since, this.cases.now()) : '';
-    return `Locked by ${c.lock.owner?.name ?? 'another agent'}${age ? ` · ${age} ago` : ''}`;
+  /**
+   * "Locked to you" / "Locked to M. Torres · 1d" - the WIDGET's sentence.
+   *
+   * This wrote its own, with the preposition reversed, while the panel beside
+   * it said "Locked to": two vocabularies for one fact. It composes from
+   * lockStatusLine() now, exactly as the row's own label does, so the table
+   * cannot drift from the panel again - which is what rule 5 is for.
+   */
+  lockTip(c: CaseRecord): string {
+    return this.lockLine(c);
   }
 
   /**
@@ -1722,13 +1733,13 @@ export class CasesTableComponent {
    * letter d; the visible tooltip can be terse because the eye supplies the
    * rest.
    */
-  lockedByLabel(c: CaseRecord): string {
+  lockedToLabel(c: CaseRecord): string {
     const who = c.lock.owner?.name ?? 'another agent';
     const age = c.lock.since ? relativeAge(c.lock.since, this.cases.now()) : '';
     const spelled = age.replace(/^(\d+)m$/, '$1 minutes').replace(/^(\d+)h$/, '$1 hours')
       .replace(/^1d$/, '1 day').replace(/^(\d+)d$/, '$1 days')
       .replace(/^(\d+)mo$/, '$1 months').replace(/^(\d+)y$/, '$1 years');
-    return `Locked by ${who}${spelled ? ` ${spelled} ago` : ''}, click to force unlock`;
+    return `Locked to ${who}${spelled ? ` ${spelled} ago` : ''}, click to force unlock`;
   }
 
   /** aria-sort for a header: the active column says which way, the other none. */
