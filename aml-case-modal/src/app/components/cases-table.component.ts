@@ -531,10 +531,10 @@ import { WorkPopoverComponent } from './work-popover.component';
       <mat-menu #workMenu="matMenu" class="pop pop--work">
         <ng-template matMenuContent let-c="c">
           <div class="pop__body pop__body--list" (click)="$event.stopPropagation()">
-            <p class="pop__head pop__head--list">Work</p>
-            <!-- The case's actions and only its actions: outstanding required
-                 ones first, then everything recorded, newest first. Read from
-                 the same record as the row, so it is live by construction. -->
+            <!-- No heading: the two group labels inside - To do, Completed,
+                 each with its live count - say what the list is. The case's
+                 actions and only its actions, read from the same record as
+                 the row, so it is live by construction. -->
             <work-popover [caseId]="c.id" />
           </div>
         </ng-template>

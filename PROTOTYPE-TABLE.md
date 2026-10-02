@@ -447,8 +447,13 @@ every +N state is on screen. Done items carry when and by whom, and a case
 never holds a recorded contact while its required contact is outstanding: the
 write-through completes the required one first, so the seed must too.
 
-**Popover rhythm.** 12px between entries within a group and 20px between the
-to-do block and the recorded block; stamps in tabular figures.
+**Two labelled groups, no heading.** *To do (N)* above the outstanding
+required actions and *Completed (N)* above the recorded ones, counts live.
+Labels 12/16 at 600, muted, 0.04em, uppercased by the stylesheet. 8px from a
+label to its first entry, 12px between entries, 20px above the second label.
+An empty group is omitted with its label; with both empty the popover says
+*No work items* - unreachable with the required set synthesised, but the rule
+is written. Stamps in tabular figures.
 
 **Open: what the count counts.** The row's `+N` is triggers *since the case
 opened* (D-13 scope note); the modal's strip is the player's full history.

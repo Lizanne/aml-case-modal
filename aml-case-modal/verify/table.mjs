@@ -992,7 +992,7 @@ try {
     const p = document.querySelector('.mat-mdc-menu-panel');
     if (!p) return null;
     const cs = (e) => getComputedStyle(e);
-    const list = p.querySelector('work-popover .list');
+    const list = p.querySelector('work-popover .groups');
     const items = [...p.querySelectorAll('.entry')];
     const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle|radio_button_unchecked|, done|, to do/g, '').trim();
     const todo = items.filter((it) => !it.classList.contains('entry--done'));
@@ -1000,14 +1000,23 @@ try {
     const gaps = items.slice(1).map((it, i) => Math.round(it.getBoundingClientRect().top - items[i].getBoundingClientRect().bottom));
     const ats = done.map((it) => Date.parse(it.querySelector('time')?.getAttribute('datetime')));
     const firstDoneIdx = items.findIndex((it) => it.classList.contains('entry--done'));
-    // gaps[i] is the space above items[i + 1]; the one above the first done entry is the group gap
-    const groupGap = firstDoneIdx > 0 ? gaps[firstDoneIdx - 1] : null;
+    const groups = [...p.querySelectorAll('.group')];
+    const labels = groups.map((g) => g.querySelector('.group__label'));
+    const R = (e) => e.getBoundingClientRect();
+    const labelStyle = labels[0] ? (({ fontSize, fontWeight, color, letterSpacing, textTransform, lineHeight }) =>
+      ({ fontSize, fontWeight, color, letterSpacing, textTransform, lineHeight }))(cs(labels[0])) : null;
+    const labelText = labels.map((l) => l.textContent.trim());
+    const labelCounts = groups.map((g) => ({ said: Number(g.querySelector('.group__label').textContent.match(/\((\d+)\)/)?.[1]), has: g.querySelectorAll('.entry').length }));
+    const labelToFirst = groups.map((g) => Math.round(R(g.querySelector('.entry')).top - R(g.querySelector('.group__label')).bottom));
+    const betweenGroups = groups.length === 2 ? Math.round(R(labels[1]).top - R([...groups[0].querySelectorAll('.entry')].pop()).bottom) : null;
+    // gaps within a list only: the gap that crosses from one group to the other is label-sized
     const withinGaps = [...new Set(gaps.filter((_, i) => i !== firstDoneIdx - 1))];
+    const groupGap = betweenGroups;
     const tabular = done[0] ? cs(done[0].querySelector('time')).fontVariantNumeric : null;
     const types = window.ng?.getComponent?.(document.querySelector('cases-table'))?.cases.workTypes.map((w) => w.id) ?? [];
     return {
       isWork: p.classList.contains('pop--work'), cmp: !!p.querySelector('work-popover'),
-      head: p.querySelector('.pop__head')?.textContent.trim(), items: items.length,
+      items: items.length,
       todo: todo.map(name), done: done.map(name),
       todoOnTop: firstDoneIdx < 0 || items.slice(firstDoneIdx).every((it) => it.classList.contains('entry--done')),
       todoNoMeta: todo.every((it) => !it.querySelector('.entry__meta') && !it.querySelector('time')),
@@ -1019,14 +1028,23 @@ try {
       newestFirst: ats.every((t, i) => i === 0 || t <= ats[i - 1]),
       borders: [...new Set(items.map((it) => cs(it).borderBottomWidth))],
       bgs: [...new Set(items.map((it) => cs(it).backgroundColor))], gaps: [...new Set(gaps)],
-      groupGap, withinGaps, tabular, types,
+      groupGap, withinGaps, tabular, types, labelText, labelCounts, labelStyle, labelToFirst, groupCount: groups.length,
+      head: p.querySelector('.pop__head')?.textContent.trim() ?? null,
       list: { pad: cs(list).padding, maxH: cs(list).maxHeight, overflowY: cs(list).overflowY, sbW: cs(list).scrollbarWidth },
       width: Math.round(p.getBoundingClientRect().width),
       nonAction: items.filter((it) => /Case created|Trigger added|Severity|locked|unlocked|resync/i.test(it.textContent)).length,
     };
   });
-  check('the count opens a popover headed Work, holding the work list',
-    wp?.isWork && wp.cmp && wp.head === 'Work', JSON.stringify(wp && { isWork: wp.isWork, cmp: wp.cmp, head: wp.head }));
+  check('the count opens the work popover - no heading; two labelled groups instead',
+    wp?.isWork && wp.cmp && wp.head === null && wp.groupCount === 2 &&
+    /^To do \(\d+\)$/.test(wp.labelText[0] ?? '') && /^Completed \(\d+\)$/.test(wp.labelText[1] ?? ''),
+    JSON.stringify(wp && { isWork: wp.isWork, cmp: wp.cmp, head: wp.head, labels: wp.labelText }));
+  check('each label counts its own group, live',
+    wp?.labelCounts.every((c) => c.said === c.has), JSON.stringify(wp?.labelCounts));
+  check('labels: 12/16 at 600, muted, 0.04em, uppercased by the stylesheet',
+    wp?.labelStyle?.fontSize === '12px' && wp.labelStyle.lineHeight === '16px' && wp.labelStyle.fontWeight === '600' &&
+    wp.labelStyle.color === 'rgb(82, 82, 91)' && /^0\.48/.test(wp.labelStyle.letterSpacing) && wp.labelStyle.textTransform === 'uppercase',
+    JSON.stringify(wp?.labelStyle));
   check('actions only: no creation, trigger, severity, lock or resync entries', wp?.nonAction === 0, String(wp?.nonAction));
   check('the outstanding required actions sit in a block at the top - unticked, no stamp - and are the row\'s to-dos',
     wp?.todoOnTop && wp.todoNoMeta && JSON.stringify(wp.todo) === JSON.stringify(wpRow) &&
@@ -1036,10 +1054,13 @@ try {
     wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'check_circle' &&
     wp.metaColour === 'rgb(82, 82, 91)' && wp.nameColour === 'rgb(9, 9, 11)',
     JSON.stringify({ done: wp?.done, newestFirst: wp?.newestFirst, meta: wp?.doneMeta, metaColour: wp?.metaColour }));
-  check('the Triggers list layout: no borders, no backgrounds, 16px padding; 12px within a group, 20px between the two',
+  check('the Triggers list layout: no borders, no backgrounds, 16px padding; 12px within a group',
     wp?.borders.join() === '0px' && wp.bgs.every((b) => b === 'rgba(0, 0, 0, 0)') && wp.withinGaps.join() === '12' &&
-    (wp.todo.length === 0 || wp.groupGap === 20) && wp.list.pad === '0px 16px 16px',
-    JSON.stringify({ borders: wp?.borders, bgs: wp?.bgs, within: wp?.withinGaps, group: wp?.groupGap, pad: wp?.list.pad }));
+    wp.list.pad === '0px 16px 16px',
+    JSON.stringify({ borders: wp?.borders, bgs: wp?.bgs, within: wp?.withinGaps, pad: wp?.list.pad }));
+  check('8px from a label to its first entry, 20px above the second label',
+    wp?.labelToFirst.every((g) => g === 8) && wp.groupGap === 20,
+    JSON.stringify({ labelToFirst: wp?.labelToFirst, aboveSecond: wp?.groupGap }));
   check('stamps in tabular figures', wp?.tabular === 'tabular-nums', wp?.tabular);
   check('PEP check, Sanctions screen and SoF request are gone from the work types',
     wp?.types.length > 0 && ['pep-check', 'sanctions-screen', 'sof-request'].every((t) => !wp.types.includes(t)),
