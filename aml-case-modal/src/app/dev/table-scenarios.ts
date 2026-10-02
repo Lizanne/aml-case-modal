@@ -2,7 +2,8 @@ import { CasesStore } from '../core/cases-store';
 import { CasesTab, NavStore } from '../core/nav-store';
 
 /**
- * The table's build states, T-00 to T-12 of PROTOTYPE-TABLE.md §8.
+ * The table's build states, PROTOTYPE-TABLE.md §8. The ids keep their
+ * numbers where states were retired (D-13, D-17), so a frame keeps its name.
  *
  * A SEPARATE group from the modal's fourteen. They are only offered while
  * `?view=cases` is active and never appear on the modal view, and the modal's
@@ -28,6 +29,19 @@ function reseed(cases: CasesStore, tab: CasesTab, nav: NavStore): void {
 }
 
 export const TABLE_SCENARIOS: readonly TableScenario[] = [
+  {
+    id: 'T-00',
+    label: 'T-00 - Empty',
+    hint: 'Nothing open in either queue: "No open AML cases" here, "No open Compliance AML cases" on the other tab. No link.',
+    // Not a reseed with a filter: an empty collection is its own state, and
+    // both tabs have to show it - so, unlike every other frame, this one does
+    // not pick a tab. Whichever queue you are on shows its own sentence.
+    apply: (c) => {
+      c.reseed();
+      c.sort.set('priority');
+      c.cases.set([]);
+    },
+  },
   {
     id: 'T-01',
     label: 'T-01 - Active queue, seeded',
@@ -79,12 +93,6 @@ export const TABLE_SCENARIOS: readonly TableScenario[] = [
     },
   },
   {
-    id: 'T-05',
-    label: 'T-05 - Priority breakdown popover',
-    hint: 'Click any Priority score to open its breakdown. Escape closes it.',
-    apply: (c, n) => reseed(c, 'active', n),
-  },
-  {
     id: 'T-08',
     label: 'T-08 - Case escalates to Compliance',
     hint: 'Top Active case escalated: it leaves Active and joins Compliance, counts tick. The 300ms cross-fade is step 6.',
@@ -112,18 +120,6 @@ export const TABLE_SCENARIOS: readonly TableScenario[] = [
       reseed(c, 'active', n);
       c.sort.set('sla');
     },
-  },
-  {
-    id: 'T-11',
-    label: 'T-11 - Disabled tabs',
-    hint: 'Idle and Archive render and do not respond. Hover either for "Coming soon".',
-    apply: (c, n) => reseed(c, 'active', n),
-  },
-  {
-    id: 'T-12',
-    label: 'T-12 - LHM counts',
-    hint: 'Renamed items plus AML cases and Compliance AML cases, both live from the store.',
-    apply: (c, n) => reseed(c, 'active', n),
   },
 ];
 

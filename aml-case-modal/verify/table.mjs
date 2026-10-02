@@ -1423,6 +1423,28 @@ try {
     check('a case locked to me exists to record against', false, 'none found');
   }
 
+  console.log('\nT-00: the empty queue says so, and only that');
+  const emptyOn = async (tab) => {
+    await page.goto(`${BASE}/?view=cases&tab=${tab}&tstate=T-00`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(600);
+    return page.evaluate(() => {
+      const e = document.querySelector('.cases__empty');
+      if (!e) return null;
+      const cs = getComputedStyle(e);
+      return { text: e.textContent.replace(/\s+/g, ' ').trim(), controls: e.querySelectorAll('a,button,[tabindex]').length,
+        align: cs.textAlign, padT: cs.paddingTop, padB: cs.paddingBottom, colour: cs.color, table: !!document.querySelector('.table') };
+    });
+  };
+  const emptyA = await emptyOn('active');
+  const emptyC = await emptyOn('compliance');
+  check('Active: "No open AML cases", nothing else, no link',
+    emptyA?.text === 'No open AML cases' && emptyA.controls === 0 && !emptyA.table, JSON.stringify(emptyA));
+  check('Compliance: "No open Compliance AML cases", nothing else, no link',
+    emptyC?.text === 'No open Compliance AML cases' && emptyC.controls === 0 && !emptyC.table, JSON.stringify(emptyC));
+  check('muted, centred, 48px above and below',
+    emptyA?.align === 'center' && emptyA.padT === '48px' && emptyA.padB === '48px' && emptyA.colour === 'rgb(82, 82, 91)',
+    JSON.stringify({ align: emptyA?.align, padT: emptyA?.padT, padB: emptyA?.padB, colour: emptyA?.colour }));
+
   console.log('\nNo console errors along the way');
   check('the page threw nothing', errors.length === 0, errors.slice(0, 2).join(' | '));
 

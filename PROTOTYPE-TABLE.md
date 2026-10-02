@@ -42,7 +42,7 @@ not prototype work.
   Compliance) and "Compliance AML cases" (count of open Compliance cases).
   Counts come from the same store as the table and update live.
 - Tabs in order: Active, Compliance, Idle (disabled), Archive (disabled).
-  Disabled tabs render but do not respond; tooltip "Coming soon".
+  Disabled tabs render but do not respond. No tooltip (D-17).
 - Refresh button at the bottom of the table as a fallback. It re-reads the
   store; it is not the primary update path.
 - The prototype has no sidebar today. **Stub one** showing only the SG Snoozes
@@ -144,17 +144,14 @@ same red would mean "urgent" in one column and "EDD" in the next.
 
 | ID | State |
 |---|---|
-| T-00 | Empty (each tab): "No open AML cases" / "No open Compliance AML cases" with a "View past cases" link (matches the widget empty-state copy). |
+| T-00 | Empty (each tab): "No open AML cases" on Active, "No open Compliance AML cases" on Compliance. One sentence, muted, centred, 48px above and below. No link (D-17). |
 | T-01 | Active tab, seeded, mixed lock states (the master frame). |
 | T-02 | Compliance tab, seeded. |
 | T-03 | Row locked to me: Open case and Unlock both visible in Actions. |
 | T-04 | Row locked to another agent, force-unlock confirm open. |
-| T-05 | Priority breakdown popover open. |
 | T-08 | Case escalates: row fades out of Active over 300ms, fades into Compliance at its sorted position, LHM counts tick. |
 | T-09 | Case resolved: row fades out, counts tick. |
 | T-10 | Sort switched to SLA. |
-| T-11 | Idle / Archive disabled tab hover. |
-| T-12 | LHM frame: renamed items plus the two new entries with live counts. |
 
 ## 9. Real-time simulation
 
@@ -466,3 +463,24 @@ The column header carried a link to the scoring page beside its sort control,
 and the cell's own icon opens the breakdown that carries the same link. Two
 routes to one page in one column, one of them in a header that is otherwise a
 control. The header one is gone; the breakdown keeps the link.
+
+### D-17 — Three table states retired, and the empty queue is one sentence
+
+**T-05, T-11 and T-12 are gone** from §8 and from the dev switcher. Each
+applied exactly what T-01 applies and then asked the viewer to do something -
+open the breakdown, hover a dead tab, look at the sidebar. A state that sets no
+state is an instruction, and the switcher is for frames. The breakdown, the
+disabled tabs and the live sidebar counts are there in every state, which is
+where the verifier checks them.
+
+**T-00 joins the switcher.** It was in §8 and nowhere else, so the empty queue
+could be described but not shown. It empties the collection, and both tabs show
+their sentence.
+
+**No "Coming soon" tooltip.** §3 asked for one on Idle and Archive; it was never
+built, and Material's disabled tab does not take a pointer. Dropped rather than
+built: a dead tab is a dead tab.
+
+**The empty state loses its link.** "View past cases" pointed out of a queue
+that had nothing in it, to a tab that lives inside a case. One muted sentence,
+centred, 48px above and below.

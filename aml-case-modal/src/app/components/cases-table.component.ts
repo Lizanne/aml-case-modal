@@ -142,9 +142,11 @@ import { WorkPopoverComponent } from './work-popover.component';
       </div>
 
       @if (rows().length === 0) {
+        <!-- One sentence, centred, nothing to click: the queue is empty and
+             that is the whole fact. The link to past cases went - past cases
+             live in the case, under the player, not in a queue that has none. -->
         <p class="cases__empty">
           {{ nav.tab() === 'compliance' ? 'No open Compliance AML cases' : 'No open AML cases' }}
-          <button class="linkish" type="button">View past cases</button>
         </p>
       } @else {
         <!-- Only the table scrolls. The sidebar and the page header above
@@ -1654,12 +1656,11 @@ import { WorkPopoverComponent } from './work-popover.component';
       }
 
       .cases__empty {
-        display: flex;
-        align-items: center;
-        gap: 8px;
         margin: 0;
-        padding: 32px 0;
+        padding: 48px 0;
+        text-align: center;
         font-size: 14px;
+        line-height: 20px;
         color: var(--foreground-secondary);
       }
 
