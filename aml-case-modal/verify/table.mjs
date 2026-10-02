@@ -170,7 +170,7 @@ try {
     return {
       headerAfterSeverity: (() => {
         const h = [...document.querySelectorAll('thead th')].map((t) => t.textContent.trim());
-        return h[h.indexOf('Severity') + 1] === 'Triggers';
+        return h[h.indexOf('Severity') + 1] === 'Triggered by';
       })(),
       counts: cells.map((c) => c.querySelectorAll('.trig__more').length),
       withCount: cells.filter((c) => c.querySelector('.trig__more')).length,
@@ -183,8 +183,10 @@ try {
           return m ? { colour: cs(m).color, weight: cs(m).fontWeight } : null;
         })(),
       },
-      // A count, not a control.
+      // The count is the only control, and the cell itself promises nothing.
       interactive: cells.filter((c) => c.querySelector('a,button,[tabindex],[role=button]')).length,
+      controls: [...new Set(cells.flatMap((c) => [...c.querySelectorAll('a,button,[tabindex],[role=button]')]
+        .map((e) => e.className.split(' ').find((k) => k.startsWith('trig__')) ?? e.className)))],
       cursors: [...new Set(cells.map((c) => cs(c.querySelector('.trig')).cursor))],
       nowrap: [...new Set(cells.map((c) => cs(c).whiteSpace))],
       lines: cells[0].querySelector('.trig').children.length,
@@ -209,7 +211,7 @@ try {
       allAfterOpen: cells.length > 0,
     };
   });
-  check('Triggers sits directly after Severity', trig.headerAfterSeverity);
+  check('Triggered by sits directly after Severity', trig.headerAfterSeverity);
   check('one initiating trigger per row, never more', trig.counts.every((n) => n <= 1),
     trig.counts.join(','));
   check('both states are visible on first load - some with +N, some without',
@@ -219,9 +221,10 @@ try {
     trig.colours.name === 'rgb(9, 9, 11)' && trig.colours.at === 'rgb(82, 82, 91)' &&
     trig.colours.more?.colour === 'rgb(111, 111, 120)' && trig.colours.more?.weight === '500',
     JSON.stringify(trig.colours));
-  check('nothing in the column is interactive',
-    trig.interactive === 0 && trig.cursors.join() === 'auto',
-    `${trig.interactive} controls, cursors ${trig.cursors.join()}`);
+  check('the count is the only control, present exactly where there is a count',
+    trig.interactive === trig.withCount && trig.controls.every((c) => c === 'trig__more') &&
+    trig.cursors.join() === 'auto',
+    `${trig.interactive} controls in ${trig.withCount} counted cells; ${trig.controls.join()}; cursors ${trig.cursors.join()}`);
   check('two lines: what fired, and what it said',
     trig.lines === 2 && trig.detail.text.length > 0, JSON.stringify(trig.detail));
   check('both lines are 14/20; the name leads at 600, the detail follows at 400',
@@ -649,9 +652,10 @@ try {
   check('clicking the score opens nothing', !(await openPanel()));
 
   /**
-   * The row icon IS the column header's icon: same colour token, same hover,
-   * same geometry. Compared to the header rather than to a hex, so the two
-   * cannot drift apart without this failing.
+   * The row icon IS the page title's icon: same colour token, same hover,
+   * same geometry. Compared to that icon rather than to a hex, so the two
+   * cannot drift apart without this failing. (It used to be compared with the
+   * column header's icon; D-16 removed that one.)
    */
   const icons = await page.evaluate(() => {
     const read = (sel) => {
@@ -664,11 +668,11 @@ try {
         glyph: Math.round(e.querySelector('svg').getBoundingClientRect().width),
         stroke: e.querySelector('svg').getAttribute('stroke-width') };
     };
-    return { head: read('.th__info'), row: read('.prio__info'),
+    return { head: read('.cases__title .th__info'), row: read('.prio__info'),
       label: document.querySelector('.prio__info').getAttribute('aria-label'),
       expanded: document.querySelector('.prio__info').getAttribute('aria-expanded') };
   });
-  check('the row icon matches the header icon exactly',
+  check('the row icon matches the page title\'s icon exactly',
     JSON.stringify(icons.head) === JSON.stringify(icons.row),
     `head ${JSON.stringify(icons.head)} row ${JSON.stringify(icons.row)}`);
   check('16px glyph at 1.5 stroke in a 24px hit area',
@@ -678,9 +682,9 @@ try {
     icons.label);
   check('and reports collapsed when shut', icons.expanded === 'false', icons.expanded);
   check('both brighten to the same colour on hover', await (async () => {
-    await page.hover('.th__info');
+    await page.hover('.cases__title .th__info');
     await page.waitForTimeout(280);
-    const a = await page.evaluate(() => getComputedStyle(document.querySelector('.th__info')).color);
+    const a = await page.evaluate(() => getComputedStyle(document.querySelector('.cases__title .th__info')).color);
     await page.mouse.move(0, 0);
     await page.waitForTimeout(200);
     await page.hover('.prio__info');
@@ -870,9 +874,8 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForTimeout(350);
 
-  // The header link survives too, and is the other route to the same doc.
-  // Scoped to the TABLE header: the page title carries an icon of its own
-  // now, and it is earlier in the DOM.
+  // D-16: the column header carries no icon. The breakdown is the route to
+  // the scoring page; the page title keeps its own documentation link.
   const head = await page.evaluate(() => {
     const pick = (sel) => {
       const a = document.querySelector(sel);
@@ -882,13 +885,10 @@ try {
     };
     return { column: pick('thead .th__info'), page: pick('.cases__title .th__info') };
   });
-  check('the column header still carries the scoring link',
-    /confluence|scoring/.test(head.column?.href ?? '') && head.column?.target === '_blank',
-    JSON.stringify(head.column));
-  check('and the page title carries the documentation link, same icon',
+  check('the Priority header carries no info icon', head.column === null, JSON.stringify(head.column));
+  check('and the page title carries the documentation link, 16px glyph',
     head.page?.target === '_blank' && head.page?.glyph === 16 &&
-    head.page?.name === 'AML cases documentation, opens in new tab' &&
-    head.page?.glyph === head.column?.glyph,
+    head.page?.name === 'AML cases documentation, opens in new tab',
     JSON.stringify(head.page));
 
   /**
@@ -898,69 +898,508 @@ try {
    */
   const work = await page.evaluate(() => {
     const cs = (e) => getComputedStyle(e);
+    const cmp = window.ng?.getComponent?.(document.querySelector('cases-table'));
     const rows = [...document.querySelectorAll('.work-row')];
-    const items = [...rows[0].querySelectorAll('.work__item')];
-    const done = document.querySelector('.work__item--done');
+    const req = cmp ? cmp.cases.requiredTypes.map((t) => cmp.cases.workLabel(t)) : null;
+    const perRow = rows.map((r, i) => {
+      const items = [...r.querySelectorAll('.work__item')];
+      const c = cmp?.rows()[i];
+      return {
+        labels: items.map((e) => e.textContent.replace('check_circle', '').trim()),
+        states: items.map((e) => (e.classList.contains('work__item--done') ? 'done' : 'todo')),
+        weights: items.map((e) => cs(e).fontWeight),
+        colours: items.map((e) => cs(e).color),
+        ticks: items.map((e) => !!e.querySelector('.work__tick')),
+        more: r.querySelector('.work__more')?.textContent.trim() ?? null,
+        custom: c ? cmp.cases.customCount(c) : null,
+      };
+    });
+    const anyMore = document.querySelector('.work__more');
+    const tick = document.querySelector('.work__tick');
     return {
+      req, perRow,
       anyPill: document.querySelectorAll('.cell--work ui-pill').length,
-      controls: [...new Set(rows.flatMap((r) =>
-        [...r.querySelectorAll('a,button,[tabindex],[role=button]')]
-          .map((e) => e.className.split(' ').find((c) => c.startsWith('work__')) ?? e.className)))],
-      maxInline: Math.max(...rows.map((r) => r.querySelectorAll('.work__item').length)),
-      gap: cs(rows[0]).gap,
-      lead: { weight: cs(items[0]).fontWeight, colour: cs(items[0]).color },
-      second: items[1] ? { weight: cs(items[1]).fontWeight, colour: cs(items[1]).color } : null,
-      done: done ? { colour: cs(done).color, tick: !!done.querySelector('.work__tick') } : null,
-      // The spans are fragments; the wrapper carries the sentence.
-      // Everything EXCEPT the count button: a control cannot be hidden from
-      // the reader who has to press it.
-      spansHidden: rows.every((r) => [...r.children]
-        .filter((c) => !c.classList.contains('work__more'))
+      controls: [...new Set(rows.flatMap((r) => [...r.querySelectorAll('a,button,[tabindex],[role=button]')]
+        .map((e) => e.className.split(' ').find((k) => k.startsWith('work__')) ?? e.className)))],
+      gap: cs(rows[0]).gap, nowrap: cs(rows[0]).whiteSpace,
+      sep: [...new Set(rows.flatMap((r) => [...r.querySelectorAll('.work__sep')].map((x) => x.textContent.trim())))],
+      tick: tick ? { w: Math.round(tick.getBoundingClientRect().width), h: Math.round(tick.getBoundingClientRect().height) } : null,
+      spansHidden: rows.every((r) => [...r.children].filter((c) => !c.classList.contains('work__more'))
         .every((c) => c.getAttribute('aria-hidden') === 'true')),
-      moreNamed: [...document.querySelectorAll('.work__more')]
-        .every((b) => /^Show all \d+ work items/.test(b.getAttribute('aria-label') ?? '')),
       labels: rows.map((r) => r.getAttribute('aria-label')),
-      more: (() => {
-        const m = document.querySelector('.work__more');
-        if (!m) return null;
-        const r = m.getBoundingClientRect();
-        const item = m.closest('.work-row').querySelector('.work__item').getBoundingClientRect();
-        const c = getComputedStyle(m);
-        return { h: Math.round(r.height), pad: c.padding, fs: c.fontSize,
-          onAxis: Math.abs((r.top + r.height / 2) - (item.top + item.height / 2)) < 1 };
-      })(),
+      more: anyMore ? (() => {
+        const r = anyMore.getBoundingClientRect();
+        const item = anyMore.closest('.work-row').querySelector('.work__item').getBoundingClientRect();
+        const c = cs(anyMore);
+        return { h: Math.round(r.height), pad: c.padding, fs: c.fontSize, tip: anyMore.getAttribute('ng-reflect-message'),
+          name: anyMore.getAttribute('aria-label'), onAxis: Math.abs((r.top + r.height / 2) - (item.top + item.height / 2)) < 1 };
+      })() : null,
       clipped: [...document.querySelectorAll('.work__item')].filter((e) => {
-        const rg = document.createRange();
-        rg.selectNodeContents(e);
+        const rg = document.createRange(); rg.selectNodeContents(e);
         return rg.getBoundingClientRect().width > e.getBoundingClientRect().width + 0.01;
       }).length,
     };
   });
-  // Text, not pills - but the count IS a control: it is the way to the rest
-  // of the list, and the only thing in the column that does anything.
-  // The count is a real target, not a scrap of text: 32px minimum, so it
-  // clears 2.5.8 with room and sits on the same axis as the items beside it.
-  check('the count is at least 32px tall with 8px sides at 14px',
-    work.more.h >= 32 && work.more.pad === '0px 8px' && work.more.fs === '14px' &&
-    work.more.onAxis, JSON.stringify(work.more));
+  // Rafal (2 Oct): the row is the required set and nothing else.
+  const REQ = ['Contact player', 'Open source searches', 'EDD report'];
+  check('the required set is fixed: Contact player, Open source searches, EDD report, in that order',
+    JSON.stringify(work.req) === JSON.stringify(REQ), JSON.stringify(work.req));
+  check('every row shows exactly the required set - all three, nothing custom',
+    work.perRow.length > 0 && work.perRow.every((r) => r.labels.length === 3 &&
+      [...r.labels].sort().join() === [...REQ].sort().join()),
+    JSON.stringify(work.perRow.map((r) => r.labels)));
+  const inOrder = (labels) => labels.map((l) => REQ.indexOf(l)).every((v, i, a) => i === 0 || v > a[i - 1]);
+  check('to-do first, then done - each group in the required order',
+    work.perRow.every((r) => {
+      const firstDone = r.states.indexOf('done');
+      const grouped = firstDone < 0 || r.states.slice(firstDone).every((x) => x === 'done');
+      return grouped && inOrder(r.labels.filter((_, i) => r.states[i] === 'todo')) &&
+        inOrder(r.labels.filter((_, i) => r.states[i] === 'done'));
+    }), JSON.stringify(work.perRow.map((r) => r.labels.map((l, i) => l + (r.states[i] === 'done' ? ' (done)' : '')))));
+  check('to-do at 600 in full ink; done at 400, muted, behind a 16px tick',
+    work.perRow.every((r) => r.states.every((st, i) => st === 'todo'
+      ? r.weights[i] === '600' && r.colours[i] === 'rgb(9, 9, 11)' && !r.ticks[i]
+      : r.weights[i] === '400' && r.colours[i] === 'rgb(82, 82, 91)' && r.ticks[i])) &&
+    work.tick?.w === 16 && work.tick?.h === 16,
+    JSON.stringify({ tick: work.tick, first: work.perRow[0] }));
+  check('a middle dot and 8px between items, one line, nowrap',
+    work.sep.join() === '·' && work.gap === '8px' && work.nowrap === 'nowrap',
+    JSON.stringify({ sep: work.sep, gap: work.gap, nowrap: work.nowrap }));
+  check('+N is the custom count, rendered only when there is one, and both states are on screen',
+    work.perRow.every((r) => (r.custom === 0 ? r.more === null : r.more === `+${r.custom}`)) &&
+    work.perRow.some((r) => r.custom === 0) && work.perRow.some((r) => r.custom > 0),
+    JSON.stringify(work.perRow.map((r) => ({ more: r.more, custom: r.custom }))));
+  check('the count is Triggers\' button - 32px, 8px sides, 14px, on the items\' axis - with tooltip Show full timeline',
+    !!work.more && work.more.h >= 32 && work.more.pad === '0px 8px' && work.more.fs === '14px' &&
+    work.more.onAxis && work.more.tip === 'Show full timeline', JSON.stringify(work.more));
   check('Work is text, and the only control in it is the count',
-    work.anyPill === 0 &&
-    work.controls.every((c) => c === 'work__more'), JSON.stringify(work.controls));
-  check('up to four inline, a middle dot and 8px between them',
-    work.maxInline <= 4 && work.gap === '8px', `${work.maxInline} inline, gap ${work.gap}`);
-  check('the first item leads at 600 in default ink, the rest muted at 400',
-    work.lead.weight === '600' && work.lead.colour === 'rgb(9, 9, 11)' &&
-    work.second?.weight === '400' && work.second?.colour === 'rgb(82, 82, 91)',
-    JSON.stringify({ lead: work.lead, second: work.second }));
-  // Colour is never the only carrier: green says DONE, order says what is next.
-  check('a completed item keeps its tick and its green wherever it lands',
-    work.done?.tick === true && work.done?.colour === 'rgb(21, 128, 61)',
-    JSON.stringify(work.done));
+    work.anyPill === 0 && work.controls.every((c) => c === 'work__more'), JSON.stringify(work.controls));
   check('no work label is cut off', work.clipped === 0, String(work.clipped));
-  check('the descriptive spans are hidden, the count keeps its own name',
-    work.spansHidden && work.moreNamed &&
-    work.labels.every((l) => /^\d+ work items, \d+ to do, first: /.test(l ?? '') || l === 'No work items'),
+  check('the descriptive spans are hidden, the wrapper carries the sentence',
+    work.spansHidden && work.labels.every((l) => /^3 required actions, \d to do/.test(l ?? '')),
     work.labels[0]);
+
+  console.log('\nWork +N: the case\'s actions, and only its actions');
+  const wpRow = await page.evaluate(() => {
+    const tr = document.querySelector('.work__more').closest('tr');
+    return [...tr.querySelectorAll('.work__item')].filter((e) => !e.classList.contains('work__item--done'))
+      .map((e) => e.textContent.replace('check_circle', '').trim());
+  });
+  await page.locator('.work__more').first().click();
+  await page.waitForTimeout(650);
+  const wp = await page.evaluate(() => {
+    const p = document.querySelector('.mat-mdc-menu-panel');
+    if (!p) return null;
+    const cs = (e) => getComputedStyle(e);
+    const list = p.querySelector('work-popover .list');
+    const items = [...p.querySelectorAll('.entry')];
+    const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle|radio_button_unchecked|, done|, to do/g, '').trim();
+    const todo = items.filter((it) => !it.classList.contains('entry--done'));
+    const done = items.filter((it) => it.classList.contains('entry--done'));
+    const gaps = items.slice(1).map((it, i) => Math.round(it.getBoundingClientRect().top - items[i].getBoundingClientRect().bottom));
+    const ats = done.map((it) => Date.parse(it.querySelector('time')?.getAttribute('datetime')));
+    const firstDoneIdx = items.findIndex((it) => it.classList.contains('entry--done'));
+    // gaps[i] is the space above items[i + 1]; the one above the first done entry is the group gap
+    const groupGap = firstDoneIdx > 0 ? gaps[firstDoneIdx - 1] : null;
+    const withinGaps = [...new Set(gaps.filter((_, i) => i !== firstDoneIdx - 1))];
+    const tabular = done[0] ? cs(done[0].querySelector('time')).fontVariantNumeric : null;
+    const types = window.ng?.getComponent?.(document.querySelector('cases-table'))?.cases.workTypes.map((w) => w.id) ?? [];
+    return {
+      isWork: p.classList.contains('pop--work'), cmp: !!p.querySelector('work-popover'),
+      head: p.querySelector('.pop__head')?.textContent.trim(), items: items.length,
+      todo: todo.map(name), done: done.map(name),
+      todoOnTop: firstDoneIdx < 0 || items.slice(firstDoneIdx).every((it) => it.classList.contains('entry--done')),
+      todoNoMeta: todo.every((it) => !it.querySelector('.entry__meta') && !it.querySelector('time')),
+      todoMark: [...new Set(todo.map((it) => it.querySelector('.entry__mark')?.textContent.trim()))],
+      doneMark: [...new Set(done.map((it) => it.querySelector('.entry__mark')?.textContent.trim()))],
+      doneMeta: done.every((it) => { const m = it.querySelector('.entry__meta'); return !!m && !!m.querySelector('time') && /\d{4}/.test(m.textContent) && /·/.test(m.textContent); }),
+      metaColour: done[0] ? cs(done[0].querySelector('.entry__meta')).color : null,
+      nameColour: items[0] ? cs(items[0].querySelector('.entry__name')).color : null,
+      newestFirst: ats.every((t, i) => i === 0 || t <= ats[i - 1]),
+      borders: [...new Set(items.map((it) => cs(it).borderBottomWidth))],
+      bgs: [...new Set(items.map((it) => cs(it).backgroundColor))], gaps: [...new Set(gaps)],
+      groupGap, withinGaps, tabular, types,
+      list: { pad: cs(list).padding, maxH: cs(list).maxHeight, overflowY: cs(list).overflowY, sbW: cs(list).scrollbarWidth },
+      width: Math.round(p.getBoundingClientRect().width),
+      nonAction: items.filter((it) => /Case created|Trigger added|Severity|locked|unlocked|resync/i.test(it.textContent)).length,
+    };
+  });
+  check('the count opens a popover headed Work, holding the work list',
+    wp?.isWork && wp.cmp && wp.head === 'Work', JSON.stringify(wp && { isWork: wp.isWork, cmp: wp.cmp, head: wp.head }));
+  check('actions only: no creation, trigger, severity, lock or resync entries', wp?.nonAction === 0, String(wp?.nonAction));
+  check('the outstanding required actions sit in a block at the top - unticked, no stamp - and are the row\'s to-dos',
+    wp?.todoOnTop && wp.todoNoMeta && JSON.stringify(wp.todo) === JSON.stringify(wpRow) &&
+    wp.todoMark.join() === 'radio_button_unchecked',
+    JSON.stringify({ todo: wp?.todo, row: wpRow, onTop: wp?.todoOnTop, noMeta: wp?.todoNoMeta, mark: wp?.todoMark }));
+  check('every recorded action below them, newest first, ticked, with its stamp and agent on a muted second line',
+    wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'check_circle' &&
+    wp.metaColour === 'rgb(82, 82, 91)' && wp.nameColour === 'rgb(9, 9, 11)',
+    JSON.stringify({ done: wp?.done, newestFirst: wp?.newestFirst, meta: wp?.doneMeta, metaColour: wp?.metaColour }));
+  check('the Triggers list layout: no borders, no backgrounds, 16px padding; 12px within a group, 20px between the two',
+    wp?.borders.join() === '0px' && wp.bgs.every((b) => b === 'rgba(0, 0, 0, 0)') && wp.withinGaps.join() === '12' &&
+    (wp.todo.length === 0 || wp.groupGap === 20) && wp.list.pad === '0px 16px 16px',
+    JSON.stringify({ borders: wp?.borders, bgs: wp?.bgs, within: wp?.withinGaps, group: wp?.groupGap, pad: wp?.list.pad }));
+  check('stamps in tabular figures', wp?.tabular === 'tabular-nums', wp?.tabular);
+  check('PEP check, Sanctions screen and SoF request are gone from the work types',
+    wp?.types.length > 0 && ['pep-check', 'sanctions-screen', 'sof-request'].every((t) => !wp.types.includes(t)),
+    JSON.stringify(wp?.types));
+  check('capped at 360px and scrolling inside, thin scrollbar, 320 to 400 wide',
+    wp?.list.maxH === '360px' && wp.list.overflowY === 'auto' && wp.list.sbW === 'thin' &&
+    wp.width >= 320 && wp.width <= 400, JSON.stringify({ ...wp?.list, width: wp?.width }));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  check('Escape closes it and focus returns to the count', !(await openPanel()) &&
+    await page.evaluate(() => document.activeElement?.classList.contains('work__more')));
+
+  console.log('\nTriggered by: the count opens the modal\'s strip for the row');
+  await page.goto(`${BASE}/?view=cases&tab=active`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const tb = await page.evaluate(() => {
+    const cs = (e) => getComputedStyle(e);
+    const b = document.querySelector('.trig__more');
+    const r = b.getBoundingClientRect();
+    const line = b.closest('.trig__line').getBoundingClientRect();
+    const row = b.closest('tr').getBoundingClientRect();
+    return {
+      tag: b.tagName, type: b.getAttribute('type'),
+      name: b.getAttribute('aria-label'), tip: b.getAttribute('ng-reflect-message'),
+      haspopup: b.getAttribute('aria-haspopup'), expanded: b.getAttribute('aria-expanded'),
+      h: Math.round(r.height), pad: cs(b).padding, fs: cs(b).fontSize, weight: cs(b).fontWeight,
+      colour: cs(b).color, cursor: cs(b).cursor,
+      lineH: Math.round(line.height), rowH: Math.round(row.height),
+      centred: Math.abs((r.top + r.height / 2) - (line.top + line.height / 2)) < 1,
+    };
+  });
+  check('the count is a real button, typed, named in full, with a tooltip',
+    tb.tag === 'BUTTON' && tb.type === 'button' && /^Show all \d+ triggers$/.test(tb.name ?? '') &&
+    tb.tip === 'Show all triggers', JSON.stringify({ name: tb.name, tip: tb.tip }));
+  // MatMenuTrigger owns both, as on the other two popovers.
+  check('the popover state is announced, and MatMenuTrigger owns it',
+    tb.haspopup === 'menu' && tb.expanded === 'false', `${tb.haspopup} / ${tb.expanded}`);
+  check('it is Work\'s count: 32px tall, 8px sides, 14px at 500, subtle, pointer',
+    tb.h >= 32 && tb.pad === '0px 8px' && tb.fs === '14px' && tb.weight === '500' &&
+    tb.colour === 'rgb(111, 111, 120)' && tb.cursor === 'pointer', JSON.stringify(tb));
+  // A 32px box on a 20px line, and neither the line nor the row grew for it.
+  check('the line it sits on is still 20px and the row still 52, the box centred on it',
+    tb.lineH === 20 && tb.rowH === 53 && tb.centred, `line ${tb.lineH}, row ${tb.rowH}, centred ${tb.centred}`);
+  await page.hover('.trig__more');
+  await page.waitForTimeout(250);
+  const tbHover = await page.evaluate(() => {
+    const c = getComputedStyle(document.querySelector('.trig__more'));
+    return { bg: c.backgroundColor, colour: c.color };
+  });
+  check('hover: the surface tint and full ink, like Work',
+    tbHover.bg === 'rgb(244, 244, 245)' && tbHover.colour === 'rgb(9, 9, 11)', JSON.stringify(tbHover));
+
+  await page.locator('.trig__more').first().click();
+  await page.waitForTimeout(450);
+  const tp = await page.evaluate(() => {
+    const p = document.querySelector('.mat-mdc-menu-panel');
+    if (!p) return null;
+    const cs = (e) => getComputedStyle(e);
+    const rows = [...p.querySelectorAll('.trigger')];
+    const b = document.querySelector('.trig__more');
+    const cell = b.closest('.cell--triggers');
+    const ats = rows.map((r) => Date.parse(r.querySelector('time')?.getAttribute('datetime')));
+    const head = p.querySelector('.pop__head');
+    return {
+      isTrig: p.classList.contains('pop--trig'),
+      strip: !!p.querySelector('trigger-strip .strip'),
+      head: head?.textContent.trim(),
+      rows: rows.length,
+      shown: Number(b.textContent.trim().replace('+', '')) + 1,
+      named: Number((b.getAttribute('aria-label') ?? '').match(/\d+/)?.[0]),
+      first: rows[0]?.querySelector('.cell__label')?.textContent.trim(),
+      rowName: cell.querySelector('.trig__name').textContent.trim(),
+      oldestFirst: ats.every((t, i) => i === 0 || t >= ats[i - 1]),
+      width: Math.round(p.getBoundingClientRect().width),
+      opaque: cs(p).backgroundColor !== 'rgba(0, 0, 0, 0)',
+      expanded: b.getAttribute('aria-expanded'),
+      headX: Math.round(head.getBoundingClientRect().left + parseFloat(cs(head).paddingLeft)),
+      rowX: Math.round(rows[0]?.querySelector('.cell--name').getBoundingClientRect().left),
+      detailShown: rows.every((r) => (r.querySelector('.cell--detail')?.textContent ?? '').trim().length > 0),
+      gapHidden: [...p.querySelectorAll('.strip__gap-slot')].every((g) => getComputedStyle(g).display === 'none'),
+      list: (() => { const l = p.querySelector('.strip__list'); const c = cs(l); return { maxH: c.maxHeight, overflowY: c.overflowY, pad: c.padding, padB: c.paddingBottom, sbW: c.scrollbarWidth, sbColor: c.scrollbarColor, tabindex: l.getAttribute('tabindex') }; })(),
+      items: (() => {
+        const gaps = rows.slice(1).map((r, i) => Math.round(r.getBoundingClientRect().top - rows[i].getBoundingClientRect().bottom));
+        return { borders: [...new Set(rows.map((r) => cs(r).borderBottomWidth))], bgs: [...new Set(rows.map((r) => cs(r).backgroundColor))], gaps: [...new Set(gaps)] };
+      })(),
+    };
+  });
+  check('the count opens a popover holding the modal\'s strip, headed Triggered by',
+    tp?.isTrig && tp.strip && tp.head === 'Triggered by' && tp.expanded === 'true',
+    JSON.stringify(tp && { isTrig: tp.isTrig, strip: tp.strip, head: tp.head, expanded: tp.expanded }));
+  check('every entry oldest first, each with name, detail and stamp in the strip\'s format',
+    tp?.rows > 0 && tp.oldestFirst && tp.detailShown,
+    JSON.stringify({ rows: tp?.rows, oldestFirst: tp?.oldestFirst, detailShown: tp?.detailShown }));
+  check('the first entry is the row\'s initiating trigger', tp?.first === tp?.rowName,
+    `popover first "${tp?.first}" vs row "${tp?.rowName}"`);
+  check('the count the button shows is the count the popover holds',
+    tp?.rows === tp?.shown && tp?.named === tp?.rows,
+    `button +${(tp?.shown ?? 1) - 1} => ${tp?.shown}, named ${tp?.named}, popover ${tp?.rows}`);
+  check('320 to 400 wide and opaque', tp?.width >= 320 && tp.width <= 400 && tp.opaque,
+    `${tp?.width}px, opaque ${tp?.opaque}`);
+  check('the heading sits on the strip\'s own gutter', Math.abs((tp?.headX ?? 0) - (tp?.rowX ?? 99)) <= 1,
+    `heading ${tp?.headX} vs rows ${tp?.rowX}`);
+
+  // No collapse in the popover: the divider is the modal's. Every row, flat.
+  const clearBar = /^(transparent|rgba\(0, 0, 0, 0\))\s+(transparent|rgba\(0, 0, 0, 0\))$/;
+  check('no expander in the popover: the strip\'s divider is hidden, every row present',
+    tp?.gapHidden === true, JSON.stringify({ gapHidden: tp?.gapHidden, rows: tp?.rows }));
+  check('the list caps at 360px, scrolls inside, with 16px list padding',
+    tp?.list.maxH === '360px' && tp.list.overflowY === 'auto' && tp.list.pad === '0px 16px 16px',
+    JSON.stringify(tp?.list));
+  check('list items: no borders, no backgrounds, 12px apart',
+    tp?.items.borders.join() === '0px' && tp.items.bgs.every((b) => b === 'rgba(0, 0, 0, 0)') && tp.items.gaps.join() === '12',
+    JSON.stringify(tp?.items));
+  check('a thin scrollbar, clear until the list is hovered',
+    tp?.list.sbW === 'thin' && clearBar.test(tp.list.sbColor ?? ''),
+    JSON.stringify({ w: tp?.list.sbW, c: tp?.list.sbColor }));
+  await page.hover('.mat-mdc-menu-panel .strip__list');
+  await page.waitForTimeout(150);
+  const sbHover = await page.evaluate(() =>
+    getComputedStyle(document.querySelector('.mat-mdc-menu-panel .strip__list')).scrollbarColor);
+  check('and shown while it is', !!sbHover && !clearBar.test(sbHover), sbHover);
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  check('Escape closes it and focus returns to the count', !(await openPanel()) &&
+    await page.evaluate(() => document.activeElement?.classList.contains('trig__more')));
+
+  // One at a time ACROSS kinds: a trigger list open, then a breakdown aimed at.
+  await page.locator('.trig__more').first().click();
+  await page.waitForTimeout(350);
+  await page.locator('.prio__info').first().click({ force: true });
+  await page.waitForTimeout(400);
+  await page.locator('.prio__info').first().click();
+  await page.waitForTimeout(450);
+  const across = await page.evaluate(() => ({
+    panels: document.querySelectorAll('.mat-mdc-menu-panel').length,
+    kind: document.querySelector('.mat-mdc-menu-panel')?.classList.contains('pop--prio'),
+  }));
+  check('one popover at a time, across kinds', across.panels === 1 && across.kind === true,
+    JSON.stringify(across));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(350);
+  await page.locator('.trig__more').first().click();
+  await page.waitForTimeout(350);
+  await page.evaluate(() => { document.querySelector('.table-scroll').scrollLeft += 40; });
+  await page.waitForTimeout(400);
+  check('scrolling the table closes it', !(await openPanel()));
+  await page.evaluate(() => { document.querySelector('.table-scroll').scrollLeft = 0; });
+
+  // The longest case: the one that has to scroll inside the panel.
+  const longest = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.trig__more')];
+    const n = b.map((x) => Number(x.textContent.replace('+', '')));
+    return [...document.querySelectorAll('tbody tr')].indexOf(b[n.indexOf(Math.max(...n))].closest('tr'));
+  });
+  await page.locator('tbody tr').nth(longest).locator('.trig__more').click();
+  await page.waitForTimeout(450);
+  const long = await page.evaluate(() => {
+    const l = document.querySelector('.mat-mdc-menu-panel .strip__list');
+    const g = l.querySelector('.strip__gap-slot');
+    return { rows: l.querySelectorAll('.trigger').length, h: Math.round(l.getBoundingClientRect().height),
+      scrollH: l.scrollHeight, clientH: l.clientHeight, tabindex: l.getAttribute('tabindex'),
+      label: l.getAttribute('aria-label'), gapShown: !!g && getComputedStyle(g).display !== 'none' };
+  });
+  check('a long case scrolls inside the popover within 360px, keyboard-reachable, no expander',
+    long.h <= 360 && long.scrollH > long.clientH && long.tabindex === '0' &&
+    /scrollable/.test(long.label ?? '') && !long.gapShown, JSON.stringify(long));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+
+  console.log('\nParity: for every case, the popover is the modal\'s list');
+  const parity = [];
+  for (const tab of ['active', 'compliance']) {
+    await page.goto(`${BASE}/?view=cases&tab=${tab}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(600);
+    // Case ids come from the component: the row shows the PLAYER's id.
+    const rowsInfo = await page.evaluate(() => {
+      const cmp = window.ng?.getComponent?.(document.querySelector('cases-table'));
+      if (!cmp) return null;
+      return cmp.rows().map((c, i) => {
+        const tr = document.querySelectorAll('tbody tr')[i];
+        return { id: c.id, since: c.triggers.length, hasMore: !!tr.querySelector('.trig__more'),
+          hasWork: !!tr.querySelector('.work__more'),
+          rowFirst: tr.querySelector('.trig__name').textContent.trim() };
+      });
+    });
+    if (!rowsInfo) { parity.push({ tab, noNg: true }); continue; }
+    for (let i = 0; i < rowsInfo.length; i++) {
+      const info = rowsInfo[i];
+      let pop = { n: 1, first: info.rowFirst };
+      if (info.hasMore) {
+        await page.locator('tbody tr').nth(i).locator('.trig__more').click();
+        await page.waitForTimeout(400);
+        pop = await page.evaluate(() => {
+          const rows = [...document.querySelectorAll('.mat-mdc-menu-panel .trigger')];
+          return { n: rows.length, first: rows[0]?.querySelector('.cell__label')?.textContent.trim() };
+        });
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+      }
+      await page.goto(`${BASE}/?case=${info.id}`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(700);
+      const modal = await page.evaluate(() => {
+        const gap = document.querySelector('.strip__gap');
+        if (gap && gap.getAttribute('aria-expanded') !== 'true') gap.click();
+        return new Promise((resolve) => setTimeout(() => {
+          const rows = [...document.querySelectorAll('.strip .trigger')];
+          resolve({ n: rows.length, first: rows[0]?.querySelector('.cell__label')?.textContent.trim() });
+        }, 300));
+      });
+      // The Work count's popover against the modal's Timeline tab.
+      let workPop = null;
+      if (info.hasWork) {
+        await page.goto(`${BASE}/?view=cases&tab=${tab}`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(500);
+        await page.locator('tbody tr').nth(i).locator('.work__more').click();
+        await page.waitForTimeout(400);
+        workPop = await page.evaluate(() => {
+          const done = [...document.querySelectorAll('.mat-mdc-menu-panel .entry--done')];
+          const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle|, done/g, '').trim();
+          return { n: done.length, first: done[0] ? name(done[0]) : null };
+        });
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(250);
+        await page.goto(`${BASE}/?case=${info.id}`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(600);
+      }
+      await page.locator('.mat-mdc-tab', { hasText: 'Timeline' }).first().click();
+      await page.waitForTimeout(400);
+      const modalTimeline = await page.evaluate(() => {
+        const acts = [...document.querySelectorAll('player-info-panel .timeline__what')]
+          .map((e) => e.textContent.trim()).filter((t) => t.startsWith('Outcome recorded: '));
+        return { n: acts.length, first: acts[0]?.replace('Outcome recorded: ', '') ?? null };
+      });
+      parity.push({ tab, id: info.id, since: info.since, popover: pop.n, modal: modal.n,
+        firstPop: pop.first, firstModal: modal.first, rowFirst: info.rowFirst, workPop, modalTimeline });
+      await page.goto(`${BASE}/?view=cases&tab=${tab}`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(500);
+    }
+  }
+  const mism = parity.filter((p) => p.popover !== p.modal);
+  check('for every case the popover count equals the modal count', parity.length > 0 && mism.length === 0,
+    mism.map((p) => `${p.id}: popover ${p.popover} vs modal ${p.modal}`).join('; ') || `${parity.length} cases`);
+  const firstMism = parity.filter((p) => p.firstPop !== p.firstModal);
+  check('and the first entry matches', parity.length > 0 && firstMism.length === 0,
+    firstMism.map((p) => `${p.id}: "${p.firstPop}" vs "${p.firstModal}"`).join('; '));
+  // LEFT FAILING ON PURPOSE until the design answers it. The row's +N is
+  // "since the case opened" (D-13 scope note); the strip is the player's whole
+  // history. Where those differ the button and its popover disagree, and
+  // relaxing this check would decide which of them is right by default.
+  // The modal's Timeline tab holds the case's history; its "Outcome recorded"
+  // entries are the actions, and those are what the Work popover's recorded
+  // block must equal - count and newest entry - for every case with a count.
+  // The modal titles a record by the thing recorded ("Player contact"); the
+  // row and its popover name the action ("Contact player"). Same event, two
+  // registers - so the newest entry is compared through that one alias.
+  const asAction = (t) => ({ "Player contact": "Contact player" })[t] ?? t;
+  const workMism = parity.filter((p) => p.workPop !== null &&
+    (p.workPop.n !== p.modalTimeline.n || p.workPop.first !== asAction(p.modalTimeline.first)));
+  check('for every case with a count, the popover\'s recorded actions are the modal timeline\'s action entries',
+    parity.some((p) => p.workPop !== null) && workMism.length === 0,
+    workMism.map((p) => `${p.id}: popover ${JSON.stringify(p.workPop)} vs modal ${JSON.stringify(p.modalTimeline)}`).join('; ') ||
+      `${parity.filter((p) => p.workPop !== null).length} cases with a count`);
+  const scope = [...new Map(parity.filter((p) => p.since !== p.popover).map((p) => [p.id, p])).values()];
+  check('the row\'s count is the popover\'s length - what +N counts and what opens agree',
+    scope.length === 0,
+    scope.map((p) => `${p.id}: +N says ${p.since}, popover holds ${p.popover}`).join('; '));
+
+  console.log('\nLive: an arrival lands in the open popover and in the count');
+  await page.goto(`${BASE}/?view=cases&tab=active`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const live = await page.evaluate(() => {
+    const cmp = window.ng?.getComponent?.(document.querySelector('cases-table'));
+    if (!cmp) return { noNg: true };
+    const tr = document.querySelector('.trig__more').closest('tr');
+    const idx = [...document.querySelectorAll('tbody tr')].indexOf(tr);
+    return { id: cmp.rows()[idx].id, before: Number(tr.querySelector('.trig__more').textContent.trim().replace('+', '')) };
+  });
+  await page.locator('.trig__more').first().click();
+  await page.waitForTimeout(450);
+  const liveBefore = await page.evaluate(() => document.querySelectorAll('.mat-mdc-menu-panel .trigger').length);
+  const liveAfter = await page.evaluate(async (id) => {
+    const ng = window.ng;
+    const cmp = ng.getComponent(document.querySelector('cases-table'));
+    cmp.cases.cases.update((list) => list.map((c) => c.id === id
+      ? { ...c, triggers: [...c.triggers, { id: 'live-verify', name: 'Live arrival (verifier)',
+          detail: 'Appended while the popover was open', at: new Date().toISOString() }] }
+      : c));
+    ng.applyChanges(cmp);
+    await new Promise((r) => setTimeout(r, 300));
+    ng.applyChanges(cmp);
+    await new Promise((r) => setTimeout(r, 200));
+    const p = document.querySelector('.mat-mdc-menu-panel');
+    const rows = [...(p?.querySelectorAll('.trigger') ?? [])];
+    const last = rows[rows.length - 1];
+    const tr = document.querySelector('.trig__more').closest('tr');
+    return { open: !!p, rows: rows.length,
+      lastName: last?.querySelector('.cell__label')?.textContent.trim(),
+      lastNew: !!last?.querySelector('ui-pill'),
+      count: Number(tr.querySelector('.trig__more').textContent.trim().replace('+', '')),
+      name: tr.querySelector('.trig__more').getAttribute('aria-label') };
+  }, live.id);
+  check('the open popover gains the arrival at the bottom, badged New',
+    liveAfter.open && liveAfter.rows === liveBefore + 1 &&
+    liveAfter.lastName === 'Live arrival (verifier)' && liveAfter.lastNew, JSON.stringify(liveAfter));
+  check('and the count on the row goes up by one, its name with it',
+    liveAfter.count === live.before + 1 && liveAfter.name === `Show all ${live.before + 2} triggers`,
+    JSON.stringify({ before: live.before, after: liveAfter.count, name: liveAfter.name }));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+
+  console.log('\nLive: recording in the modal moves the row');
+  await page.goto(`${BASE}/?view=cases&tab=active`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const target = await page.evaluate(() => {
+    const cmp = window.ng?.getComponent?.(document.querySelector('cases-table'));
+    if (!cmp) return null;
+    const c = cmp.rows().find((x) => x.lock.state === 'locked-to-me' &&
+      x.actions.find((a) => a.type === 'player-contact')?.state === 'todo') ??
+      cmp.rows().find((x) => x.lock.state === 'locked-to-me');
+    return c ? { id: c.id, contactTodo: c.actions.find((a) => a.type === 'player-contact')?.state === 'todo',
+      custom: cmp.cases.customCount(c) } : null;
+  });
+  if (target) {
+    await page.goto(`${BASE}/?case=${target.id}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(700);
+    const saved = await page.evaluate((contactTodo) => {
+      const ng = window.ng;
+      const wf = document.querySelector('workflow-panel');
+      const s = ng.getComponent(wf).store;
+      const out = { canRecord: s.canRecord(), lock: s.lockState() };
+      if (contactTodo) { s.startRecord('player-contact'); s.patchDraft({ note: 'Verifier: contact logged' }); out.contact = s.saveDraft(); }
+      s.startRecord('note'); s.patchDraft({ note: 'Verifier: a note' }); out.note = s.saveDraft();
+      ng.applyChanges(ng.getComponent(wf));
+      return out;
+    }, target.contactTodo);
+    // Back the way an agent goes: the sidebar, not a reload - a reload would reseed.
+    await page.locator('.shell__nav').getByText('AML cases', { exact: true }).first().click();
+    await page.waitForTimeout(700);
+    const live2 = await page.evaluate((id) => {
+      const cmp = window.ng.getComponent(document.querySelector('cases-table'));
+      const i = cmp.rows().findIndex((x) => x.id === id);
+      const tr = document.querySelectorAll('tbody tr')[i];
+      const items = [...tr.querySelectorAll('.work__item')];
+      const contact = items.find((e) => /Contact player/.test(e.textContent));
+      const dones = items.filter((e) => e.classList.contains('work__item--done'));
+      return { found: i >= 0, contactDone: contact?.classList.contains('work__item--done') ?? null,
+        contactInDoneGroup: !!contact && dones.includes(contact) && items.indexOf(contact) >= items.length - dones.length,
+        more: tr.querySelector('.work__more')?.textContent.trim() ?? null,
+        custom: cmp.cases.customCount(cmp.rows()[i]), labels: items.length };
+    }, target.id);
+    check('completing Contact player in the modal moves it to the done group in the row',
+      saved.contact !== false && live2.found && live2.labels === 3 &&
+      (target.contactTodo ? live2.contactDone === true && live2.contactInDoneGroup : true),
+      JSON.stringify({ ...live2, saved, contactTodo: target.contactTodo }));
+    check('adding a note in the modal increments +N only',
+      saved.note === true && live2.custom === target.custom + 1 && live2.more === `+${target.custom + 1}`,
+      JSON.stringify({ before: target.custom, after: live2.custom, more: live2.more, saved }));
+  } else {
+    check('a case locked to me exists to record against', false, 'none found');
+  }
 
   console.log('\nNo console errors along the way');
   check('the page threw nothing', errors.length === 0, errors.slice(0, 2).join(' | '));

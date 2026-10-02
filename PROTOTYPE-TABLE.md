@@ -79,10 +79,10 @@ Active and Compliance tabs, same columns, this order.
 |---|---|
 | **Player** | Two lines. **Line one:** player ID as a link (opens player details, same tab), 600 weight, tabular figures, underlined, link colour. **Line two:** player status as muted 13/18 text - no pill, border or background. Statuses are the real values (`ENABLED`, `PLAYER_REGISTERED`, `GAMSTOP_RESTRICTED`, `PLAYER_DUPLICATE`) with display labels mapped in the template, not the fixture. Sticky on horizontal scroll with a right edge that appears only once scrolled. `min-width: 184px`. |
 | **Severity** | AML, EDD or Compliance, as the shared severity pill. Decides which tab the case is in (rule 1). |
-| **Triggers** | The **initiating** trigger only - the oldest dated at or after the case opened - then its relative age, on one line: `Large deposit · 2d ago`. Name in default ink, age muted, separated by a middle dot. The name ellipsises; the full name and an absolute stamp sit on the `title`. More than one trigger appends a muted `+N` in plain text, same line. **Not interactive:** no button, no popover, no cursor change. Text rather than chips, so it stays distinct from Work. |
-| **Priority** | Score plus band label, e.g. "50 Medium". Clicking (not hovering - ten rows of hover-opening popovers fire constantly while the eye is merely scanning the column) opens a popover listing each breakdown line as label · amount · points in any order, with a "How scoring works" link that opens the Confluence page in a new tab. The same link also sits in the column header. **Sortable.** |
+| **Triggered by** (renamed from Triggers) | Two lines. **Line one:** the **initiating** trigger - the oldest dated at or after the case opened - then its relative age: `Large deposit · 2d ago`. Name in default ink at 600, age muted, separated by a middle dot; the name ellipsises with the full name and an absolute stamp on the `title`. **Line two:** the trigger's detail, muted, one line, full text on `title`. More than one trigger appends a `+N` **button** - the same control as Work's count - which opens a popover holding the modal's trigger strip for the case: every trigger, oldest first, in the strip's own format. See D-14. |
+| **Priority** | Score plus band label, e.g. "50 Medium". Clicking (not hovering - ten rows of hover-opening popovers fire constantly while the eye is merely scanning the column) opens a popover listing each breakdown line as label · amount · points in any order, with a "How scoring works" link that opens the Confluence page in a new tab. **Sortable.** |
 | **SLA** | Time elapsed since `createdAt`, formatted `Xh Ym`, with a coloured indicator. Live. Green is `--foreground-success`. **Sortable.** |
-| **Work** (renamed from Actions) | Up to **four** items inline as TEXT, to-do first, separated by a middle dot. The first is the one to action: default ink at 600. The rest are muted at 400. A completed item carries a leading tick and success green **wherever it lands in the order**. More than four appends a muted `+N`. No work items renders a muted "No work items". **Not interactive**, and no popover. |
+| **Work** (renamed from Actions) | **The required set only**, per Rafal (2 Oct): Contact player, Open source searches, EDD report - fixed for now. To-do items first in default ink at 600, then completed ones muted at 400 behind a 16px tick; middle dot, 8px gap; one line, nowrap, ellipsis. Custom actions - notes, a second contact, anything the agent adds - never enter the row. A `+N` **button** (N = actions beyond the required set, only when N > 0; Triggers' button) opens the case's **Work** list: outstanding required actions first (unticked, no stamp), then every recorded action, required and custom, newest first, each with its stamp and agent. See D-15. |
 | **Actions** | Trailing edge. Two controls on one 32px axis, right-aligned, 8px apart: the **lock control**, then **Open case**. Lock is a 32px disc in three states - an open padlock when free, a monogram avatar when held (success tint for yours, neutral for another agent's). Open case is icon-only, primary fill, and appears only on a row locked to the current agent. `min-width: 120px`. |
 
 Open question **12** decides whether a Severity pill is added after Player. Until
@@ -358,7 +358,7 @@ thing a queue exists to save you.
 trigger and nine triggers are different cases, and the difference is legible
 without reading either.
 
-**No popover.** What each trigger actually said is a reason to open the case,
+**No popover.** *Superseded by D-14.* What each trigger actually said is a reason to open the case,
 not something to unfold in a queue. The breakdown and work popovers earn their
 overlays because they explain a number or complete a list already on screen; a
 trigger list is new material.
@@ -377,3 +377,86 @@ fixture's trigger array is the *player's* history - case 4821 carries twenty
 going back to July 2025 against a case opened in August 2026 - so the oldest
 entry is not necessarily the initiating one. The modal still shows the full
 history, deliberately; only the table filters.
+
+### D-14 — Triggered by, and the count opens the modal's strip
+
+**Reverses the "No popover" paragraph of D-13.** The column is renamed
+*Triggered by*, and its `+N` count is a control: the same button as Work's
+count, opening a popover that holds the modal's trigger strip - the component
+itself, unchanged, on a `CaseStore` of its own loaded with the row's case by the
+modal's own `loadCase()`. The list is therefore the modal's list by
+construction, oldest first, every entry.
+
+D-13's reasoning still holds for the *row*: what opened the case and how much
+has happened since is all a scan needs, and the row still shows exactly that.
+What changed is the price of the rest. A popover that reuses the modal's
+component is not a second rendering to keep in step, and "open the case to see
+the triggers" was the one trip the count kept sending an agent on.
+
+Same overlay rules as the other two popovers: CDK overlay, 320-400px, opaque,
+closes on outside click, Escape and scroll, one open at a time, focus back on
+the count when it closes. A trigger that arrives while the panel is open
+appends to it, badged New, and the count increments either way.
+
+**No collapse in the popover.** The strip's divider - two anchors and a "Show
+N more" between them - is the modal's economy, where the strip shares a column
+with the workflow. A popover opened to see the list has asked for all of it:
+every row, flat, oldest first, capped at 360px and scrolling inside, a thin
+scrollbar that shows on hover, 8px under the last row. The strip is still the
+strip: the popover hides the divider from its own styles and leaves the
+component alone.
+
+### D-15 — Work is the required set, and +N is the work list
+
+**Final rules per Rafal (2 Oct).** The row shows only the required actions,
+and for now that set is fixed: Contact player, Open source searches, EDD report,
+in that order. Custom actions - notes, a second Contact player, anything the
+agent adds - never appear in the row. The four-item limit is gone with them:
+there are three, and all three always render.
+
+**To-do first, then done.** To-do required items in default ink at 600 - every
+one of them, not only the first, since each is one to action. Completed ones
+after, muted at 400 behind a 16px tick. This retires D-12's success green:
+completion is the tick and the position, and the row stays one colour.
+Separator a middle dot with 8px either side; one line, nowrap, ellipsis.
+
+**+N is the custom count** and renders only when it is above zero, as Triggers'
+button. Tooltip *Show full timeline*. It opens the case's **Work** list - the
+actions and only the actions. The modal's Timeline was the first draft and was
+wrong for it: that list is the case's history (created, triggers, severity,
+locks, resyncs) and the question here is the work. So: outstanding required
+actions in a block at the top, unticked and without a stamp because they have
+not happened; then every recorded action, required and custom, newest first as
+the modal orders its timeline, each as the action name over its stamp and agent
+in muted ink. Same list as the Triggers popover - 12px apart, 16px padding, no
+rules - and the same overlay rules; 360px then scroll.
+
+**One truth.** `loadCase()` seeds the modal's timeline from what the
+collection says has been recorded on the case, and `saveDraft()` writes back
+to it. So completing a required action in the modal moves it to the row's done
+group, adding a custom action increments +N, and the Timeline tab, the popover
+and the row cannot disagree: the popover reads the same record the row does.
+The verifier checks the popover's recorded entries against the tab's for every
+case, and records in the modal to watch the row move.
+
+**Fixture.** `workTypes` carries a `required` flag on the three; the custom
+set is notes and second contacts - SoF request, PEP check and Sanctions screen
+are retired (2 Oct) - and every case has the three required and 0-4 custom, so
+every +N state is on screen. Done items carry when and by whom, and a case
+never holds a recorded contact while its required contact is outstanding: the
+write-through completes the required one first, so the seed must too.
+
+**Popover rhythm.** 12px between entries within a group and 20px between the
+to-do block and the recorded block; stamps in tabular figures.
+
+**Open: what the count counts.** The row's `+N` is triggers *since the case
+opened* (D-13 scope note); the modal's strip is the player's full history.
+Where those differ the button's number and the popover's length disagree.
+`verify/table.mjs` measures this per case; resolve on its numbers.
+
+### D-16 — No info icon in the Priority header
+
+The column header carried a link to the scoring page beside its sort control,
+and the cell's own icon opens the breakdown that carries the same link. Two
+routes to one page in one column, one of them in a header that is otherwise a
+control. The header one is gone; the breakdown keeps the link.

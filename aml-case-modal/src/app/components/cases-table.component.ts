@@ -10,8 +10,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CaseStore } from '../core/case-store';
 import { CasesStore } from '../core/cases-store';
 import { CASES_TABS, CasesTab, NavStore, QUEUE_COPY } from '../core/nav-store';
-import { CaseRecord, TriggerRef, lockStatusLine, relativeAge } from '../core/models';
+import { CaseRecord, TriggerRef, lockStatusLine, relativeAge, WorkItem } from '../core/models';
 import { PillComponent } from './ui-pill.component';
+import { TriggerPopoverComponent } from './trigger-popover.component';
+import { WorkPopoverComponent } from './work-popover.component';
 
 /**
  * The Global AML Cases table - PROTOTYPE-TABLE.md.
@@ -34,6 +36,8 @@ import { PillComponent } from './ui-pill.component';
     MatTabsModule,
     MatTooltipModule,
     PillComponent,
+    TriggerPopoverComponent,
+    WorkPopoverComponent,
   ],
   /**
    * Scrolling closes the popover; it does not follow the row.
@@ -175,7 +179,7 @@ import { PillComponent } from './ui-pill.component';
               <tr>
                 <th scope="col" class="cell--player">Player</th>
                 <th scope="col">Severity</th>
-                <th scope="col">Triggers</th>
+                <th scope="col">Triggered by</th>
                 <th
                   scope="col"
                   [attr.aria-sort]="ariaSort('priority')"
@@ -211,33 +215,6 @@ import { PillComponent } from './ui-pill.component';
                       <path d="m19 12-7 7-7-7" />
                     </svg>
                   </button>
-                  <a
-                    class="th__info"
-                    [href]="SCORING_URL"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    role="link"
-                    aria-label="How priority scoring works"
-                    matTooltip="How priority scoring works"
-                  >
-                    <!-- An SVG, not a mat-icon: the stroke weight is specified,
-                         and a font glyph has no stroke to set. -->
-                    <svg
-                      class="th__info-svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 16v-4" />
-                      <path d="M12 8h.01" />
-                    </svg>
-                  </a>
                   </span>
                 </th>
                 <th scope="col" [attr.aria-sort]="ariaSort('sla')">
@@ -299,9 +276,9 @@ import { PillComponent } from './ui-pill.component';
                     column is chips, and two chip columns would read as one
                     kind of thing said twice.
 
-                    The count is not a control. What each trigger said is a
-                    reason to open the case, not something to unfold in a
-                    queue, so there is no popover and no cursor change.
+                    The count is the way into the rest. The row shows what
+                    opened the case; the popover lists everything since, in
+                    the modal's own strip - the same component on the same case.
                   -->
                   <td class="cell--triggers">
                     <span class="trig">
@@ -311,7 +288,21 @@ import { PillComponent } from './ui-pill.component';
                           >· {{ triggerAge(c) }}</span
                         >
                         @if (c.triggers.length > 1) {
-                          <span class="trig__more">+{{ c.triggers.length - 1 }}</span>
+                          <!-- aria-expanded and aria-haspopup are MatMenuTrigger's,
+                               as on the other two popovers: it keeps them in step
+                               with the panel, and a second hand on them would drift. -->
+                          <button
+                            class="trig__more"
+                            type="button"
+                            #trigTrigger="matMenuTrigger"
+                            [matMenuTriggerFor]="trigMenu"
+                            [matMenuTriggerData]="{ c: c }"
+                            (keydown.escape)="trigTrigger.closeMenu()"
+                            matTooltip="Show all triggers"
+                            [attr.aria-label]="'Show all ' + c.triggers.length + ' triggers'"
+                          >
+                            +{{ c.triggers.length - 1 }}
+                          </button>
                         }
                       </span>
                       <span class="trig__detail" [title]="initiating(c).detail">{{
@@ -392,49 +383,47 @@ import { PillComponent } from './ui-pill.component';
                   <!--
                     Text, not chips - D-12. Four pills a row read as four
                     controls; the column is a statement about what is left to
-                    do, and the first item is the one to action.
+                    do, and every to-do item is one to action.
 
                     Order and WEIGHT carry the priority, never colour alone:
                     green marks completion, which is a different fact.
                   -->
                   <td class="cell--work">
                     <span class="work-row" [attr.aria-label]="workSummary(c)">
-                      @if (cases.workOrdered(c).length === 0) {
-                        <span class="work__empty" aria-hidden="true">No work items</span>
-                      } @else {
-                        @for (w of visibleWork(c); track w.type; let i = $index) {
-                          @if (i > 0) {
-                            <span class="work__sep" aria-hidden="true">·</span>
+                      @for (w of cases.workRow(c); track w.type; let i = $index) {
+                        @if (i > 0) {
+                          <span class="work__sep" aria-hidden="true">·</span>
+                        }
+                        <span
+                          class="work__item"
+                          [class.work__item--done]="w.state === 'done'"
+                          aria-hidden="true"
+                        >
+                          @if (w.state === 'done') {
+                            <mat-icon class="work__tick">check_circle</mat-icon>
                           }
-                          <span
-                            class="work__item"
-                            [class.work__item--lead]="i === 0"
-                            [class.work__item--done]="w.state === 'done'"
-                            aria-hidden="true"
-                          >
-                            @if (w.state === 'done') {
-                              <mat-icon class="work__tick">check_circle</mat-icon>
-                            }
-                            {{ cases.workLabel(w.type) }}
-                          </span>
-                        }
-                        @if (hiddenWork(c) > 0) {
-                          <!-- The count is the way into the rest. The four
-                               inline items are the scan; this is the list. -->
-                          <button
-                            class="work__more"
-                            type="button"
-                            #workTrigger="matMenuTrigger"
-                            [matMenuTriggerFor]="workMenu"
-                            [matMenuTriggerData]="{ c: c }"
-                            (keydown.escape)="workTrigger.closeMenu()"
-                            [attr.aria-label]="
-                              'Show all ' + c.actions.length + ' work items for player ' + c.player.id
-                            "
-                          >
-                            +{{ hiddenWork(c) }}
-                          </button>
-                        }
+                          {{ cases.workLabel(w.type) }}
+                        </span>
+                      }
+                      @if (cases.customCount(c) > 0) {
+                        <!-- Beyond the required set: notes, a second contact,
+                             anything the agent added. They never enter the
+                             row; the count is the way to the list that holds
+                             them. -->
+                        <button
+                          class="work__more"
+                          type="button"
+                          #workTrigger="matMenuTrigger"
+                          [matMenuTriggerFor]="workMenu"
+                          [matMenuTriggerData]="{ c: c }"
+                          (keydown.escape)="workTrigger.closeMenu()"
+                          matTooltip="Show full timeline"
+                          [attr.aria-label]="
+                            'Show full timeline, ' + cases.customCount(c) + ' more actions'
+                          "
+                        >
+                          +{{ cases.customCount(c) }}
+                        </button>
                       }
                     </span>
                   </td>
@@ -543,21 +532,24 @@ import { PillComponent } from './ui-pill.component';
       -->
       <mat-menu #workMenu="matMenu" class="pop pop--work">
         <ng-template matMenuContent let-c="c">
-          <div class="pop__body" (click)="$event.stopPropagation()">
-            <p class="pop__head">Work</p>
-            <!-- ALL of them, in the SAME order the row shows: to-do first,
-                 then done. A reader should not have to reconcile two
-                 orderings of one list. -->
-            <ul class="pop__work">
-              @for (w of cases.workOrdered(c); track w.type) {
-                <li class="pop__work-item" [class.pop__work-item--done]="w.state === 'done'">
-                  @if (w.state === 'done') {
-                    <mat-icon class="work__tick" aria-hidden="true">check_circle</mat-icon>
-                  }
-                  {{ cases.workLabel(w.type) }}
-                </li>
-              }
-            </ul>
+          <div class="pop__body pop__body--list" (click)="$event.stopPropagation()">
+            <p class="pop__head pop__head--list">Work</p>
+            <!-- The case's actions and only its actions: outstanding required
+                 ones first, then everything recorded, newest first. Read from
+                 the same record as the row, so it is live by construction. -->
+            <work-popover [caseId]="c.id" />
+          </div>
+        </ng-template>
+      </mat-menu>
+
+      <mat-menu #trigMenu="matMenu" class="pop pop--trig">
+        <ng-template matMenuContent let-c="c">
+          <div class="pop__body pop__body--list" (click)="$event.stopPropagation()">
+            <p class="pop__head pop__head--list">Triggered by</p>
+            <!-- The modal's strip, unchanged, on a CaseStore of its own loaded
+                 with THIS row's case - so the list is the modal's list by
+                 construction, not a second rendering of the same data. -->
+            <trigger-popover [caseId]="c.id" />
           </div>
         </ng-template>
       </mat-menu>
@@ -800,11 +792,15 @@ import { PillComponent } from './ui-pill.component';
         font-weight: 400;
         color: var(--foreground-secondary);
       }
-      /* A count, not a label. Not interactive: nothing to open. */
+      /**
+       * Work's count, declared once with it below. One control, one look.
+       *
+       * Its 32px target sits on a 20px line, and a 32px flex item would make
+       * the line 32 and the row 64. The negative margin takes the box out of
+       * the line's flow: the target stays 32, the line stays 20, the row 52.
+       */
       .trig__more {
-        flex: none;
-        font-weight: 500;
-        color: var(--foreground-subtle);
+        margin: -6px 0;
       }
       .trig__detail {
         min-width: 0;
@@ -824,7 +820,9 @@ import { PillComponent } from './ui-pill.component';
          and count needs a little more. */
       .col-triggers {
         min-width: 200px;
-        width: 232px;
+        width: 240px;
+        /* +8 for the count: a 32px button with 8px sides is 30 wide where the
+           bare "+N" was 22, and the longest name was 6px from the edge. */
       }
       /**
        * Sized for the widest real cell, which is locked-to-me: a 102px status
@@ -858,7 +856,9 @@ import { PillComponent } from './ui-pill.component';
        * nothing they did not already know.
        */
       .col-work {
-        width: 508px;
+        width: 440px;
+        /* Three required items at most - Contact player, Open source searches,
+           EDD report - two dots and a count: 400px at the widest. */
       }
       /**
        * Trailing edge. 180 was given as a MINIMUM, and the widest pair needs
@@ -1296,6 +1296,17 @@ import { PillComponent } from './ui-pill.component';
            click target the way a menu of items does. */
         cursor: default;
       }
+      /* The strip carries its own 20px gutters. The body gives up its sides so
+         they are not doubled, and the heading takes the strip's gutter so the
+         two left edges agree. */
+      .pop__body--list {
+        padding: 16px 0 0;
+      }
+      .pop__head--list {
+        /* 16, the strip's STACKED gutter: at 320-400px the panel is always
+           under the strip's 520px breakpoint, so the wide gutter never shows. */
+        padding: 0 16px;
+      }
       /**
        * 14/20, title case. It was 12/16 uppercase with tracking - the table
        * header's treatment, borrowed - which made a panel heading read like a
@@ -1344,25 +1355,6 @@ import { PillComponent } from './ui-pill.component';
         font-variant-numeric: tabular-nums;
         color: var(--foreground-primary);
         white-space: nowrap;
-      }
-      .pop__work {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .pop__work-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 14px;
-        line-height: 20px;
-        color: var(--foreground-secondary);
-      }
-      .pop__work-item--done {
-        color: var(--foreground-success);
       }
       .pop__link {
         display: inline-flex;
@@ -1603,13 +1595,22 @@ import { PillComponent } from './ui-pill.component';
         color: var(--foreground-secondary);
       }
       /* The one to action. */
-      .work__item--lead {
+      /* Done, wherever it lands in the order. */
+      /**
+       * Rafal (2 Oct): to-do is the statement, done is the record.
+       *
+       * Every to-do item at 600 in full ink - not only the first, now that the
+       * row is the required set and each of them is one to action. Done items
+       * muted at 400 behind their tick. The success green goes with D-12's
+       * reading: completion is a tick, not a colour.
+       */
+      .work__item {
         font-weight: 600;
         color: var(--foreground-primary);
       }
-      /* Done, wherever it lands in the order. */
       .work__item--done {
-        color: var(--foreground-success);
+        font-weight: 400;
+        color: var(--foreground-secondary);
       }
       .work__tick {
         flex: none;
@@ -1624,7 +1625,8 @@ import { PillComponent } from './ui-pill.component';
       }
       /* A control, but the quietest in the row: the four inline items are the
          scan, and this is only the way to the rest. */
-      .work__more {
+      .work__more,
+      .trig__more {
         display: inline-flex;
         align-items: center;
         flex: none;
@@ -1642,16 +1644,15 @@ import { PillComponent } from './ui-pill.component';
         cursor: pointer;
         transition: background-color 150ms ease;
       }
-      .work__more:hover {
+      .work__more:hover,
+      .trig__more:hover {
         background: var(--surface-hover);
         color: var(--foreground-primary);
       }
-      .work__more:focus-visible {
+      .work__more:focus-visible,
+      .trig__more:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
-      }
-      .work__empty {
-        color: var(--foreground-secondary);
       }
 
       .cases__empty {
@@ -1684,6 +1685,7 @@ import { PillComponent } from './ui-pill.component';
         .th-sort__arrow,
         .lock-av,
         .work__more,
+        .trig__more,
         .pop__link,
         .table tbody td,
         .table .cell--player::after {
@@ -1781,14 +1783,17 @@ export class CasesTableComponent {
    * order - which is the whole point of the column - does not survive.
    */
   workSummary(c: CaseRecord): string {
-    const all = this.cases.workOrdered(c);
-    if (all.length === 0) return 'No work items';
-    const todo = all.filter((w) => w.state === 'todo').length;
-    const shown = this.visibleWork(c).map((w) => this.cases.workLabel(w.type));
-    const hidden = this.hiddenWork(c);
-    const first = shown.length ? `, first: ${shown.join(', ')}` : '';
-    const more = hidden > 0 ? `, and ${hidden} more` : '';
-    return `${all.length} work items, ${todo} to do${first}${more}`;
+    const row = this.cases.workRow(c);
+    const label = (w: WorkItem) => this.cases.workLabel(w.type);
+    const todo = row.filter((w) => w.state === 'todo').map(label);
+    const done = row.filter((w) => w.state === 'done').map(label);
+    const more = this.cases.customCount(c);
+    return (
+      `${row.length} required actions, ${todo.length} to do` +
+      (todo.length ? `: ${todo.join(', ')}` : '') +
+      (done.length ? `; done: ${done.join(', ')}` : '') +
+      (more > 0 ? `; ${more} more in the timeline` : '')
+    );
   }
 
   /**
@@ -1866,16 +1871,6 @@ export class CasesTableComponent {
     return lockStatusLine(c.lock.state, c.lock.owner?.name ?? null, {
       sinceIso: c.lock.since ?? undefined,
     });
-  }
-
-  /** Two chips, then a count. To-do first. */
-  /** Up to four inline; the rest become a count. */
-  visibleWork(c: CaseRecord) {
-    return this.cases.workOrdered(c).slice(0, 4);
-  }
-
-  hiddenWork(c: CaseRecord): number {
-    return Math.max(0, c.actions.length - 4);
   }
 
   /**
