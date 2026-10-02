@@ -417,10 +417,8 @@ import { WorkPopoverComponent } from './work-popover.component';
                           [matMenuTriggerFor]="workMenu"
                           [matMenuTriggerData]="{ c: c }"
                           (keydown.escape)="workTrigger.closeMenu()"
-                          matTooltip="Show full timeline"
-                          [attr.aria-label]="
-                            'Show full timeline, ' + cases.customCount(c) + ' more actions'
-                          "
+                          matTooltip="Show all work items"
+                          aria-label="Show all work items"
                         >
                           +{{ cases.customCount(c) }}
                         </button>

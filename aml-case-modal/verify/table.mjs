@@ -969,9 +969,10 @@ try {
     work.perRow.every((r) => (r.custom === 0 ? r.more === null : r.more === `+${r.custom}`)) &&
     work.perRow.some((r) => r.custom === 0) && work.perRow.some((r) => r.custom > 0),
     JSON.stringify(work.perRow.map((r) => ({ more: r.more, custom: r.custom }))));
-  check('the count is Triggers\' button - 32px, 8px sides, 14px, on the items\' axis - with tooltip Show full timeline',
+  check('the count is Triggers\' button - 32px, 8px sides, 14px, on the items\' axis - tooltip and name "Show all work items"',
     !!work.more && work.more.h >= 32 && work.more.pad === '0px 8px' && work.more.fs === '14px' &&
-    work.more.onAxis && work.more.tip === 'Show full timeline', JSON.stringify(work.more));
+    work.more.onAxis && work.more.tip === 'Show all work items' && work.more.name === 'Show all work items',
+    JSON.stringify(work.more));
   check('Work is text, and the only control in it is the count',
     work.anyPill === 0 && work.controls.every((c) => c === 'work__more'), JSON.stringify(work.controls));
   check('no work label is cut off', work.clipped === 0, String(work.clipped));

@@ -421,7 +421,8 @@ completion is the tick and the position, and the row stays one colour.
 Separator a middle dot with 8px either side; one line, nowrap, ellipsis.
 
 **+N is the custom count** and renders only when it is above zero, as Triggers'
-button. Tooltip *Show full timeline*. It opens the case's **Work** list - the
+button. Tooltip and accessible name *Show all work items* - the popover is headed
+Work and holds only work items. It opens the case's **Work** list - the
 actions and only the actions. The modal's Timeline was the first draft and was
 wrong for it: that list is the case's history (created, triggers, severity,
 locks, resyncs) and the question here is the work. So: outstanding required
