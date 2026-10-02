@@ -631,11 +631,21 @@ export type WorkState = 'todo' | 'done';
 export interface WorkItem {
   type: string;
   state: WorkState;
+  /** When it was recorded. Set on done items; a to-do has not happened yet. */
+  at?: string;
+  /** Who recorded it. */
+  by?: string;
 }
 
 export interface WorkTypeDef {
   id: string;
   label: string;
+  /**
+   * Rafal (2 Oct): the row shows only the required actions, and for now that
+   * set is fixed - Contact player, Open source searches, EDD report, in the
+   * fixture's order. Everything else is custom and counts toward +N.
+   */
+  required?: boolean;
 }
 
 /**

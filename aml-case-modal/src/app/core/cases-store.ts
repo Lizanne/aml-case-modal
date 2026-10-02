@@ -151,6 +151,59 @@ export class CasesStore {
     return this.workTypes.find((w) => w.id === type)?.label ?? type;
   }
 
+  /** The row's fixed set, in presentation order: the work types flagged required. */
+  readonly requiredTypes: readonly string[] = this.workTypes.filter((w) => w.required).map((w) => w.id);
+
+  /**
+   * One row item per required type: the FIRST action of that type, or a
+   * synthesised to-do when the case has none yet. Rafal (2 Oct): the row shows
+   * only the required actions, and the set is fixed for now.
+   */
+  requiredWork(c: CaseRecord): WorkItem[] {
+    return this.requiredTypes.map(
+      (type) => c.actions.find((a) => a.type === type) ?? { type, state: 'todo' as const },
+    );
+  }
+
+  /**
+   * Everything beyond the required set - a note, a second Contact player,
+   * anything the agent added. These never enter the row; they are +N.
+   */
+  customWork(c: CaseRecord): WorkItem[] {
+    const taken = new Set<WorkItem>(this.requiredWork(c));
+    return c.actions.filter((a) => !taken.has(a));
+  }
+
+  customCount(c: CaseRecord): number {
+    return this.customWork(c).length;
+  }
+
+  /** The row: to-do required first, then done - each group in the required order. */
+  workRow(c: CaseRecord): WorkItem[] {
+    const req = this.requiredWork(c);
+    return [...req.filter((w) => w.state === 'todo'), ...req.filter((w) => w.state === 'done')];
+  }
+
+  /**
+   * The modal recorded an action on this case - the write-through that keeps
+   * the row live. A required type whose row item is still to do completes
+   * that item; anything else is a custom action and moves only the count.
+   * A decision is an outcome of the case, not work on it.
+   */
+  recordWork(caseId: string, type: string, at: string, by: string): void {
+    if (type === 'decision') return;
+    this.cases.update((list) =>
+      list.map((c) => {
+        if (c.id !== caseId) return c;
+        const first = c.actions.find((a) => a.type === type);
+        if (this.requiredTypes.includes(type) && first?.state === 'todo') {
+          return { ...c, actions: c.actions.map((a) => (a === first ? { ...a, state: 'done' as const, at, by } : a)) };
+        }
+        return { ...c, actions: [...c.actions, { type, state: 'done' as const, at, by }] };
+      }),
+    );
+  }
+
   byId(id: string): CaseRecord | undefined {
     return this.cases().find((c) => c.id === id);
   }
@@ -342,7 +395,14 @@ function seedCases(): CaseRecord[] {
         .filter((t) => Date.parse(t.at) >= Date.parse(createdAt))
         .sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
       linkedAccounts: c.linkedAccounts,
-      actions: c.actions as WorkItem[],
+      // A done item carries when and by whom, as offsets like everything else
+      // the fixture dates; a to-do carries neither, because it has not happened.
+      actions: (c.actions as any[]).map((a) => ({
+        type: a.type as string,
+        state: a.state as WorkItem['state'],
+        ...(a.atOffsetMinutes != null ? { at: iso(a.atOffsetMinutes) } : {}),
+        ...(a.by ? { by: a.by as string } : {}),
+      })) as WorkItem[],
     } satisfies CaseRecord;
   });
 }

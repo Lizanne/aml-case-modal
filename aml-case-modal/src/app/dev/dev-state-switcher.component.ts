@@ -233,6 +233,17 @@ export class DevStateSwitcherComponent {
     // The modal's state is applied either way: the table view can be left, and
     // the modal must be where its own state id says when that happens.
     this._current.set(applyScenario(this.store, this.ws, q.get('state') ?? DEFAULT_SCENARIO));
+    // A case picked off the table arrives as ?case= and no ?state=. The scenario
+    // above reset() the store to the base frame - right for the switcher, wrong
+    // for a real case - so load it again and let the case's own state win: its
+    // lock, its status, and what has been recorded on it. Identity was already
+    // right (app.component loaded it first), so this is the same projection
+    // applied twice, not a different one.
+    // The default state counts as no state: writeUrl() puts it in the URL at
+    // once, so a refresh of a picked case carries both, and must still be the
+    // case rather than the frame. An explicitly chosen frame still wins.
+    const picked = q.get('case');
+    if (picked && (q.get('state') ?? DEFAULT_SCENARIO) === DEFAULT_SCENARIO) this.store.loadCase(picked);
     this.writeUrl('state', this._current());
 
     if (this.onCases()) {

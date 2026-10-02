@@ -1,5 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 
+import { CasesStore } from './cases-store';
 import { DEFAULT_CASE_ID, SHARED, caseFixture } from './case-fixture';
 import {
   CaseCreatedEvent,
@@ -176,6 +177,13 @@ export class CaseStore {
    */
   private fx = caseFixture();
 
+  /**
+   * The collection the table reads. loadCase() takes what has been RECORDED on
+   * a case from here, and saveDraft() writes back to it - one truth for the
+   * row, the Timeline tab and the table's timeline popover.
+   */
+  private readonly collection = inject(CasesStore);
+
   /** Which case the modal is showing. */
   readonly loadedCaseId = signal<string>(DEFAULT_CASE_ID);
 
@@ -210,6 +218,22 @@ export class CaseStore {
     this.lockState.set(this.fx.case.lock.state as LockState);
     this.lockOwner.set((this.fx.case.lock.owner as Agent | null) ?? null);
     this.lockedSince.set(this.fx.case.lock.since);
+
+    // What has been recorded on the case, from the collection - the same truth
+    // the row shows. reset() seeds the two entries every case has; this adds
+    // one per completed action, required or custom, so the Timeline tab, the
+    // table's timeline popover and the row agree by construction.
+    for (const a of this.collection.byId(id)?.actions ?? []) {
+      if (a.state !== 'done' || !a.at) continue;
+      this.pushTimeline(a.at, `Outcome recorded: ${this.workTitle(a.type)}`, a.by ?? this.me().name);
+    }
+  }
+
+  /** The card title for a type the modal records; the work label for one it does not. */
+  private workTitle(type: string): string {
+    return this.actionTypes().some((t) => t.id === type)
+      ? this.outcomeTitleFor(type as ActionTypeId)
+      : this.collection.workLabel(type);
   }
 
   // ---------------------------------------------------------------- reference data
@@ -681,6 +705,9 @@ export class CaseStore {
     };
     this.stream.update((s) => [...s, outcome]);
     this.pushTimeline(at, `Outcome recorded: ${d.title}`, this.me().name);
+    // The row is live: a required type still to do completes its item, anything
+    // else is custom and moves only the count.
+    this.collection.recordWork(this.caseId(), d.actionType, at, this.me().name);
     this.draft.set(null);
 
     // Rule 5: the agent's explicit choice is applied after the save.

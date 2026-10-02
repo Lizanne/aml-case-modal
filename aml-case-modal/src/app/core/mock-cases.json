@@ -35,28 +35,23 @@
   ],
   "workTypes": [
     {
-      "id": "open-source-searches",
-      "label": "Open source searches"
-    },
-    {
       "id": "player-contact",
-      "label": "Contact player"
+      "label": "Contact player",
+      "required": true
     },
     {
-      "id": "sof-request",
-      "label": "SoF request"
+      "id": "open-source-searches",
+      "label": "Open source searches",
+      "required": true
     },
     {
-      "id": "edd-review",
-      "label": "EDD review"
+      "id": "edd-report",
+      "label": "EDD report",
+      "required": true
     },
     {
-      "id": "sanctions-screen",
-      "label": "Sanctions screen"
-    },
-    {
-      "id": "pep-check",
-      "label": "PEP check"
+      "id": "note",
+      "label": "Note"
     }
   ],
   "severityRanking": {
@@ -101,16 +96,30 @@
       "linkedAccounts": 3,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
           "state": "todo"
         },
         {
-          "type": "sof-request",
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 2250,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1500,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 750,
+          "by": "A. Kowalski"
         }
       ],
       "origin": "manual",
@@ -141,7 +150,7 @@
         {
           "id": "t18",
           "name": "HVP withdrawal",
-          "detail": "HVP 50\u00a3 withdrawal request.",
+          "detail": "HVP 50£ withdrawal request.",
           "at": "2026-08-11T10:35:00Z"
         },
         {
@@ -195,7 +204,7 @@
         {
           "id": "t09",
           "name": "HVP withdrawal",
-          "detail": "HVP 120\u00a3 withdrawal request.",
+          "detail": "HVP 120£ withdrawal request.",
           "at": "2025-10-02T13:25:00Z"
         },
         {
@@ -219,7 +228,7 @@
         {
           "id": "t05",
           "name": "HVP withdrawal",
-          "detail": "HVP 75\u00a3 withdrawal request.",
+          "detail": "HVP 75£ withdrawal request.",
           "at": "2025-08-19T12:40:00Z"
         },
         {
@@ -356,14 +365,14 @@
           "caseId": "3310",
           "status": "RESOLVED",
           "severity": "COMPLIANCE",
-          "reason": "\u00a330,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
+          "reason": "£30,000 Lifetime Net Loss Checkpoint, escalated after the source-of-funds pack supplied did not reconcile with the deposit history over the preceding twelve months.",
           "dateCreated": "2025-11-02T10:00:00Z"
         },
         {
           "caseId": "2984",
           "status": "RESOLVED",
           "severity": "EDD",
-          "reason": "\u00a330,000 Lifetime Net Loss Checkpoint.",
+          "reason": "£30,000 Lifetime Net Loss Checkpoint.",
           "dateCreated": "2025-06-18T14:30:00Z"
         }
       ],
@@ -411,11 +420,15 @@
       "linkedAccounts": 0,
       "actions": [
         {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "edd-report",
           "state": "todo"
         }
       ],
@@ -485,24 +498,42 @@
       "linkedAccounts": 7,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
-          "type": "sanctions-screen",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
           "state": "todo"
         },
         {
-          "type": "sof-request",
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 267,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "edd-report",
           "state": "todo"
         },
         {
-          "type": "edd-review",
-          "state": "todo"
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 213,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 160,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 107,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 53,
+          "by": "A. Kowalski"
         }
       ],
       "origin": "system",
@@ -576,11 +607,23 @@
       "actions": [
         {
           "type": "player-contact",
-          "state": "done"
+          "state": "done",
+          "atOffsetMinutes": 427,
+          "by": "M. Torres"
         },
         {
           "type": "open-source-searches",
           "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 213,
+          "by": "A. Kowalski"
         }
       ],
       "origin": "manual",
@@ -652,20 +695,34 @@
       "linkedAccounts": 2,
       "actions": [
         {
-          "type": "sanctions-screen",
-          "state": "done"
+          "type": "player-contact",
+          "state": "todo"
         },
         {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "edd-report",
           "state": "todo"
         },
         {
-          "type": "pep-check",
-          "state": "todo"
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 533,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 280,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 267,
+          "by": "M. Torres"
         }
       ],
       "origin": "system",
@@ -728,28 +785,30 @@
       "linkedAccounts": 12,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
-          "type": "sanctions-screen",
-          "state": "done"
-        },
-        {
-          "type": "pep-check",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
           "state": "todo"
         },
         {
-          "type": "sof-request",
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1125,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
           "state": "todo"
         },
         {
-          "type": "edd-review",
-          "state": "todo"
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 750,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 375,
+          "by": "M. Torres"
         }
       ],
       "origin": "manual",
@@ -800,12 +859,28 @@
       "linkedAccounts": 0,
       "actions": [
         {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1367,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 683,
+          "by": "M. Torres"
         }
       ],
       "origin": "system",
@@ -861,20 +936,26 @@
       "linkedAccounts": 4,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
-          "state": "done"
+          "state": "done",
+          "atOffsetMinutes": 1725,
+          "by": "M. Torres"
         },
         {
-          "type": "sof-request",
-          "state": "done"
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1150,
+          "by": "A. Kowalski"
         },
         {
-          "type": "edd-review",
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 575,
+          "by": "M. Torres"
         }
       ],
       "origin": "manual",
@@ -926,15 +1007,41 @@
       "actions": [
         {
           "type": "player-contact",
-          "state": "done"
+          "state": "done",
+          "atOffsetMinutes": 2200,
+          "by": "A. Kowalski"
         },
         {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "sof-request",
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1650,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1100,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 550,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 962,
+          "by": "A. Kowalski"
         }
       ],
       "origin": "system",
@@ -986,11 +1093,17 @@
       "linkedAccounts": 1,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
+          "type": "player-contact",
+          "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1550,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
           "state": "todo"
         }
       ],
@@ -1042,20 +1155,34 @@
       "linkedAccounts": 9,
       "actions": [
         {
-          "type": "sanctions-screen",
-          "state": "done"
+          "type": "player-contact",
+          "state": "todo"
         },
         {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "edd-report",
           "state": "todo"
         },
         {
-          "type": "edd-review",
-          "state": "todo"
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 158,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 105,
+          "by": "M. Torres"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 53,
+          "by": "A. Kowalski"
         }
       ],
       "origin": "system",
@@ -1132,20 +1259,30 @@
       "linkedAccounts": 2,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
-          "type": "pep-check",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
           "state": "todo"
         },
         {
-          "type": "sof-request",
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1290,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 860,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 430,
+          "by": "M. Torres"
         }
       ],
       "origin": "manual",
@@ -1207,24 +1344,32 @@
       "linkedAccounts": 6,
       "actions": [
         {
-          "type": "open-source-searches",
-          "state": "done"
-        },
-        {
           "type": "player-contact",
-          "state": "done"
+          "state": "done",
+          "atOffsetMinutes": 2080,
+          "by": "A. Kowalski"
         },
         {
-          "type": "sanctions-screen",
-          "state": "done"
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1560,
+          "by": "M. Torres"
         },
         {
-          "type": "pep-check",
-          "state": "done"
-        },
-        {
-          "type": "edd-review",
+          "type": "edd-report",
           "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1040,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 520,
+          "by": "M. Torres"
         }
       ],
       "origin": "system",
@@ -1283,15 +1428,15 @@
       "linkedAccounts": 3,
       "actions": [
         {
-          "type": "sof-request",
-          "state": "done"
+          "type": "player-contact",
+          "state": "todo"
         },
         {
           "type": "open-source-searches",
           "state": "todo"
         },
         {
-          "type": "player-contact",
+          "type": "edd-report",
           "state": "todo"
         }
       ],
