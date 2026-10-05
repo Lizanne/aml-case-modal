@@ -8,8 +8,9 @@ The AML Case panel for the Manual Core epic: every state, the rules that govern
 them, the components they are built from, and the edge cases found while
 prototyping.
 
-**Out of scope, owned elsewhere:** the create case modal, the AML cases table on
-the player profile, the widget ticket itself, and snapshot report content (a
+**Out of scope, owned elsewhere:** the create case modal, the AML cases table
+(sections [20](20-table-overview.md)–[24](24-table-accessibility.md) of this
+set), the widget ticket itself, and snapshot report content (a
 future epic). This panel proves the snapshot generation stamp, the resync
 control and the historical view only.
 
