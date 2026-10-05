@@ -1,4 +1,21 @@
-import mockCases from './mock-cases.json';
+import defaultCases from './mock-cases.json';
+import stressCases from './mock-cases-stress.json';
+
+/**
+ * Which fixture this session runs on, decided once at module load from
+ * ?fixture=. "stress" is the edge-case set - one case per thing that could
+ * break a cell - and anything else is the authored collection. Read here,
+ * not in a store, because SEED_NOW and ALL_CASES are module constants and the
+ * choice has to be made before either is.
+ *
+ * Guarded for the store verifier, which bundles this module for Node.
+ */
+function selectFixture(): typeof defaultCases {
+  const name =
+    typeof location !== 'undefined' ? new URLSearchParams(location.search).get('fixture') : null;
+  return name === 'stress' ? (stressCases as unknown as typeof defaultCases) : defaultCases;
+}
+const mockCases = selectFixture();
 
 /**
  * One fixture, two views.

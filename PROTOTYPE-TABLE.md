@@ -484,3 +484,18 @@ built: a dead tab is a dead tab.
 **The empty state loses its link.** "View past cases" pointed out of a queue
 that had nothing in it, to a tab that lives inside a case. One muted sentence,
 centred, 48px above and below.
+
+### D-18 — A stress fixture, loaded by URL
+
+`?fixture=stress` loads `mock-cases-stress.json` - same schema as the
+authored collection, one case per edge the table has to survive, plus filler
+to 40 Active and 15 Compliance. `verify:stress` runs the edges and writes a
+screenshot per case to `docs/handoff/stress/` for a visual review; the index
+there lists them.
+
+Three things the edges required of the product, each small: a case with no
+triggers renders "No triggers" rather than throwing; initials run to three
+letters, so a three-part name keeps its third; and the Work popover's agent
+line truncates with its full text on the title. The fixture choice is made once
+at module load, before SEED_NOW and the collection are, which is why it is a
+URL parameter and not a store flag.

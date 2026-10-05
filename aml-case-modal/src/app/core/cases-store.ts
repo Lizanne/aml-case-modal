@@ -403,6 +403,7 @@ function seedCases(): CaseRecord[] {
         ...(a.atOffsetMinutes != null ? { at: iso(a.atOffsetMinutes) } : {}),
         ...(a.by ? { by: a.by as string } : {}),
       })) as WorkItem[],
+      ...(c.stress ? { stress: c.stress as CaseRecord['stress'] } : {}),
     } satisfies CaseRecord;
   });
 }

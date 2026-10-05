@@ -248,6 +248,11 @@ export class DevStateSwitcherComponent {
 
     if (this.onCases()) {
       this._currentTable.set(applyTableScenario(this.cases, this.nav, q.get('tstate')));
+      // The default frame seeds the Active queue, which would override a
+      // ?tab= the URL arrived with. No explicit frame asked for a tab, so
+      // the URL's wins - the same rule as ?case= against the modal frames.
+      const tab = q.get('tab');
+      if (!q.get('tstate') && (tab === 'active' || tab === 'compliance')) this.nav.showCases(tab);
       this.writeUrl('tstate', this._currentTable());
     }
   }

@@ -700,6 +700,12 @@ export interface CaseRecord {
   triggers: TriggerRef[];
   linkedAccounts: number;
   actions: WorkItem[];
+  /**
+   * Dev only. The stress fixture tags each edge case with the edge it is for,
+   * and verify:stress finds its rows by this. Absent on authored cases; read
+   * by nothing in the product.
+   */
+  stress?: { n: number; name: string; slaMinutes?: number };
 }
 
 /**

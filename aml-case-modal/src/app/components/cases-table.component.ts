@@ -283,34 +283,41 @@ import { WorkPopoverComponent } from './work-popover.component';
                     the modal's own strip - the same component on the same case.
                   -->
                   <td class="cell--triggers">
-                    <span class="trig">
-                      <span class="trig__line" [title]="initiating(c).name">
-                        <span class="trig__name">{{ initiating(c).name }}</span>
-                        <span class="trig__at" [title]="triggerStamp(c)"
-                          >· {{ triggerAge(c) }}</span
-                        >
-                        @if (c.triggers.length > 1) {
-                          <!-- aria-expanded and aria-haspopup are MatMenuTrigger's,
-                               as on the other two popovers: it keeps them in step
-                               with the panel, and a second hand on them would drift. -->
-                          <button
-                            class="trig__more"
-                            type="button"
-                            #trigTrigger="matMenuTrigger"
-                            [matMenuTriggerFor]="trigMenu"
-                            [matMenuTriggerData]="{ c: c }"
-                            (keydown.escape)="trigTrigger.closeMenu()"
-                            matTooltip="Show all triggers"
-                            [attr.aria-label]="'Show all ' + c.triggers.length + ' triggers'"
+                    <!-- Not possible in production - a case exists because
+                         something triggered it - but the table must not throw
+                         on data it did not expect. One muted line. -->
+                    @if (c.triggers.length === 0) {
+                      <span class="trig__empty">No triggers</span>
+                    } @else {
+                      <span class="trig">
+                        <span class="trig__line" [title]="initiating(c).name">
+                          <span class="trig__name">{{ initiating(c).name }}</span>
+                          <span class="trig__at" [title]="triggerStamp(c)"
+                            >· {{ triggerAge(c) }}</span
                           >
-                            +{{ c.triggers.length - 1 }}
-                          </button>
-                        }
+                          @if (c.triggers.length > 1) {
+                            <!-- aria-expanded and aria-haspopup are MatMenuTrigger's,
+                                 as on the other two popovers: it keeps them in step
+                                 with the panel, and a second hand on them would drift. -->
+                            <button
+                              class="trig__more"
+                              type="button"
+                              #trigTrigger="matMenuTrigger"
+                              [matMenuTriggerFor]="trigMenu"
+                              [matMenuTriggerData]="{ c: c }"
+                              (keydown.escape)="trigTrigger.closeMenu()"
+                              matTooltip="Show all triggers"
+                              [attr.aria-label]="'Show all ' + c.triggers.length + ' triggers'"
+                            >
+                              +{{ c.triggers.length - 1 }}
+                            </button>
+                          }
+                        </span>
+                        <span class="trig__detail" [title]="initiating(c).detail">{{
+                          initiating(c).detail
+                        }}</span>
                       </span>
-                      <span class="trig__detail" [title]="initiating(c).detail">{{
-                        initiating(c).detail
-                      }}</span>
-                    </span>
+                    }
                   </td>
 
                   <!--
@@ -801,6 +808,11 @@ import { WorkPopoverComponent } from './work-popover.component';
        */
       .trig__more {
         margin: -6px 0;
+      }
+      .trig__empty {
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--foreground-secondary);
       }
       .trig__detail {
         min-width: 0;
@@ -1719,7 +1731,9 @@ export class CasesTableComponent {
     return (name ?? '?')
       .split(/[\s.]+/)
       .filter(Boolean)
-      .slice(0, 2)
+      // Up to three: "A. Kowalski" is AK as before, and a three-part name
+      // keeps its third letter rather than losing it to a two-letter cap.
+      .slice(0, 3)
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('');
   }

@@ -1,0 +1,3617 @@
+{
+  "_note": "STRESS FIXTURE. One case per edge the table has to survive, plus filler to 40 Active and 15 Compliance. Loaded with ?fixture=stress; verify/stress.mjs reads the stress annotations. Same schema as mock-cases.json.",
+  "agents": [
+    {
+      "id": "ak",
+      "name": "A. Kowalski",
+      "isMe": true
+    },
+    {
+      "id": "mt",
+      "name": "M. Torres",
+      "isMe": false
+    },
+    {
+      "id": "x",
+      "name": "X",
+      "isMe": false
+    },
+    {
+      "id": "mtl",
+      "name": "Marie Thérèse Lacroix",
+      "isMe": false
+    },
+    {
+      "id": "ak2",
+      "name": "Anna Kowalczyk",
+      "isMe": false
+    },
+    {
+      "id": "long1",
+      "name": "Alexandra Konstantinopoulos-Whitfield",
+      "isMe": false
+    },
+    {
+      "id": "long2",
+      "name": "Bartholomew Fitzgerald-Montgomery",
+      "isMe": false
+    },
+    {
+      "id": "long3",
+      "name": "Christabel Oyelaran-Abernathy",
+      "isMe": false
+    },
+    {
+      "id": "long4",
+      "name": "Dimitrios Papadopoulos-Lindqvist",
+      "isMe": false
+    },
+    {
+      "id": "long5",
+      "name": "Evangelina Castellanos-Rutherford",
+      "isMe": false
+    },
+    {
+      "id": "long6",
+      "name": "Fitzwilliam Oduya-Blackwood",
+      "isMe": false
+    },
+    {
+      "id": "long7",
+      "name": "Guadalupe Villanueva-Strickland",
+      "isMe": false
+    },
+    {
+      "id": "long8",
+      "name": "Hieronymus Vandenberg-Castellano",
+      "isMe": false
+    },
+    {
+      "id": "long9",
+      "name": "Isadora Featherstonehaugh-Reyes",
+      "isMe": false
+    },
+    {
+      "id": "long10",
+      "name": "Jacqueline Oyelowo-Brandenburg",
+      "isMe": false
+    }
+  ],
+  "requiredActions": [
+    "open-source-searches",
+    "player-contact"
+  ],
+  "actionTypes": [
+    {
+      "id": "player-contact",
+      "label": "Contact player",
+      "hint": "Log another contact with the player"
+    },
+    {
+      "id": "open-source-searches",
+      "label": "Open source searches",
+      "hint": "Record an additional search"
+    },
+    {
+      "id": "note",
+      "label": "Add a note",
+      "hint": "Free note with optional attachments"
+    }
+  ],
+  "workTypes": [
+    {
+      "id": "player-contact",
+      "label": "Contact player",
+      "required": true
+    },
+    {
+      "id": "open-source-searches",
+      "label": "Open source searches",
+      "required": true
+    },
+    {
+      "id": "edd-report",
+      "label": "EDD report",
+      "required": true
+    },
+    {
+      "id": "note",
+      "label": "Note"
+    }
+  ],
+  "severityRanking": {
+    "comment": "Confirmed by compliance 12 Aug: rank high to low. Any direction of change is allowed; badge derives from this order.",
+    "order": [
+      "COMPLIANCE",
+      "EDD",
+      "AML"
+    ]
+  },
+  "attachmentErrorsExample": [
+    {
+      "file": "notes.docx",
+      "reason": "type",
+      "message": "notes.docx was not added. JPG or PNG only."
+    },
+    {
+      "file": "statement-screenshot.png",
+      "reason": "size",
+      "message": "statement-screenshot.png was not added. Files must be under 10 MB."
+    }
+  ],
+  "cases": [
+    {
+      "id": "7001",
+      "player": {
+        "id": "364533553494316",
+        "name": "Tomasz Wiśniewski",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 700,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 100,
+          "by": "M. Torres"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 700,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7001-t1",
+          "name": "System - Velocity",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 690,
+          "isNew": false
+        },
+        {
+          "id": "7001-t2",
+          "name": "System - Velocity 2",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 656,
+          "isNew": false
+        },
+        {
+          "id": "7001-t3",
+          "name": "System - Velocity 3",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 622,
+          "isNew": false
+        },
+        {
+          "id": "7001-t4",
+          "name": "System - Velocity 4",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 588,
+          "isNew": false
+        },
+        {
+          "id": "7001-t5",
+          "name": "System - Velocity 5",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 554,
+          "isNew": false
+        },
+        {
+          "id": "7001-t6",
+          "name": "System - Velocity 6",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 520,
+          "isNew": false
+        },
+        {
+          "id": "7001-t7",
+          "name": "System - Velocity 7",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 486,
+          "isNew": false
+        },
+        {
+          "id": "7001-t8",
+          "name": "System - Velocity 8",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 452,
+          "isNew": false
+        },
+        {
+          "id": "7001-t9",
+          "name": "System - Velocity 9",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 418,
+          "isNew": false
+        },
+        {
+          "id": "7001-t10",
+          "name": "System - Velocity 10",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 384,
+          "isNew": false
+        },
+        {
+          "id": "7001-t11",
+          "name": "System - Velocity 11",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 350,
+          "isNew": false
+        },
+        {
+          "id": "7001-t12",
+          "name": "System - Velocity 12",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 316,
+          "isNew": false
+        },
+        {
+          "id": "7001-t13",
+          "name": "System - Velocity 13",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 282,
+          "isNew": false
+        },
+        {
+          "id": "7001-t14",
+          "name": "System - Velocity 14",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 248,
+          "isNew": false
+        },
+        {
+          "id": "7001-t15",
+          "name": "System - Velocity 15",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 214,
+          "isNew": false
+        },
+        {
+          "id": "7001-t16",
+          "name": "System - Velocity 16",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 180,
+          "isNew": false
+        },
+        {
+          "id": "7001-t17",
+          "name": "System - Velocity 17",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 146,
+          "isNew": false
+        },
+        {
+          "id": "7001-t18",
+          "name": "System - Velocity 18",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 112,
+          "isNew": false
+        },
+        {
+          "id": "7001-t19",
+          "name": "System - Velocity 19",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 78,
+          "isNew": false
+        },
+        {
+          "id": "7001-t20",
+          "name": "System - Velocity 20",
+          "detail": "Deposit velocity above the rolling 24h threshold across three payment instruments, with two declined attempts in the la.",
+          "atOffsetMinutes": 44,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 1,
+        "name": "twenty triggers, 120-char details"
+      }
+    },
+    {
+      "id": "7002",
+      "player": {
+        "id": "364533553502235",
+        "name": "Aisha Bello",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2000,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 1940,
+          "by": "Alexandra Konstantinopoulos-Whitfield"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 1880,
+          "by": "Bartholomew Fitzgerald-Montgomery"
+        },
+        {
+          "type": "edd-report",
+          "state": "done",
+          "atOffsetMinutes": 1820,
+          "by": "Christabel Oyelaran-Abernathy"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1760,
+          "by": "Dimitrios Papadopoulos-Lindqvist"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1700,
+          "by": "Evangelina Castellanos-Rutherford"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1640,
+          "by": "Fitzwilliam Oduya-Blackwood"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1580,
+          "by": "Guadalupe Villanueva-Strickland"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1520,
+          "by": "Hieronymus Vandenberg-Castellano"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1460,
+          "by": "Isadora Featherstonehaugh-Reyes"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1400,
+          "by": "Jacqueline Oyelowo-Brandenburg"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1340,
+          "by": "Alexandra Konstantinopoulos-Whitfield"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1280,
+          "by": "Bartholomew Fitzgerald-Montgomery"
+        },
+        {
+          "type": "note",
+          "state": "done",
+          "atOffsetMinutes": 1220,
+          "by": "Christabel Oyelaran-Abernathy"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2000,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7002-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2000,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 2,
+        "name": "thirteen actions by long-named agents"
+      }
+    },
+    {
+      "id": "7003",
+      "player": {
+        "id": "364533553510154",
+        "name": "Lars Johansson",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 900,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 720,
+          "by": "M. Torres"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 540,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "done",
+          "atOffsetMinutes": 360,
+          "by": "M. Torres"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 900,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7003-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 900,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 3,
+        "name": "all required done, nothing custom"
+      }
+    },
+    {
+      "id": "7004",
+      "player": {
+        "id": "364533553518073",
+        "name": "Mei Chen",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 300,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 300,
+        "outOfSync": false
+      },
+      "triggers": [],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 4,
+        "name": "zero triggers"
+      }
+    },
+    {
+      "id": "7005",
+      "player": {
+        "id": "364533553525992",
+        "name": "Diego Álvarez",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 400,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 400,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7005-t1",
+          "name": "Multiple failed deposit attempts across three payment instruments within one ro.",
+          "detail": "Three instruments, one hour.",
+          "atOffsetMinutes": 400,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 5,
+        "name": "80-char trigger name"
+      }
+    },
+    {
+      "id": "7006",
+      "player": {
+        "id": "999999999999999",
+        "name": "Maximilian Featherstonehaugh",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 500,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 500,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7006-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 500,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 6,
+        "name": "15-digit id, GAMSTOP restricted"
+      }
+    },
+    {
+      "id": "7007",
+      "player": {
+        "id": "364533553533911",
+        "name": "Fatima Zahra",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 800,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 800,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7007-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 800,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": true
+      },
+      "stress": {
+        "n": 7,
+        "name": "score 200"
+      }
+    },
+    {
+      "id": "7008",
+      "player": {
+        "id": "364533553541830",
+        "name": "Noah Williams",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 810,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 810,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7008-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 810,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 7,
+        "name": "score 10"
+      }
+    },
+    {
+      "id": "7009",
+      "player": {
+        "id": "364533553549749",
+        "name": "Sofia Rossi",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 820,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 820,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7009-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 820,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "medium",
+        "sgVulnerability": true,
+        "complaint": false
+      },
+      "stress": {
+        "n": 7,
+        "name": "score 125, the gap"
+      }
+    },
+    {
+      "id": "7010",
+      "player": {
+        "id": "364533553557668",
+        "name": "Kwame Mensah",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7010-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 1,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 0h 01m",
+        "slaMinutes": 1
+      }
+    },
+    {
+      "id": "7011",
+      "player": {
+        "id": "364533553565587",
+        "name": "Priya Raman",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 719,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 719,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7011-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 719,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 11h 59m",
+        "slaMinutes": 719
+      }
+    },
+    {
+      "id": "7012",
+      "player": {
+        "id": "364533553573506",
+        "name": "Tomasz Wiśniewski",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 720,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 720,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7012-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 720,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 12h 00m",
+        "slaMinutes": 720
+      }
+    },
+    {
+      "id": "7013",
+      "player": {
+        "id": "364533553581425",
+        "name": "Aisha Bello",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2159,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2159,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7013-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2159,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 35h 59m",
+        "slaMinutes": 2159
+      }
+    },
+    {
+      "id": "7014",
+      "player": {
+        "id": "364533553589344",
+        "name": "Lars Johansson",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2160,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2160,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7014-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2160,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 36h 00m",
+        "slaMinutes": 2160
+      }
+    },
+    {
+      "id": "7015",
+      "player": {
+        "id": "364533553597263",
+        "name": "Mei Chen",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2879,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2879,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7015-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2879,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 47h 59m",
+        "slaMinutes": 2879
+      }
+    },
+    {
+      "id": "7016",
+      "player": {
+        "id": "364533553605182",
+        "name": "Diego Álvarez",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 2880,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 2880,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7016-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 2880,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 48h 00m",
+        "slaMinutes": 2880
+      }
+    },
+    {
+      "id": "7017",
+      "player": {
+        "id": "364533553613101",
+        "name": "Fatima Zahra",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 59940,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 59940,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7017-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 59940,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 8,
+        "name": "SLA 999h 00m",
+        "slaMinutes": 59940
+      }
+    },
+    {
+      "id": "7018",
+      "player": {
+        "id": "364533553621020",
+        "name": "Noah Williams",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 650,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "x",
+          "name": "X"
+        },
+        "sinceOffsetMinutes": 120
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 650,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7018-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 650,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 9,
+        "name": "initials X"
+      }
+    },
+    {
+      "id": "7019",
+      "player": {
+        "id": "364533553628939",
+        "name": "Sofia Rossi",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 660,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mtl",
+          "name": "Marie Thérèse Lacroix"
+        },
+        "sinceOffsetMinutes": 120
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 660,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7019-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 660,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 9,
+        "name": "initials MTL"
+      }
+    },
+    {
+      "id": "7020",
+      "player": {
+        "id": "364533553636858",
+        "name": "Kwame Mensah",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 670,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "ak2",
+          "name": "Anna Kowalczyk"
+        },
+        "sinceOffsetMinutes": 120
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 670,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7020-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 670,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 10,
+        "name": "same initials as me"
+      }
+    },
+    {
+      "id": "7021",
+      "player": {
+        "id": "364533553644777",
+        "name": "Priya Raman",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 200,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 200,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7021-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 200,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      },
+      "stress": {
+        "n": 12,
+        "name": "live: trigger, status, withdrawal, escalation"
+      }
+    },
+    {
+      "id": "7022",
+      "player": {
+        "id": "364533553652696",
+        "name": "Tomasz Wiśniewski",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 837,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mt",
+          "name": "M. Torres"
+        },
+        "sinceOffsetMinutes": 120
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 670,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 837,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7022-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 837,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7023",
+      "player": {
+        "id": "364533553660615",
+        "name": "Aisha Bello",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 874,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 874,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7023-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 874,
+          "isNew": false
+        },
+        {
+          "id": "7023-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 854,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7024",
+      "player": {
+        "id": "364533553668534",
+        "name": "Lars Johansson",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 911,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 729,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 911,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7024-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 911,
+          "isNew": false
+        },
+        {
+          "id": "7024-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 891,
+          "isNew": false
+        },
+        {
+          "id": "7024-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 871,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7025",
+      "player": {
+        "id": "364533553676453",
+        "name": "Mei Chen",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 948,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 948,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7025-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 948,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "low",
+        "sgVulnerability": true,
+        "complaint": true
+      }
+    },
+    {
+      "id": "7026",
+      "player": {
+        "id": "364533553684372",
+        "name": "Diego Álvarez",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 985,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 788,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 985,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7026-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 985,
+          "isNew": false
+        },
+        {
+          "id": "7026-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 965,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7027",
+      "player": {
+        "id": "364533553692291",
+        "name": "Fatima Zahra",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1022,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1022,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7027-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1022,
+          "isNew": false
+        },
+        {
+          "id": "7027-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1002,
+          "isNew": false
+        },
+        {
+          "id": "7027-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 982,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7028",
+      "player": {
+        "id": "364533553700210",
+        "name": "Noah Williams",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 1059,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 847,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1059,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7028-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1059,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7029",
+      "player": {
+        "id": "364533553708129",
+        "name": "Sofia Rossi",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1096,
+      "lock": {
+        "state": "locked-to-other",
+        "owner": {
+          "id": "mt",
+          "name": "M. Torres"
+        },
+        "sinceOffsetMinutes": 120
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1096,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7029-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1096,
+          "isNew": false
+        },
+        {
+          "id": "7029-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1076,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "medium",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7030",
+      "player": {
+        "id": "364533553716048",
+        "name": "Kwame Mensah",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1133,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 906,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1133,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7030-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1133,
+          "isNew": false
+        },
+        {
+          "id": "7030-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1113,
+          "isNew": false
+        },
+        {
+          "id": "7030-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1093,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7031",
+      "player": {
+        "id": "364533553723967",
+        "name": "Priya Raman",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 1170,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1170,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7031-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1170,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": true
+      }
+    },
+    {
+      "id": "7032",
+      "player": {
+        "id": "364533553731886",
+        "name": "Tomasz Wiśniewski",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1207,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 966,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1207,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7032-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1207,
+          "isNew": false
+        },
+        {
+          "id": "7032-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1187,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7033",
+      "player": {
+        "id": "364533553739805",
+        "name": "Aisha Bello",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1244,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1244,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7033-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1244,
+          "isNew": false
+        },
+        {
+          "id": "7033-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1224,
+          "isNew": false
+        },
+        {
+          "id": "7033-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1204,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7034",
+      "player": {
+        "id": "364533553747724",
+        "name": "Lars Johansson",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 1281,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 1025,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1281,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7034-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1281,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7035",
+      "player": {
+        "id": "364533553755643",
+        "name": "Mei Chen",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1318,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1318,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7035-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1318,
+          "isNew": false
+        },
+        {
+          "id": "7035-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1298,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7036",
+      "player": {
+        "id": "364533553763562",
+        "name": "Diego Álvarez",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1355,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 1084,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1355,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7036-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1355,
+          "isNew": false
+        },
+        {
+          "id": "7036-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1335,
+          "isNew": false
+        },
+        {
+          "id": "7036-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1315,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 0,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7037",
+      "player": {
+        "id": "364533553771481",
+        "name": "Fatima Zahra",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 1392,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1392,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7037-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1392,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 120,
+        "amlRisk": "low",
+        "sgVulnerability": true,
+        "complaint": true
+      }
+    },
+    {
+      "id": "7038",
+      "player": {
+        "id": "364533553779400",
+        "name": "Noah Williams",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1429,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 1143,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1429,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7038-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1429,
+          "isNew": false
+        },
+        {
+          "id": "7038-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1409,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "medium",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7039",
+      "player": {
+        "id": "364533553787319",
+        "name": "Sofia Rossi",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "AML",
+      "createdAtOffsetMinutes": 1466,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1466,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7039-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1466,
+          "isNew": false
+        },
+        {
+          "id": "7039-t2",
+          "name": "Declined deposits",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1446,
+          "isNew": false
+        },
+        {
+          "id": "7039-t3",
+          "name": "Manual - EDD",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1426,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7040",
+      "player": {
+        "id": "364533553795238",
+        "name": "Kwame Mensah",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "EDD",
+      "createdAtOffsetMinutes": 1503,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "done",
+          "atOffsetMinutes": 1202,
+          "by": "A. Kowalski"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 1503,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7040-t1",
+          "name": "System - Threshold",
+          "detail": "Seeded filler trigger.",
+          "atOffsetMinutes": 1503,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "low",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7041",
+      "player": {
+        "id": "364533553803157",
+        "name": "Priya Raman",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 90,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 90,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7041-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 90,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7042",
+      "player": {
+        "id": "364533553811076",
+        "name": "Tomasz Wiśniewski",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 143,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 86,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 143,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7042-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 143,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7043",
+      "player": {
+        "id": "364533553818995",
+        "name": "Aisha Bello",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 196,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 196,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7043-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 196,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7044",
+      "player": {
+        "id": "364533553826914",
+        "name": "Lars Johansson",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 249,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 149,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 249,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7044-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 249,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7045",
+      "player": {
+        "id": "364533553834833",
+        "name": "Mei Chen",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 302,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 302,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7045-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 302,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7046",
+      "player": {
+        "id": "364533553842752",
+        "name": "Diego Álvarez",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 355,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 213,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 355,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7046-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 355,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7047",
+      "player": {
+        "id": "364533553850671",
+        "name": "Fatima Zahra",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 408,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 408,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7047-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 408,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7048",
+      "player": {
+        "id": "364533553858590",
+        "name": "Noah Williams",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 461,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 277,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 461,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7048-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 461,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7049",
+      "player": {
+        "id": "364533553866509",
+        "name": "Sofia Rossi",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 514,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 514,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7049-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 514,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7050",
+      "player": {
+        "id": "364533553874428",
+        "name": "Kwame Mensah",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 567,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 340,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 567,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7050-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 567,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7051",
+      "player": {
+        "id": "364533553882347",
+        "name": "Priya Raman",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 620,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 620,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7051-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 620,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7052",
+      "player": {
+        "id": "364533553890266",
+        "name": "Tomasz Wiśniewski",
+        "status": "ENABLED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 673,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 404,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 673,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7052-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 673,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7053",
+      "player": {
+        "id": "364533553898185",
+        "name": "Aisha Bello",
+        "status": "PLAYER_REGISTERED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 726,
+      "lock": {
+        "state": "locked-to-me",
+        "owner": {
+          "id": "ak",
+          "name": "A. Kowalski"
+        },
+        "sinceOffsetMinutes": 60
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 726,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7053-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 726,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 600,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7054",
+      "player": {
+        "id": "364533553906104",
+        "name": "Lars Johansson",
+        "status": "GAMSTOP_RESTRICTED"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 779,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "done",
+          "atOffsetMinutes": 467,
+          "by": "M. Torres"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 779,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7054-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 779,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 1500,
+        "amlRisk": "high",
+        "sgVulnerability": false,
+        "complaint": false
+      }
+    },
+    {
+      "id": "7055",
+      "player": {
+        "id": "364533553914023",
+        "name": "Mei Chen",
+        "status": "PLAYER_DUPLICATE"
+      },
+      "status": "OPEN",
+      "severity": "COMPLIANCE",
+      "createdAtOffsetMinutes": 832,
+      "lock": {
+        "state": "unlocked",
+        "owner": null
+      },
+      "linkedAccounts": 0,
+      "actions": [
+        {
+          "type": "player-contact",
+          "state": "todo"
+        },
+        {
+          "type": "open-source-searches",
+          "state": "todo"
+        },
+        {
+          "type": "edd-report",
+          "state": "todo"
+        }
+      ],
+      "origin": "system",
+      "snapshot": {
+        "generatedAtOffsetMinutes": 832,
+        "outOfSync": false
+      },
+      "triggers": [
+        {
+          "id": "7055-t1",
+          "name": "System - Threshold",
+          "detail": "Lifetime net loss checkpoint reached.",
+          "atOffsetMinutes": 832,
+          "isNew": false
+        }
+      ],
+      "workflow": [],
+      "timeline": [],
+      "pastCases": [],
+      "starredCommentaries": [],
+      "scoring": {
+        "pendingWithdrawals": 2500,
+        "amlRisk": "high",
+        "sgVulnerability": true,
+        "complaint": false
+      }
+    }
+  ]
+}

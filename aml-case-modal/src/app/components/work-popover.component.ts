@@ -68,7 +68,9 @@ let popoverSeq = 0;
                     {{ w.label }}
                   </span>
                   @if (w.at) {
-                    <span class="entry__meta">
+                    <!-- One line. A long agent name ellipsises and the full
+                         "stamp · agent" sits on the title. -->
+                    <span class="entry__meta" [attr.title]="(w.at | stamp) + (w.by ? ' · ' + w.by : '')">
                       <time [attr.datetime]="w.at">{{ w.at | stamp }}</time>
                       @if (w.by) {
                         <span aria-hidden="true"> · </span><span>{{ w.by }}</span>
@@ -162,7 +164,11 @@ let popoverSeq = 0;
       /* The tick is 16 and the text starts 20 in; the second line starts
          under the text, not under the glyph. */
       .entry__meta {
+        min-width: 0;
         padding-left: 20px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-size: 14px;
         line-height: 20px;
         color: var(--foreground-secondary);
