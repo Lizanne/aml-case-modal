@@ -64,7 +64,7 @@ let popoverSeq = 0;
               @for (w of done(); track w.key) {
                 <li class="entry entry--done" role="listitem">
                   <span class="entry__name">
-                    <mat-icon class="entry__mark" aria-hidden="true">check_circle</mat-icon>
+                    <mat-icon class="entry__mark" aria-hidden="true">check_circle_outline</mat-icon>
                     {{ w.label }}
                   </span>
                   @if (w.at) {

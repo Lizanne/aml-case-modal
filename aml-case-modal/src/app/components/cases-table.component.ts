@@ -409,7 +409,7 @@ import { WorkPopoverComponent } from './work-popover.component';
                           aria-hidden="true"
                         >
                           @if (w.state === 'done') {
-                            <mat-icon class="work__tick">check_circle</mat-icon>
+                            <mat-icon class="work__tick">check_circle_outline</mat-icon>
                           }
                           {{ cases.workLabel(w.type) }}
                         </span>

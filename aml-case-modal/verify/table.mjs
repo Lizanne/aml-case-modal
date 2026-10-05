@@ -905,7 +905,7 @@ try {
       const items = [...r.querySelectorAll('.work__item')];
       const c = cmp?.rows()[i];
       return {
-        labels: items.map((e) => e.textContent.replace('check_circle', '').trim()),
+        labels: items.map((e) => e.textContent.replace('check_circle_outline', '').trim()),
         states: items.map((e) => (e.classList.contains('work__item--done') ? 'done' : 'todo')),
         weights: items.map((e) => cs(e).fontWeight),
         colours: items.map((e) => cs(e).color),
@@ -984,7 +984,7 @@ try {
   const wpRow = await page.evaluate(() => {
     const tr = document.querySelector('.work__more').closest('tr');
     return [...tr.querySelectorAll('.work__item')].filter((e) => !e.classList.contains('work__item--done'))
-      .map((e) => e.textContent.replace('check_circle', '').trim());
+      .map((e) => e.textContent.replace('check_circle_outline', '').trim());
   });
   await page.locator('.work__more').first().click();
   await page.waitForTimeout(650);
@@ -994,7 +994,7 @@ try {
     const cs = (e) => getComputedStyle(e);
     const list = p.querySelector('work-popover .groups');
     const items = [...p.querySelectorAll('.entry')];
-    const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle|radio_button_unchecked|, done|, to do/g, '').trim();
+    const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle_outline|radio_button_unchecked|, done|, to do/g, '').trim();
     const todo = items.filter((it) => !it.classList.contains('entry--done'));
     const done = items.filter((it) => it.classList.contains('entry--done'));
     const gaps = items.slice(1).map((it, i) => Math.round(it.getBoundingClientRect().top - items[i].getBoundingClientRect().bottom));
@@ -1051,7 +1051,7 @@ try {
     wp.todoMark.join() === 'radio_button_unchecked',
     JSON.stringify({ todo: wp?.todo, row: wpRow, onTop: wp?.todoOnTop, noMeta: wp?.todoNoMeta, mark: wp?.todoMark }));
   check('every recorded action below them, newest first, ticked, with its stamp and agent on a muted second line',
-    wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'check_circle' &&
+    wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'check_circle_outline' &&
     wp.metaColour === 'rgb(82, 82, 91)' && wp.nameColour === 'rgb(9, 9, 11)',
     JSON.stringify({ done: wp?.done, newestFirst: wp?.newestFirst, meta: wp?.doneMeta, metaColour: wp?.metaColour }));
   check('the Triggers list layout: no borders, no backgrounds, 16px padding; 12px within a group',
@@ -1284,7 +1284,7 @@ try {
         await page.waitForTimeout(400);
         workPop = await page.evaluate(() => {
           const done = [...document.querySelectorAll('.mat-mdc-menu-panel .entry--done')];
-          const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle|, done/g, '').trim();
+          const name = (it) => it.querySelector('.entry__name').textContent.replace(/check_circle_outline|, done/g, '').trim();
           return { n: done.length, first: done[0] ? name(done[0]) : null };
         });
         await page.keyboard.press('Escape');
