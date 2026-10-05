@@ -1021,9 +1021,11 @@ try {
       todoOnTop: firstDoneIdx < 0 || items.slice(firstDoneIdx).every((it) => it.classList.contains('entry--done')),
       todoNoMeta: todo.every((it) => !it.querySelector('.entry__meta') && !it.querySelector('time')),
       todoMark: [...new Set(todo.map((it) => it.querySelector('.entry__mark')?.textContent.trim()))],
-      doneMark: [...new Set(done.map((it) => it.querySelector('.entry__mark')?.textContent.trim()))],
+      doneMark: [...new Set(done.map((it) => it.querySelector('.entry__mark')?.tagName.toLowerCase()))],
       doneMeta: done.every((it) => { const m = it.querySelector('.entry__meta'); return !!m && !!m.querySelector('time') && /\d{4}/.test(m.textContent) && /·/.test(m.textContent); }),
       metaColour: done[0] ? cs(done[0].querySelector('.entry__meta')).color : null,
+      ringColour: todo[0] ? cs(todo[0].querySelector('.entry__mark')).color : null,
+      tickColour: done[0] ? cs(done[0].querySelector('.entry__mark')).fill : null,
       nameColour: items[0] ? cs(items[0].querySelector('.entry__name')).color : null,
       newestFirst: ats.every((t, i) => i === 0 || t <= ats[i - 1]),
       borders: [...new Set(items.map((it) => cs(it).borderBottomWidth))],
@@ -1051,7 +1053,7 @@ try {
     wp.todoMark.join() === 'radio_button_unchecked',
     JSON.stringify({ todo: wp?.todo, row: wpRow, onTop: wp?.todoOnTop, noMeta: wp?.todoNoMeta, mark: wp?.todoMark }));
   check('every recorded action below them, newest first, ticked, with its stamp and agent on a muted second line',
-    wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'check_circle_outline' &&
+    wp?.done.length > 0 && wp.newestFirst && wp.doneMeta && wp.doneMark.join() === 'svg' &&
     wp.metaColour === 'rgb(82, 82, 91)' && wp.nameColour === 'rgb(9, 9, 11)',
     JSON.stringify({ done: wp?.done, newestFirst: wp?.newestFirst, meta: wp?.doneMeta, metaColour: wp?.metaColour }));
   check('the Triggers list layout: no borders, no backgrounds, 16px padding; 12px within a group',
@@ -1062,6 +1064,9 @@ try {
     wp?.labelToFirst.every((g) => g === 8) && wp.groupGap === 20,
     JSON.stringify({ labelToFirst: wp?.labelToFirst, aboveSecond: wp?.groupGap }));
   check('stamps in tabular figures', wp?.tabular === 'tabular-nums', wp?.tabular);
+  check('the to-do ring is the name\'s full ink; the done tick stays on the secondary grey',
+    wp?.ringColour === 'rgb(9, 9, 11)' && wp.tickColour === 'rgb(82, 82, 91)',
+    JSON.stringify({ ring: wp?.ringColour, tick: wp?.tickColour }));
   check('PEP check, Sanctions screen and SoF request are gone from the work types',
     wp?.types.length > 0 && ['pep-check', 'sanctions-screen', 'sof-request'].every((t) => !wp.types.includes(t)),
     JSON.stringify(wp?.types));
@@ -1260,7 +1265,10 @@ try {
         await page.waitForTimeout(400);
         pop = await page.evaluate(() => {
           const rows = [...document.querySelectorAll('.mat-mdc-menu-panel .trigger')];
-          return { n: rows.length, first: rows[0]?.querySelector('.cell__label')?.textContent.trim() };
+          // A row badged New is an arrival the modal has not resynced, so the
+          // modal cannot hold it yet; the count that must match is the rest.
+          const settled = rows.filter((r) => !r.classList.contains('trigger--new'));
+          return { n: settled.length, first: rows[0]?.querySelector('.cell__label')?.textContent.trim(), arrivals: rows.length - settled.length };
         });
         await page.keyboard.press('Escape');
         await page.waitForTimeout(300);
@@ -1332,6 +1340,32 @@ try {
   check('the row\'s count is the popover\'s length - what +N counts and what opens agree',
     scope.length === 0,
     scope.map((p) => `${p.id}: +N says ${p.since}, popover holds ${p.popover}`).join('; '));
+
+  console.log('\nThe New badge: with the name, 8px after it, named for a reader');
+  await page.goto(`${BASE}/?view=cases&tab=active`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const newRow = await page.evaluate(() => {
+    const cmp = window.ng.getComponent(document.querySelector('cases-table'));
+    return cmp.rows().findIndex((c) => c.id === '4821');
+  });
+  await page.locator('tbody tr').nth(newRow).locator('.trig__more').click();
+  await page.waitForTimeout(650);
+  const nb = await page.evaluate(() => {
+    const row = document.querySelector('.mat-mdc-menu-panel .trigger--new');
+    if (!row) return null;
+    const name = row.querySelector('.cell--name'); const label = name.querySelector('.cell__label'); const pill = name.querySelector('ui-pill');
+    const meta = row.querySelector('.cell--meta'); const R = (e) => e.getBoundingClientRect();
+    return { inNameGroup: !!pill && pill.parentElement === name, afterName: pill && label && pill.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_PRECEDING ? true : false,
+      gap: pill ? Math.round(R(pill).left - R(label).right) : null, aria: pill?.getAttribute('aria-label'), text: pill?.textContent.trim(), nameText: label?.textContent.trim(),
+      stampRight: Math.round(R(row).right - R(meta).right), total: document.querySelectorAll('.mat-mdc-menu-panel .trigger').length };
+  });
+  check('4821\'s popover shows the unresynced arrival, badged New', !!nb, JSON.stringify(nb));
+  check('the badge sits in the name\'s group, right after the name, 8px on, with its own name "New trigger"',
+    nb?.inNameGroup && nb.afterName && nb.gap === 8 && nb.aria === 'New trigger' && nb.text === 'New' && !/New/.test(nb.nameText ?? 'New'),
+    JSON.stringify(nb));
+  check('and the stamp stays on the right edge', nb?.stampRight === 0, String(nb?.stampRight));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
 
   console.log('\nLive: an arrival lands in the open popover and in the count');
   await page.goto(`${BASE}/?view=cases&tab=active`, { waitUntil: 'networkidle' });

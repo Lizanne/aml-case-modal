@@ -64,7 +64,10 @@ let popoverSeq = 0;
               @for (w of done(); track w.key) {
                 <li class="entry entry--done" role="listitem">
                   <span class="entry__name">
-                    <mat-icon class="entry__mark" aria-hidden="true">check_circle_outline</mat-icon>
+                    <!-- The same Round outlined check the row draws. -->
+                    <svg class="entry__mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                      <path d="M8.00016 1.33331C4.32016 1.33331 1.3335 4.31998 1.3335 7.99998C1.3335 11.68 4.32016 14.6666 8.00016 14.6666C11.6802 14.6666 14.6668 11.68 14.6668 7.99998C14.6668 4.31998 11.6802 1.33331 8.00016 1.33331ZM8.00016 13.3333C5.06016 13.3333 2.66683 10.94 2.66683 7.99998C2.66683 5.05998 5.06016 2.66665 8.00016 2.66665C10.9402 2.66665 13.3335 5.05998 13.3335 7.99998C13.3335 10.94 10.9402 13.3333 8.00016 13.3333ZM10.5868 5.52665L6.66683 9.44665L5.4135 8.19331C5.1535 7.93331 4.7335 7.93331 4.4735 8.19331C4.2135 8.45331 4.2135 8.87331 4.4735 9.13331L6.20016 10.86C6.46016 11.12 6.88016 11.12 7.14016 10.86L11.5335 6.46665C11.7935 6.20665 11.7935 5.78665 11.5335 5.52665C11.2735 5.26665 10.8468 5.26665 10.5868 5.52665Z" />
+                    </svg>
                     {{ w.label }}
                   </span>
                   @if (w.at) {
@@ -150,13 +153,15 @@ let popoverSeq = 0;
       .entry--done .entry__name {
         font-weight: 400;
       }
+      /* The ring takes the name's ink: a to-do is one thing, mark and name
+         alike. Done is the quieter pair, below. */
       .entry__mark {
         flex: none;
         width: 16px;
         height: 16px;
         font-size: 16px;
         line-height: 16px;
-        color: var(--foreground-subtle);
+        color: var(--foreground-primary);
       }
       .entry--done .entry__mark {
         color: var(--foreground-secondary);

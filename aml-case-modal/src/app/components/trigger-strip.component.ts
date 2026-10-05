@@ -154,7 +154,7 @@ let stripSeq = 0;
               <span class="cell cell--name">
                 <span class="cell__label">{{ trigger.name }}</span>
                 @if (isArrival(trigger)) {
-                  <ui-pill tone="warn-solid" size="sm">New</ui-pill>
+                  <ui-pill tone="warn-solid" size="sm" aria-label="New trigger">New</ui-pill>
                 }
               </span>
               <!-- Clamped to one line; the title is where the rest of it

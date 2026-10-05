@@ -88,6 +88,11 @@ import { TriggerStripComponent } from './trigger-strip.component';
       :host ::ng-deep .strip .trigger .cell {
         height: auto;
       }
+      /* The New badge travels with the name: inside the name's flex group,
+         8px after it, so the stamp stays on the right edge regardless. */
+      :host ::ng-deep .strip .cell--name {
+        gap: 8px;
+      }
     `,
   ],
 })
@@ -105,9 +110,17 @@ export class TriggerPopoverComponent {
     this.id = id;
     this.own.loadCase(id);
     this.own.triggersExpanded.set(true);
-    this.seen = new Set(
-      untracked(() => this.collection.byId(id)?.triggers ?? []).map((t) => t.id),
-    );
+    // The modal's reset() leaves out a trigger the fixture marks isNew - an
+    // arrival not yet resynced. The collection carries it, and the count on
+    // the row counts it, so the popover shows it too, badged New: everything
+    // the collection has that the seeded list does not is an arrival.
+    const have = new Set(untracked(() => this.own.triggers()).map((t) => t.id));
+    const record = untracked(() => this.collection.byId(id));
+    const arrivals = (record?.triggers ?? []).filter((t) => !have.has(t.id));
+    if (arrivals.length) {
+      this.own.triggers.update((list) => [...list, ...arrivals.map((t) => ({ ...t, isNew: true }))]);
+    }
+    this.seen = new Set((record?.triggers ?? []).map((t) => t.id));
   }
 
   constructor() {
