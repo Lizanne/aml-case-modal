@@ -46,6 +46,14 @@ import { TriggerStripComponent } from './trigger-strip.component';
        * outranks the strip's own --expanded rule on specificity, not on the
        * order the two stylesheets happened to load in.
        */
+      /* The strip tints its block and rules it off at the bottom: in the modal
+         it is one surface among several. In a popover it is the only thing
+         there, so it sits on the panel's white with no rule. This panel only -
+         the Work popover has no strip, and the modal keeps its ground. */
+      :host ::ng-deep trigger-strip .strip {
+        background: var(--panel);
+        border-bottom: 0;
+      }
       :host ::ng-deep .strip .strip__gap-slot {
         display: none;
       }

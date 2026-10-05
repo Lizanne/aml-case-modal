@@ -1141,6 +1141,7 @@ try {
       rowX: Math.round(rows[0]?.querySelector('.cell--name').getBoundingClientRect().left),
       detailShown: rows.every((r) => (r.querySelector('.cell--detail')?.textContent ?? '').trim().length > 0),
       gapHidden: [...p.querySelectorAll('.strip__gap-slot')].every((g) => getComputedStyle(g).display === 'none'),
+      ground: (() => { const st = p.querySelector('.strip'); const c = cs(st); return { bg: c.backgroundColor, border: c.borderBottomWidth, panelBg: cs(p).backgroundColor }; })(),
       list: (() => { const l = p.querySelector('.strip__list'); const c = cs(l); return { maxH: c.maxHeight, overflowY: c.overflowY, pad: c.padding, padB: c.paddingBottom, sbW: c.scrollbarWidth, sbColor: c.scrollbarColor, tabindex: l.getAttribute('tabindex') }; })(),
       items: (() => {
         const gaps = rows.slice(1).map((r, i) => Math.round(r.getBoundingClientRect().top - rows[i].getBoundingClientRect().bottom));
@@ -1166,6 +1167,9 @@ try {
 
   // No collapse in the popover: the divider is the modal's. Every row, flat.
   const clearBar = /^(transparent|rgba\(0, 0, 0, 0\))\s+(transparent|rgba\(0, 0, 0, 0\))$/;
+  check('the strip sits on the panel\'s white with no bottom rule - this popover only',
+    tp?.ground.bg === 'rgb(255, 255, 255)' && tp.ground.border === '0px' && tp.ground.panelBg === 'rgb(255, 255, 255)',
+    JSON.stringify(tp?.ground));
   check('no expander in the popover: the strip\'s divider is hidden, every row present',
     tp?.gapHidden === true, JSON.stringify({ gapHidden: tp?.gapHidden, rows: tp?.rows }));
   check('the list caps at 360px, scrolls inside, with 16px list padding',
