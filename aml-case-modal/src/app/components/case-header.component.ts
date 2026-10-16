@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
+import { WorkspaceStore } from '../core/workspace-store';
 import { StampPipe } from '../core/format';
 import { SEVERITY_LABEL, lockStatusLine } from '../core/models';
 import { PillComponent } from './ui-pill.component';
@@ -74,7 +75,8 @@ import { PillComponent } from './ui-pill.component';
               row uses, so a narrow panel and the card above it agree.
 
               Full width keeps md, because there it has the room and md is what
-              every other pill in the panel is.
+              every other pill in the panel is. Dual mode keeps md too, even
+              though each modal is narrow there: asked for on 16 Oct 2026.
             -->
             <div class="head__pills">
               <ui-pill [severity]="store.severity()" [size]="pillSize()">
@@ -562,13 +564,16 @@ import { PillComponent } from './ui-pill.component';
 })
 export class CaseHeaderComponent {
   readonly store = inject(CaseStore);
+  private readonly ws = inject(WorkspaceStore);
   @Output() close = new EventEmitter<void>();
   @Output() minimise = new EventEmitter<void>();
 
   readonly severityLabel = computed(() => SEVERITY_LABEL[this.store.severity()]);
 
   /** See the note in the template: the row's width is the reason. */
-  readonly pillSize = computed<'sm' | 'md'>(() => (this.store.layoutNarrow() ? 'sm' : 'md'));
+  readonly pillSize = computed<'sm' | 'md'>(() =>
+    this.ws.visibleCount() === 2 || !this.store.layoutNarrow() ? 'md' : 'sm',
+  );
 
   readonly lockIcon = computed(() =>
     this.store.lockState() === 'unlocked' ? 'lock_open' : 'lock',
