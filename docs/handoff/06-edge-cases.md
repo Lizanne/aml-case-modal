@@ -9,9 +9,17 @@ never discard silently.**
 
 | Situation | Behaviour |
 |---|---|
-| A new trigger arrives mid-draft | The draft is **preserved**; Save is blocked with a warn note until Resync |
+| A new trigger arrives mid-draft | The draft is **untouched and Save stays available** - a trigger no longer blocks recording (rule 11, revised). The arrival is a workflow entry |
+| Starting another action while a draft has content | **Refused.** The open form is scrolled into view with the line `Save or cancel this draft before starting <action>.` This covers the Add action menu, the placeholders and every risk status in the left panel - a status is a click away from a form the agent cannot see |
+| Starting the same action again | Not a conflict: the open form is simply revealed |
 | A force unlock takes the lock | The other agent's draft **is lost**, and the confirmation says so |
 | Submitting a decision with a draft open | The dialog warns, **naming the draft** |
+| Resync with assessments recorded | Nothing is lost - the assessments stay in the workflow - but a field whose risk changed goes back to Action required and must be assessed again. The confirm dialog says so before it runs |
+
+> **Why "refused" and not "confirm and discard":** the draft guard exists
+> because the trigger was in the other panel. A confirm dialog would still be a
+> decision about work the agent cannot see; revealing the work is the honest
+> answer.
 
 `Save outcome` and `Submit decision` can be enabled at the same time. An open
 draft never disables Submit.
@@ -68,7 +76,9 @@ Every list tab needs one.
 | Surface | Empty state |
 |---|---|
 | Workflow stream | **No empty line.** The dashed placeholders name each outstanding action, which says more than a generic line above them |
-| Left panel, resolved | `No snapshot selected` until an outcome's `View snapshot` is clicked |
+| Left panel, resolved | The Risk assessment as finalized: a `Finalized by … · <stamp>` line, every status a plain label, no Resync |
+| Risk assessment, a field with no value | Not reachable with the mock data; every field has at least one line. Open source searches opens as `No searches recorded` (open question 13) |
+| Resync with nothing new | Runs in full - confirm, overlay - and writes `Resync completed` / `No changes.` |
 | Widget, no open case | A `Create case` state — designed and in the component set, **out of scope for this ticket and not in the prototype** |
 | Widget, resolved case | Resolved status, no lock line, no actions |
 

@@ -14,7 +14,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
-import { ActionTypeId, OutcomeItem, StreamItem, isOutcome } from '../core/models';
+import { RequiredActionState } from '../core/case-store';
+import { OutcomeItem, StreamItem, isOutcome } from '../core/models';
+import { joinLabels } from '../core/risk-assessment';
 import { ActionPlaceholderComponent } from './action-placeholder.component';
 import { AddActionMenuComponent } from './add-action-menu.component';
 import { EventRowComponent } from './event-row.component';
@@ -55,51 +57,32 @@ import { RequiredChipsComponent } from './required-chips.component';
         <required-chips />
       }
 
-      <!-- Rule 11: the resync gate sits above the stream, where it blocks work. -->
-      @if (store.snapshotOutOfSync() && !store.isResolved()) {
-        <div class="resync" role="alert">
-          <mat-icon fontSet="material-icons-outlined">sync_problem</mat-icon>
-          <div class="resync__text">
-            <p class="resync__title">Snapshot is out of sync</p>
-            <p class="resync__body">
-              A new trigger arrived after this snapshot was taken. Resync before recording outcomes.
-            </p>
-          </div>
-          <!-- The same gate as the snapshot tab's Resync and as Record:
-               resyncing is acting on the case, so it belongs to whoever holds
-               the lock. Disabled rather than hidden, so an agent who does not
-               hold it can still see what the case is waiting for. -->
-          <button
-            mat-flat-button
-            color="primary"
-            type="button"
-            [disabled]="!store.canAct()"
-            (click)="store.resync()"
-          >
-            Resync
-          </button>
-        </div>
-      }
+      <!-- No resync banner. A new trigger no longer blocks work: it is an
+           entry in the stream, and Resync lives on the Risk assessment. -->
 
       <!-- Scrolls. -->
       <div class="stream" #stream tabindex="0" aria-label="Workflow stream" (scroll)="onScroll()">
         @for (item of store.stream(); track item.id) {
           @if (asOutcome(item); as outcome) {
-            <outcome-card [outcome]="outcome" (viewSnapshot)="store.viewSnapshot($event)" />
+            <outcome-card [outcome]="outcome" />
           } @else {
             <event-row [event]="$any(item)" />
           }
         }
 
-        @for (pending of store.pendingPlaceholders(); track pending.id) {
-          @if (draftFor(pending.id)) {
+        @for (pending of store.pendingPlaceholders(); track pending.key) {
+          @if (draftFor(pending)) {
             <record-form />
           } @else {
             <action-placeholder
-              [actionType]="pending.id"
-              [label]="pending.label"
+              [attr.data-key]="pending.key"
+              [actionType]="pending.actionType"
+              [label]="pending.fieldId ? pending.shortLabel : pending.label"
               [block]="store.recordBlock()"
-              (record)="store.startRecord($event, true)"
+              [available]="pending.available"
+              [status]="pending.status"
+              [unavailableReason]="finalizeReason()"
+              (record)="store.startRecord(pending.actionType, true, pending.fieldId)"
             />
           }
         }
@@ -159,48 +142,14 @@ import { RequiredChipsComponent } from './required-chips.component';
         min-width: 0;
         height: 100%;
       }
-      /* Flex, not grid: the chip bar and resync banner are conditional, so the
-         stream must claim whatever is left rather than a fixed track. */
+      /* Flex, not grid: the chip bar is conditional, so the stream
+         must claim whatever is left rather than a fixed track. */
       .panel {
         display: flex;
         flex-direction: column;
         height: 100%;
         min-height: 0;
         background: var(--panel);
-      }
-      .resync {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 16px;
-        background: var(--warn-bg);
-        color: var(--warn);
-        border-bottom: 1px solid var(--line);
-      }
-      /* icon + text top-align; the action stays optically centred. */
-      .resync button {
-        align-self: center;
-      }
-      .resync mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        flex: none;
-      }
-      .resync__text {
-        flex: 1;
-      }
-      .resync__title {
-        margin: 0;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 600;
-      }
-      .resync__body {
-        margin: 2px 0 0;
-        font-size: 12px;
-        line-height: 1.4;
       }
       /**
        * grid-template-columns: minmax(0, 1fr) is load-bearing.
@@ -271,7 +220,7 @@ import { RequiredChipsComponent } from './required-chips.component';
         padding-left: 16px;
         padding-right: 16px;
       }
-      /* 16px glyph, matching View snapshot, Add action and Add files.
+      /* 16px glyph, matching Add action and Add files.
          mat-icon.mat-icon, not just the class: Material sets 24px at .mat-icon
          inside its own button rule, so the element tag is what wins. */
       .footer mat-icon.mat-icon {
@@ -366,17 +315,44 @@ export class WorkflowPanelComponent implements AfterViewInit, OnDestroy {
 
   readonly store = inject(CaseStore);
 
-  /** Why Submit is disabled - shown as a tooltip where the sentence does not fit. */
+  /**
+   * Why Submit is disabled - shown as a tooltip where the sentence does not fit.
+   * Only a finalized risk assessment lets a case close, so it is always named
+   * when it is outstanding.
+   */
   readonly gateTooltip = computed(() => {
     const outstanding = this.store.requiredActions().filter((r) => !r.done);
     if (!outstanding.length) return 'Lock the case to submit a decision.';
-    return `Record ${outstanding.map((r) => r.label.toLowerCase()).join(' and ')} to submit a decision.`;
+    const steps: string[] = [];
+    if (outstanding.some((r) => r.actionType === 'assess-risk')) {
+      steps.push('assess every field marked Action required');
+    }
+    if (outstanding.some((r) => r.actionType === 'player-contact')) {
+      steps.push('record the player contact');
+    }
+    if (outstanding.some((r) => r.actionType === 'finalize-risk-assessment')) {
+      steps.push('finalize the risk assessment');
+    }
+    const sentence = joinLabels(steps);
+    return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)} to submit a decision.`;
+  });
+
+  /** Why Finalize is still disabled: the fields that are left, by name. */
+  readonly finalizeReason = computed(() => {
+    const left = this.store.actionRequiredFields().map((f) => f.def.label);
+    if (!left.length) return null;
+    return `Assess ${joinLabels(left)} first.`;
   });
 
   /** True when the open draft belongs in this placeholder's slot. */
-  draftFor(actionType: ActionTypeId): boolean {
+  draftFor(pending: RequiredActionState): boolean {
     const draft = this.store.draft();
-    return !!draft && draft.fromPlaceholder && draft.actionType === actionType;
+    return (
+      !!draft &&
+      draft.fromPlaceholder &&
+      draft.actionType === pending.actionType &&
+      (draft.riskFieldId ?? null) === pending.fieldId
+    );
   }
 
   /** True when the open draft came from the Add action menu (rule 7). */

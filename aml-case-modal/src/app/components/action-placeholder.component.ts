@@ -12,21 +12,31 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore, RecordBlock } from '../core/case-store';
 import { ActionTypeId } from '../core/models';
+import { RiskStatus } from '../core/risk-assessment';
+import { RiskStatusComponent } from './risk-status.component';
 
 /**
  * Rule 4. A dashed slot for a mandatory action that has not been recorded yet.
- * The Record button is disabled unless the agent holds the lock and the
- * snapshot is in sync (rules 3 and 11); the reason is always stated, never mimed.
+ * The button is disabled unless the agent holds the lock (rule 3), and
+ * Finalize risk assessment is also disabled - but still shown - until every
+ * field is assessed. The reason is always stated, never mimed.
  */
 @Component({
   selector: 'action-placeholder',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RiskStatusComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="slot" [class.slot--narrow]="store.layoutNarrow()">
       <div class="slot__text">
-        <p class="slot__title">{{ label }} - not recorded</p>
+        <p class="slot__title">
+          <span>{{ label }}{{ pendingSuffix }}</span>
+          <!-- The field's status, the same pill its row shows: an assessment
+               slot says Action required in the panel's own words. -->
+          @if (status) {
+            <risk-status [status]="status" />
+          }
+        </p>
         @if (blockReason(); as reason) {
           <p class="slot__reason">{{ reason }}</p>
         }
@@ -35,11 +45,12 @@ import { ActionTypeId } from '../core/models';
         mat-flat-button
         color="primary"
         type="button"
-        [disabled]="!!block"
+        [disabled]="!!block || !available"
+        [attr.aria-label]="buttonName"
         (click)="record.emit(actionType)"
       >
-        <mat-icon>edit_note</mat-icon>
-        Record
+        <mat-icon>{{ actionType === 'finalize-risk-assessment' ? 'task_alt' : 'edit_note' }}</mat-icon>
+        {{ buttonLabel }}
       </button>
     </div>
   `,
@@ -61,6 +72,10 @@ import { ActionTypeId } from '../core/models';
         flex: 1;
       }
       .slot__title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
         margin: 0;
         font-size: 14px;
         font-weight: 600;
@@ -93,6 +108,12 @@ export class ActionPlaceholderComponent {
   @Input({ required: true }) actionType!: ActionTypeId;
   @Input({ required: true }) label = '';
   @Input() block: RecordBlock = null;
+  /** False keeps the slot in view with its button disabled - Finalize, before every field is assessed. */
+  @Input() available = true;
+  /** Why it is not available yet. Shown under the title when the lock is not the reason. */
+  @Input() unavailableReason: string | null = null;
+  /** An assessment's current status, shown as the pill beside the title. */
+  @Input() status: RiskStatus | null = null;
 
   @Output() record = new EventEmitter<ActionTypeId>();
 
@@ -102,12 +123,29 @@ export class ActionPlaceholderComponent {
         return 'Lock the case to record an outcome.';
       case 'locked-to-other':
         return 'Another agent holds the lock.';
-      case 'out-of-sync':
-        return 'Resync the snapshot before recording outcomes.';
       case 'resolved':
         return 'This case is resolved.';
       default:
-        return null;
+        return this.available ? null : this.unavailableReason;
     }
+  }
+
+  get buttonLabel(): string {
+    if (this.actionType === 'assess-risk') return 'Assess';
+    if (this.actionType === 'finalize-risk-assessment') return 'Finalize';
+    return 'Record';
+  }
+
+  /**
+   * Several placeholders can say "Assess", so each button's accessible name
+   * carries what it assesses. Finalize's label already says it in full.
+   */
+  get buttonName(): string | null {
+    return this.actionType === 'finalize-risk-assessment' ? null : `${this.buttonLabel} ${this.label}`;
+  }
+
+  /** "Contact player - not recorded". An assessment's pill says its state; Finalize needs none. */
+  get pendingSuffix(): string {
+    return this.actionType === 'player-contact' || this.actionType === 'note' ? ' - not recorded' : '';
   }
 }

@@ -16,6 +16,7 @@ import { WorkspaceStore } from '../core/workspace-store';
 import { CaseHeaderComponent } from './case-header.component';
 import { DecisionDialogComponent } from './decision-dialog.component';
 import { PlayerInfoPanelComponent } from './player-info-panel.component';
+import { ResyncDialogComponent } from './resync-dialog.component';
 import { SeverityDialogComponent } from './severity-dialog.component';
 import { TriggerStripComponent } from './trigger-strip.component';
 import { WorkflowPanelComponent } from './workflow-panel.component';
@@ -42,6 +43,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
     WorkflowPanelComponent,
     SeverityDialogComponent,
     DecisionDialogComponent,
+    ResyncDialogComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -73,7 +75,7 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         columns, which cost the workflow that height for a list the workflow
         never reads. The workflow now starts at the top of the body, directly
         under the header, and the triggers sit above the tabs whose content
-        they belong with - the snapshot, the timeline, the case's history.
+        they belong with - the risk assessment, the timeline, the case's history.
 
         It travels with the left column in BOTH layouts. Narrow has no columns,
         so "the left column" there is the Player info segment: the strip is on
@@ -110,8 +112,8 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
       </div>
 
       <!--
-        Severity and decision only. Both are reached from controls inside this
-        panel, so neither can be asked for while the panel is shut.
+        Severity, decision and resync. All three are reached from controls
+        inside this panel, so none can be asked for while the panel is shut.
 
         confirm-unlock is NOT here, and the omission is the point: Force unlock
         also appears on the WIDGET, which only shows its actions while this
@@ -126,6 +128,9 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         }
         @case ('decision') {
           <decision-dialog />
+        }
+        @case ('resync') {
+          <resync-dialog />
         }
       }
     </div>

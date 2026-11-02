@@ -83,6 +83,49 @@
    * capping either.
    */
   --panel-bar-h: 48px;
+
+  /**
+   * LDS core spacing scale (lds-core-spacing-*), 2 Nov 2026. The names keep
+   * the scale's step numbers; a dot in the step ("0.5") becomes a hyphen,
+   * because a custom property name cannot carry one. New spacing is taken
+   * from here. Existing values elsewhere in the app are not retrofitted yet;
+   * they are all on the scale, so moving them is a rename, not a redesign.
+   */
+  --lds-core-spacing-0: 0;
+  --lds-core-spacing-px: 1px;
+  --lds-core-spacing-0-5: 2px;
+  --lds-core-spacing-1: 4px;
+  --lds-core-spacing-1-5: 6px;
+  --lds-core-spacing-2: 8px;
+  --lds-core-spacing-2-5: 10px;
+  --lds-core-spacing-3: 12px;
+  --lds-core-spacing-3-5: 14px;
+  --lds-core-spacing-4: 16px;
+  --lds-core-spacing-5: 20px;
+  --lds-core-spacing-6: 24px;
+  --lds-core-spacing-7: 28px;
+  --lds-core-spacing-8: 32px;
+  --lds-core-spacing-9: 36px;
+  --lds-core-spacing-10: 40px;
+  --lds-core-spacing-11: 44px;
+  --lds-core-spacing-12: 48px;
+  --lds-core-spacing-14: 56px;
+  --lds-core-spacing-16: 64px;
+  --lds-core-spacing-20: 80px;
+  --lds-core-spacing-24: 96px;
+  --lds-core-spacing-28: 112px;
+  --lds-core-spacing-32: 128px;
+  --lds-core-spacing-36: 144px;
+  --lds-core-spacing-40: 160px;
+  --lds-core-spacing-44: 176px;
+  --lds-core-spacing-48: 192px;
+  --lds-core-spacing-52: 208px;
+  --lds-core-spacing-56: 224px;
+  --lds-core-spacing-60: 240px;
+  --lds-core-spacing-64: 256px;
+  --lds-core-spacing-72: 288px;
+  --lds-core-spacing-80: 320px;
+  --lds-core-spacing-96: 384px;
   --nav-w: 256px;
   --top-bar-h: 56px;
   --player-bar-h: 64px;
@@ -369,6 +412,26 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
+/**
+ * Material's focus STATE LAYER follows the same rule as the ring.
+ *
+ * Material paints a focused button grey (black at 12%) only on keyboard
+ * focus - except on a disabledInteractive button, which it paints on plain
+ * :focus. Resync is one, so after the resync dialog returned focus to it a
+ * mouse user got a grey button that stayed grey until they clicked somewhere
+ * else - a button that looked pressed for no reason. The other dialog openers
+ * (Adjust severity, Submit decision, Force unlock) were already fine.
+ *
+ * Same rule as the ring: the layer only on :focus-visible. A keyboard user
+ * still gets both; mouse and script focus get neither. Hover and press are
+ * untouched. Specificity is one class above Material's own rule, which is
+ * what the first attempt at this lacked.
+ */
+.mat-mdc-button-base.mat-mdc-button-disabled-interactive:focus:not(:focus-visible)
+  > .mat-mdc-button-persistent-ripple::before {
+  opacity: 0;
+}
+
 /* A radio's real control is a hidden input; put the ring on the visible
    button so the user sees what the browser focused. */
 .mat-mdc-radio-button:has(.mdc-radio__native-control:focus-visible) {
@@ -632,4 +695,15 @@ button .mat-icon,
   .mat-mdc-menu-content {
     padding: 0;
   }
+}
+
+/**
+ * Risk assessment field tooltips: what the field is, a blank line, then when
+ * it is a risk. Two paragraphs, so the line break is kept and the text is
+ * left-aligned like any other paragraph.
+ */
+.ra-tooltip .mdc-tooltip__surface {
+  white-space: pre-line;
+  text-align: left;
+  max-width: 280px;
 }

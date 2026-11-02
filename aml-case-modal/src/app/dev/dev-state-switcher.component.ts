@@ -55,15 +55,11 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
         <button
           mat-stroked-button
           type="button"
-          matTooltip="Rule 11 - inserts a system trigger and marks the snapshot out of sync"
+          matTooltip="A system trigger arrives: a workflow entry, and the next resync finds new values"
           (click)="store.simulateNewTrigger()"
         >
           <mat-icon>bolt</mat-icon>
           New trigger
-        </button>
-        <button mat-stroked-button type="button" [disabled]="!store.snapshotOutOfSync()" (click)="store.resync()">
-          <mat-icon>sync</mat-icon>
-          Resync
         </button>
         <button mat-stroked-button type="button" (click)="reload()">
           <mat-icon>restart_alt</mat-icon>

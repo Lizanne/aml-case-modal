@@ -241,9 +241,9 @@ check('green survives on the done chip and the lock band',
   ));
 
 console.log('\nBanners: 16px, top-aligned, 20px outlined icons');
+// The two out-of-sync banners went with rule 11's revision: a new trigger
+// raises no banner now.
 const BANNERS = [
-  ['10', 'player-info-panel .warn-note'],
-  ['10', 'workflow-panel .resync'],
   ['05', 'severity-dialog .warn-note'],
   ['06', 'decision-dialog .notice'],
   ['00b', 'confirm-unlock-dialog .danger-note'],
@@ -411,58 +411,32 @@ for (const [state, width] of [['01', 1440], ['09', 1500]]) {
   check(`${state}: which does not wrap`, new Set(h.centres).size === 1, h.centres.join(','));
 }
 
-console.log('\nOne Resync on screen while the out-of-sync notice is up');
+console.log('\nOne Resync on screen, always the Risk assessment\'s');
+/**
+ * Rule 12: Resync is always visible, in the Risk assessment header, whether
+ * or not a trigger has arrived. There is no notice any more to hold a second
+ * one, so the claim is simply one product Resync, live for the lock owner.
+ */
 await page.setViewportSize({ width: 1440, height: 1040 });
-for (const [state, noticeExpected] of [['10', true], ['01', false]]) {
+for (const state of ['10', '01']) {
   await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('player-info-panel', { timeout: 15000 });
+  await page.waitForSelector('risk-assessment', { timeout: 15000 });
   await page.waitForTimeout(600);
-  // The Snapshot tab is where the second Resync lives, so it has to be OPEN
-  // for this to be a real test - on any other tab it is simply not rendered
-  // and the check would pass for the wrong reason.
-  await page.click('player-info-panel .mat-mdc-tab:has-text("Snapshot")');
-  await page.waitForTimeout(500);
   const r = await page.evaluate(() => {
-    // dev-state-switcher has its own Resync. It is harness, not product, and
-    // counting it made a correct app look like it had two.
     const product = [...document.querySelectorAll('button')].filter(
       (b) => /Resync/i.test(b.textContent) && !b.closest('dev-state-switcher'),
     );
-    const notice = document.querySelector('workflow-panel .resync');
-    const noticeBtn = notice?.querySelector('button');
-    const icon = notice?.querySelector('mat-icon');
     return {
       count: product.length,
-      inNotice: product.filter((b) => b.closest('.resync')).length,
+      inHeader: product.filter((b) => b.closest('risk-assessment .ra-head')).length,
       enabled: product.filter((b) => !b.disabled).length,
-      notice: !!notice,
-      btnBg: noticeBtn ? getComputedStyle(noticeBtn).backgroundColor : null,
-      iconFont: icon ? getComputedStyle(icon).fontFamily : null,
-      iconBox: icon
-        ? `${Math.round(icon.getBoundingClientRect().width)}x${Math.round(icon.getBoundingClientRect().height)}`
-        : null,
-      // An unresolved ligature lays out the whole word "sync_problem", so its
-      // scrollWidth runs far past the 20px box. One glyph fits.
-      iconRenders: icon ? icon.scrollWidth <= 22 && icon.getBoundingClientRect().width === 20 : false,
+      notice: !!document.querySelector('workflow-panel .resync'),
     };
   });
-  check(`${state}: notice ${noticeExpected ? 'shown' : 'absent'}`, r.notice === noticeExpected);
-  check(`${state}: exactly one product Resync on screen`, r.count === 1, `${r.count}`);
-  if (noticeExpected) {
-    check(`${state}: the one Resync is the notice's`, r.inNotice === 1 && r.enabled === 1,
-      `inNotice=${r.inNotice} enabled=${r.enabled}`);
-    check(`${state}: it is the primary blue`, r.btnBg === PRIMARY, r.btnBg);
-    check(`${state}: the notice icon actually renders a glyph`, r.iconRenders,
-      `${r.iconBox} ${r.iconFont}`);
-    check(`${state}: and uses the outlined set`, /Outlined/.test(r.iconFont ?? ''), r.iconFont);
-  } else {
-    // In sync, so the notice is away and the snapshot tab owns the control.
-    // Enabled, not disabled: it follows the LOCK now, and these states are
-    // locked to you. What still holds either way is that there is exactly one
-    // Resync on screen, which the check above this asserts.
-    check(`${state}: the snapshot Resync is back, and live for the lock owner`,
-      r.inNotice === 0 && r.enabled === 1, `inNotice=${r.inNotice} enabled=${r.enabled}`);
-  }
+  check(`${state}: no out-of-sync notice`, !r.notice);
+  check(`${state}: exactly one product Resync, in the Risk assessment header`,
+    r.count === 1 && r.inHeader === 1, `${r.count}/${r.inHeader}`);
+  check(`${state}: live for the lock owner`, r.enabled === 1);
 }
 
 console.log('\nThe info tab header is 48px, tabs included');
@@ -1143,7 +1117,9 @@ const edgesIn = () =>
     }
     if (info) {
       const l = info.getBoundingClientRect().left;
-      at('snapshot label', '.snapshot-head__label', l);
+      at('risk assessment label', '.ra-head__label', l);
+      // The band bleeds to the panel edge; its LABEL is what sits on the gutter.
+      at('risk assessment section', '.ra-sec__label', l);
       at('snapshot stub', '.info__body > .placeholder', l);
       at('past row', '.past__id', l);
       at('timeline row', '.timeline__at', l);
@@ -1399,7 +1375,7 @@ for (const state of ['01', '09', '10']) {
 }
 // The two the request named, by name.
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('trigger-strip ui-pill', { timeout: 15000 });
+await page.waitForSelector('trigger-strip .trigger', { timeout: 15000 });
 await page.waitForTimeout(500);
 // Scoped, not text-matched across the page: the SG widget now carries a
 // "41 triggers hit" pill of its own, which a loose /triggers/ search finds
@@ -1476,113 +1452,49 @@ check('the count badge is 12px/16px', widgetCount?.fs === '12px' && widgetCount?
 // the row - its tint and its New badge - and rules.mjs is where that is
 // asserted, against an open case and a resolved one.
 
-console.log('\nThe snapshot header is one layout in both modes');
+console.log('\nThe Risk assessment header keeps the snapshot header\'s layout');
+/**
+ * The historical snapshot view went with View snapshot, so there is one mode
+ * now. What carries over is the header's geometry: a small label over a bold
+ * stamp, the one control hard right and centred, and a 40px floor.
+ */
 await page.setViewportSize({ width: 1440, height: 1040 });
-const snapHead = async (state) => {
-  await page.goto(`${BASE}/?state=${state}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.snapshot-head', { timeout: 15000 });
-  await page.waitForTimeout(450);
-  return page.evaluate(() => {
-    const h = document.querySelector('.snapshot-head');
-    const R = (e) => e.getBoundingClientRect();
-    const label = h.querySelector('.snapshot-head__label');
-    const value = h.querySelector('.snapshot-head__value');
-    const ctrl = h.querySelector('button');
-    const after = document.querySelector('.placeholder');
-    return {
-      height: Math.round(R(h).height),
-      label: label.textContent.trim(),
-      value: value.textContent.trim(),
-      labelSize: getComputedStyle(label).fontSize,
-      valueSize: getComputedStyle(value).fontSize,
-      valueWeight: getComputedStyle(value).fontWeight,
-      // Both lines single-line in both modes, or the fixed height is a lie.
-      lines: [Math.round(R(label).height), Math.round(R(value).height)],
-      control: ctrl ? ctrl.textContent.replace(/\s+/g, ' ').trim() : null,
-      controlName: ctrl ? (ctrl.getAttribute('aria-label') ?? ctrl.textContent.trim()) : null,
-      controlIsMaterial: ctrl ? ctrl.classList.contains('mat-mdc-button-base') : null,
-      controlDisabled: ctrl ? ctrl.disabled : null,
-      controlRightInset: ctrl ? Math.round(R(h).right - R(ctrl).right) : null,
-      controlCentred: ctrl
-        ? Math.abs((R(ctrl).top - R(h).top) - (R(h).bottom - R(ctrl).bottom)) <= 1
-        : null,
-      // What sits below the header must start at the same place in both modes.
-      contentOffset: after ? Math.round(R(after).top - R(h).top) : null,
-      hasOldBanner: !!document.querySelector('player-info-panel .banner'),
-    };
-  });
-};
-
-const current = await snapHead('01');
-const historical = await snapHead('04');
-
-check('current: label over a bold timestamp',
-  current.label === 'Snapshot generated' && current.labelSize === '12px' &&
-    current.valueSize === '14px' && current.valueWeight === '600',
-  `${current.label} / ${current.value} ${current.valueSize} w${current.valueWeight}`);
-check('current: the control is Resync', /Resync/.test(current.control ?? ''), current.control);
-// Resync belongs to the lock owner, not to the snapshot being stale. It was
-// hardcoded disabled here, which made it a label shaped like a button - taking
-// a fresh snapshot is something you may simply want to do. State 01 is locked
-// to you, so it is live.
-check('current: Resync is enabled for the lock owner', current.controlDisabled === false,
-  String(current.controlDisabled));
-
-check('historical: label names the source action',
-  historical.label === 'Snapshot from Open source searches', historical.label);
-check('historical: timestamp reads "Captured ..."',
-  /^Captured \d{1,2} \w+ \d{4}, \d{2}:\d{2}$/.test(historical.value), historical.value);
-check('historical: the control is a text Back with a chevron',
-  /^chevron_left Back$/.test(historical.control ?? '') &&
-    historical.controlIsMaterial === false,
-  `${historical.control} material=${historical.controlIsMaterial}`);
-// "Back" alone does not say where to, so the full sentence lives on the label.
-check('historical: the short label keeps a full accessible name',
-  historical.controlName === 'Back to current snapshot', historical.controlName);
-
-const LINK = await tokenRgb('--link');
-const LINK_HOVER = await tokenRgb('--link-hover');
-const backStyle = () =>
-  page.evaluate(() => {
-    const btn = document.querySelector('.snapshot-head__back');
-    const icon = btn.querySelector('mat-icon');
-    return {
-      colour: getComputedStyle(btn).color,
-      iconColour: getComputedStyle(icon).color,
-      underline: getComputedStyle(btn).textDecorationLine,
-    };
-  });
-const backRest = await backStyle();
-check('historical: label and chevron share the link colour',
-  backRest.colour === LINK && backRest.iconColour === LINK,
-  `${backRest.colour} / ${backRest.iconColour}`);
-await page.hover('.snapshot-head__back');
-await page.waitForTimeout(250);
-const backHover = await backStyle();
-// mat-icon sets its own colour, so a hover rule on the button alone leaves the
-// chevron behind at the rest colour.
-check('historical: both deepen together on hover',
-  backHover.colour === LINK_HOVER && backHover.iconColour === LINK_HOVER,
-  `${backHover.colour} / ${backHover.iconColour}`);
-check('historical: no underline, at rest or on hover',
-  backRest.underline === 'none' && backHover.underline === 'none',
-  `${backRest.underline} / ${backHover.underline}`);
-check('the tinted banner is gone', !historical.hasOldBanner);
-
-// The whole point of the shared layout.
-check('both modes are exactly the same height',
-  current.height === historical.height, `${current.height} vs ${historical.height}`);
-check('both put the control hard right',
-  current.controlRightInset === 0 && historical.controlRightInset === 0,
-  `${current.controlRightInset} / ${historical.controlRightInset}`);
-check('both centre the control against the text column',
-  current.controlCentred && historical.controlCentred);
-check('both keep the label and timestamp to one line each',
-  current.lines.concat(historical.lines).every((h) => h <= 21),
-  `${current.lines.join(',')} / ${historical.lines.join(',')}`);
-check('what follows the header does not move between modes',
-  current.contentOffset === historical.contentOffset,
-  `${current.contentOffset} vs ${historical.contentOffset}`);
+await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('risk-assessment .ra-head', { timeout: 15000 });
+await page.waitForTimeout(450);
+const raHead = await page.evaluate(() => {
+  const h = document.querySelector('risk-assessment .ra-head');
+  const R = (e) => e.getBoundingClientRect();
+  const label = h.querySelector('.ra-head__label');
+  const value = h.querySelector('.ra-head__value');
+  const ctrl = h.querySelector('button');
+  return {
+    height: Math.round(R(h).height),
+    label: label.textContent.trim(),
+    labelSize: getComputedStyle(label).fontSize,
+    valueSize: getComputedStyle(value).fontSize,
+    valueWeight: getComputedStyle(value).fontWeight,
+    lines: [Math.round(R(label).height), Math.round(R(value).height)],
+    control: ctrl ? ctrl.textContent.replace(/\s+/g, ' ').trim() : null,
+    controlDisabled: ctrl ? ctrl.disabled : null,
+    controlRightInset: ctrl ? Math.round(R(h).right - R(ctrl).right) : null,
+    controlCentred: ctrl
+      ? Math.abs((R(ctrl).top - R(h).top) - (R(h).bottom - R(ctrl).bottom)) <= 1
+      : null,
+    hasSnapshot: !!document.querySelector('.snapshot-head, .snapshot-head__back'),
+  };
+});
+check('label over a bold timestamp',
+  raHead.label === 'Generated' && raHead.labelSize === '12px' &&
+    raHead.valueSize === '14px' && raHead.valueWeight === '600',
+  `${raHead.label} ${raHead.valueSize} w${raHead.valueWeight}`);
+check('the control is Resync, live for the lock owner',
+  /Resync/.test(raHead.control ?? '') && raHead.controlDisabled === false, raHead.control);
+check('it sits hard right, centred', raHead.controlRightInset === 0 && raHead.controlCentred,
+  `${raHead.controlRightInset}`);
+check('the 40px floor holds', raHead.height >= 40, `${raHead.height}`);
+check('label and timestamp one line each', raHead.lines.every((h) => h <= 21), raHead.lines.join(','));
+check('no historical snapshot view left anywhere', !raHead.hasSnapshot);
 
 console.log('\nEvery close and minimise control is one size');
 // These lived in four components at three different button sizes and two icon
@@ -1851,7 +1763,8 @@ for (const state of ['01', '03', '05', '07', '10', '11']) {
   rows.forEach((r) => pills.set(r.key + r.bg, r));
 }
 const P = [...pills.values()];
-check('pills are rendered at all', P.length >= 8, String(P.length));
+// 7, not 8: the amber New badge no longer appears in the case modal (rule 11).
+check('pills are rendered at all', P.length >= 7, String(P.length));
 /**
  * Two sizes now, so the metric assertions are per size.
  *
@@ -2286,7 +2199,7 @@ check('there is no header above it', scrolled.noBar);
 check('the divider moved with the rows', scrolled.moved < 0, `moved ${scrolled.moved}px`);
 check('and is not pinned', scrolled.position === 'static', scrolled.position);
 
-console.log('\nTrigger rows align, highlighted row included');
+console.log('\nTrigger rows align');
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.setViewportSize({ width: 1180, height: 1000 });
 await page.goto(`${BASE}/?state=10`, { waitUntil: 'networkidle' });
@@ -2332,80 +2245,12 @@ if (cols.stacked) {
 } else {
   check('all rows share the same column edges', new Set(cols.edges).size === 1);
 }
-check('the NEW row is one of them', (await page.locator('trigger-strip .trigger--new').count()) === 1);
-check('the NEW row aligns with the rest', await page.evaluate((expect) => {
-  const r = document.querySelector('trigger-strip .trigger--new');
-  const L = (e) => Math.round(e.getBoundingClientRect().left);
-  return expect.stacked
-    ? L(r.querySelector('.cell--name')) === expect.nameLeft &&
-        L(r.querySelector('.cell--detail')) === expect.detailLeft
-    : [...r.querySelectorAll('.cell')].map(L).join(',') === expect.edges;
-}, { stacked: cols.stacked, nameLeft: cols.nameLefts[0], detailLeft: cols.detailLefts[0], edges: cols.edges[0] }));
-/**
- * The highlight covers the row with no seams in it, however the row is built.
- *
- * Grid rows have no box of their own - display: contents - so the tint has to
- * be painted on each of the three cells, and the check is that all three carry
- * it and butt up against each other. A stacked row IS a box, so the tint goes
- * on the row and the cells stay transparent; there are no seams to look for,
- * and requiring tinted cells there would fail on the layout that cannot have
- * the bug.
- */
-check('the highlight paints the full row width, no gaps', await page.evaluate(() => {
-  const row = document.querySelector('trigger-strip .trigger--new');
-  const opaque = (e) => getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)';
-  if (getComputedStyle(document.querySelector('trigger-strip .strip__list')).display === 'block') {
-    return opaque(row) && Math.round(row.getBoundingClientRect().width) ===
-      Math.round(row.parentElement.getBoundingClientRect().width);
-  }
-  const cells = [...row.querySelectorAll('.cell')];
-  if (cells.length !== 3) return false;
-  const boxes = cells.map((c) => c.getBoundingClientRect());
-  return cells.every(opaque) &&
-    boxes.every((b, i) => i === 0 || Math.abs(b.left - (boxes[i - 1].left + boxes[i - 1].width)) < 1);
-}));
-
-console.log('\nThe NEW badge sits with the name, not the timestamp');
-const badge = await page.evaluate(() => {
-  const row = document.querySelector('trigger-strip .trigger--new');
-  if (!row) return null;
-  const name = row.querySelector('.cell--name');
-  const label = row.querySelector('.cell__label');
-  const b = row.querySelector('ui-pill[data-tone="warn-solid"]');
-  const meta = row.querySelector('.cell--meta');
-  const time = row.querySelector('.cell__at');
-  const br = b.getBoundingClientRect();
-  const lr = label.getBoundingClientRect();
-  return {
-    inColumn1: name.contains(b),
-    inMeta: meta.contains(b),
-    gap: Math.round(br.left - lr.right),
-    afterName: br.left >= lr.right - 1,
-    tag: b.tagName,
-    rowFs: parseFloat(getComputedStyle(row.querySelector('.cell')).fontSize),
-    badgeFs: parseFloat(getComputedStyle(b).fontSize),
-    radius: getComputedStyle(b).borderTopLeftRadius,
-    metaOnlyHasTime: [...meta.children].every((c) => c.tagName === 'TIME'),
-    timeFlushRight:
-      Math.round(meta.getBoundingClientRect().right - time.getBoundingClientRect().right) <= 20,
-    centred: Math.abs(br.top + br.height / 2 - (lr.top + lr.height / 2)) < 1.5,
-  };
-});
-check('the highlighted row exists to test', !!badge);
-check('badge is in column 1 with the name', badge.inColumn1 && !badge.inMeta);
-check('badge follows the name', badge.afterName);
-check('6px gap between name and badge', badge.gap === 6, `${badge.gap}px`);
-check('badge is the shared pill component', badge.tag === 'UI-PILL');
-check('badge is fully rounded like every other pill', badge.radius === '999px', badge.radius);
-// One component, two sizes, and the size follows the SURFACE: sm for widget
-// and list rows, md for the panel header. A trigger row is a list row, so the
-// badge takes sm - 12px - and sits a step below the 14px row text. It briefly
-// carried md while the pill was being unified; that was the transition, not
-// the rule.
-check('badge takes the sm pill type, per list-row sizing', badge.badgeFs === 12, String(badge.badgeFs));
-check('badge is vertically centred on the name', badge.centred);
-check('timestamp column holds nothing but the time', badge.metaOnlyHasTime);
-check('timestamp stays right-aligned', badge.timeFlushRight);
+// Rule 11, revised: the case modal flags no arrival - no tint, no New badge.
+// The badge still exists for the cases table's trigger popover, and
+// table.mjs is where its placement is asserted.
+check('no row is highlighted in the case modal',
+  (await page.locator('aml-case-modal trigger-strip .trigger--new').count()) === 0 &&
+  (await page.locator('aml-case-modal trigger-strip ui-pill[data-tone="warn-solid"]').count()) === 0);
 
 /**
  * Sorted by TIMESTAMP, not by array order - which is the bug this pins. The

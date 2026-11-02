@@ -97,9 +97,12 @@ check('save is enabled once the note has content, with no further choice needed'
   await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
-check('one chip done, one still pending',
-  (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 1 &&
-  (await page.locator('required-chips ui-pill[data-tone="outline"]').count()) === 1);
+// Four required now: both assessments, the contact and Finalize.
+// Assessment chips are the field's risk status pill; Contact and Finalize keep
+// the pending / done pill. "Done" for an assessment is No risk or Risk flagged.
+const chipsPending = () => page.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count();
+const chipsDone = () => page.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count();
+check('one chip done, three still pending', (await chipsDone()) === 1 && (await chipsPending()) === 3);
 check('rule 6: saved card has no edit control',
   (await page.locator('outcome-card button:has-text("Edit")').count()) === 0);
 check('rule 6: saved attachments have no remove control',
@@ -117,28 +120,18 @@ await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
 check('extra note saved as an ordinary card', (await page.locator('outcome-card').count()) === 2);
 check('extra note did not satisfy the outstanding requirement',
-  (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 1);
+  (await chipsDone()) === 1);
 check('submit still disabled', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
-check('placeholder for the outstanding action remains',
-  (await page.locator('action-placeholder').count()) === 1);
+check('placeholders for the outstanding actions remain',
+  (await page.locator('action-placeholder').count()) === 3);
 
-console.log('\nRule 11 - a mid-case trigger blocks recording until resync');
+console.log('\nRule 11, revised - a mid-case trigger is recorded and blocks nothing');
 await page.locator('dev-state-switcher button:has-text("New trigger")').click();
 await page.waitForTimeout(250);
-check('snapshot flagged out of sync', (await page.locator('workflow-panel .resync').count()) === 1);
-check('recording blocked', await page.locator('action-placeholder button').first().isDisabled());
-/**
- * Rule 11 holds by construction in BOTH modes, by opposite routes.
- *
- * The strip reads oldest to newest in both modes, so an arrival - being by
- * definition the most recent - is the LAST row either way. It cannot be among
- * the rows the collapsed strip withholds; there is no mode in which it goes
- * missing.
- *
- * The amber count chip that used to carry it as a second signal went with the
- * header. The row's own highlight and its New badge are the whole of it here,
- * so those are what this checks.
- */
+check('no out-of-sync banner', (await page.locator('workflow-panel .resync').count()) === 0);
+check('recording not blocked', await page.locator('action-placeholder button').first().isEnabled());
+check('a workflow entry with a warning icon',
+  (await page.locator('event-row:has-text("New trigger added") mat-icon.row__icon--warn').count()) === 1);
 check('collapsed: the strip has no header to carry a count',
   (await page.locator('trigger-strip .strip__bar').count()) === 0);
 check('collapsed: exactly two rows, oldest then newest', await page.evaluate(() => {
@@ -146,13 +139,10 @@ check('collapsed: exactly two rows, oldest then newest', await page.evaluate(() 
   return at.length === 2 && at[0] < at[1];
 }));
 check('collapsed: the arrival is the second - the newest - row',
-  (await page.locator('trigger-strip .trigger').last().getAttribute('class')).includes('trigger--new'));
-check('collapsed: exactly one row is marked',
-  (await page.locator('trigger-strip .trigger--new').count()) === 1);
-// The pair spans the history rather than sampling the top of it: with the
-// middle withheld, the two rows must be the actual ends of the case.
-// The total is not rendered anywhere now, so it comes from the divider, which
-// names exactly what it is withholding: two anchors plus N remaining.
+  (await page.locator('trigger-strip .trigger').last().innerText()).includes('System - Threshold'));
+check('no row is marked: a new trigger is not amber any more',
+  (await page.locator('trigger-strip .trigger--new').count()) === 0 &&
+  (await page.locator('trigger-strip ui-pill[data-tone="warn-solid"]').count()) === 0);
 check('collapsed: the two rows are the ends of the whole case', await page.evaluate(() => {
   const shown = [...document.querySelectorAll('trigger-strip .cell__at')].length;
   const hidden = Number(
@@ -167,39 +157,17 @@ check('collapsed: it does not scroll - what it withholds is absent, not hidden',
   }));
 await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(400);
-/**
- * ONE DIRECTION, both modes: oldest to newest.
- *
- * This asserted newest-first when expanded, which made the arrival the top row
- * open and the bottom row closed - so expanding moved both anchors past each
- * other. The strip reads forwards now in either mode, and expanding only adds
- * the middle back between two rows that never move.
- */
 check('expanded: oldest first, arrival still last', await page.evaluate(() => {
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
   const at = [...document.querySelectorAll('trigger-strip .cell__at')].map((t) => Date.parse(t.getAttribute('datetime')));
   const ascending = at.every((v, i) => i === 0 || at[i - 1] <= v);
-  return ascending && rows[rows.length - 1].className.includes('trigger--new');
+  return ascending && rows[rows.length - 1].textContent.includes('System - Threshold');
 }));
-// The anchors are the same two rows in both modes - that is what the divider
-// between them is for.
-check('expanded: the anchors are the ones the collapsed pair showed',
-  await page.evaluate(() => {
-    const at = [...document.querySelectorAll('trigger-strip .cell__at')]
-      .map((t) => t.getAttribute('datetime'));
-    return { first: at[0], last: at[at.length - 1] };
-  }).then((v) => !!v.first && !!v.last && v.first < v.last));
-// Every trigger is in the DOM; five of them are on screen. That is what keeps
-// the strip from pushing the workflow down the page.
 check('expanded: the whole history is rendered, five rows shown', await page.evaluate(() => {
   const el = document.querySelector('trigger-strip .strip__list');
   const rows = [...document.querySelectorAll('trigger-strip .trigger')];
-  // Two anchors plus what the divider says it is hiding.
   const total =
     2 + Number(document.querySelector('trigger-strip .strip__gap-count').textContent.trim());
-  // Average row, not .cell: .trigger has no box in the grid layout and .cell
-  // is a single line once the strip stacks in its column, so only the average
-  // is a row height in both.
   const rowH = el.scrollHeight / rows.length;
   return rows.length === total &&
     Math.round(el.clientHeight / rowH) === 5 &&
@@ -208,35 +176,49 @@ check('expanded: the whole history is rendered, five rows shown', await page.eva
 await page.locator('trigger-strip .strip__gap').click();
 await page.waitForTimeout(300);
 
-// Open question 2: a draft open when the trigger lands survives, Save does not.
-await page.locator('workflow-panel .resync button:has-text("Resync")').click();
-await page.waitForTimeout(250);
-check('after resync: recording allowed again', await page.locator('action-placeholder button').first().isEnabled());
-// No chip to clear any more - the New BADGE on the row is the signal, and it
-// is what a resync has to take away.
-check('after resync: the New badge is gone from every row',
-  (await page.locator('trigger-strip ui-pill[tone="warn-solid"]').count()) === 0);
-check('after resync: NEW highlight cleared on the rows',
-  (await page.locator('trigger-strip .trigger--new').count()) === 0);
+console.log('\nRule 12 - resync asks, overlays, then applies its rules');
+await page.locator('risk-assessment .ra-head__resync').click();
+await page.waitForTimeout(200);
+check('it asks first', (await page.locator('resync-dialog').count()) === 1);
+await page.locator('resync-dialog button.confirm').click();
+await page.waitForTimeout(200);
+check('the section is overlaid', (await page.locator('risk-assessment .ra-overlay').count()) === 1);
+await page.waitForTimeout(1800);
+check('Resync completed is in the workflow', (await page.locator('event-row:has-text("Resync completed")').count()) === 1);
+check('two more required assessments',
+  (await chipsPending()) === 5);
 
-console.log('\nOpen question 2 - a trigger landing mid-draft preserves the draft');
+console.log('\nOpen question 2 - a trigger landing mid-draft preserves the draft, and Save');
 await page.locator('action-placeholder button').first().click();
 await page.waitForTimeout(200);
-await fillForm({ note: 'Half-written search notes.', lockChoice: 'Keep the case locked' });
+await fillForm({ note: 'Half-written notes.', lockChoice: 'Keep the case locked' });
+await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
 await page.locator('dev-state-switcher button:has-text("New trigger")').click();
 await page.waitForTimeout(250);
 check('draft still open', (await page.locator('record-form form').count()) === 1);
-check('draft text preserved', (await page.locator('record-form textarea').inputValue()) === 'Half-written search notes.');
-check('save withheld', await page.locator('record-form button:has-text("Save outcome")').isDisabled());
-check('form states the reason', (await page.locator('record-form .warn-note').innerText()).includes('Resync required'));
-await page.locator('workflow-panel .resync button:has-text("Resync")').click();
+check('draft text preserved', (await page.locator('record-form textarea').inputValue()) === 'Half-written notes.');
+check('save still available', await page.locator('record-form button:has-text("Save assessment")').isEnabled());
+check('no resync warning on the form', (await page.locator('record-form .warn-note').count()) === 0);
+await page.locator('record-form button:has-text("Save assessment")').click();
 await page.waitForTimeout(250);
-check('save re-enabled after resync', await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 
-console.log('\nRules 4 and 9 - both recorded unlocks submit; submitting resolves');
-await page.locator('record-form button:has-text("Save outcome")').click();
+console.log('\nRules 4, 13, 14 and 9 - assess the rest, finalize, then submit');
+for (let i = 0; i < 6 && (await page.locator('action-placeholder[data-key^="assess:"] button').count()); i++) {
+  await page.locator('action-placeholder[data-key^="assess:"] button').first().click();
+  await page.waitForTimeout(200);
+  await fillForm({ note: 'Reviewed.' });
+  await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
+  await page.waitForTimeout(100);
+  await page.locator('record-form button:has-text("Save assessment")').click();
+  await page.waitForTimeout(250);
+}
+check('submit still disabled before Finalize', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
+await page.locator('action-placeholder:has-text("Finalize risk assessment") button').click();
+await page.waitForTimeout(200);
+await fillForm({ note: 'Overall: enhanced monitoring.' });
+await page.locator('record-form button:has-text("Finalize")').click();
 await page.waitForTimeout(250);
-check('both chips done', (await page.locator('required-chips ui-pill[data-tone="success"]').count()) === 2);
+check('every chip done', (await chipsPending()) === 0);
 check('no placeholders left', (await page.locator('action-placeholder').count()) === 0);
 check('submit now enabled', await page.locator('.footer button:has-text("Submit decision")').isEnabled());
 await page.locator('.footer button:has-text("Submit decision")').click();
@@ -255,14 +237,9 @@ check('no footer', (await page.locator('workflow-panel .footer').count()) === 0)
 check('no add action', (await page.locator('add-action-menu').count()) === 0);
 check('no lock control', (await page.locator('case-header button:has-text("Lock")').count()) === 0);
 check('tabs reduced to two', (await page.locator('player-info-panel .mat-mdc-tab').count()) === 2);
-check('no snapshot selected', (await page.locator('player-info-panel .empty').innerText()).includes('No snapshot selected'));
-await page.locator('outcome-card').first().locator('button:has-text("View snapshot")').click();
-await page.waitForTimeout(250);
-// The historical view is the shared snapshot header, whose label names the
-// action the snapshot came from.
-check('View snapshot fills the left panel',
-  (await page.locator('player-info-panel .snapshot-head__back').count()) === 1 &&
-    (await page.locator('player-info-panel .snapshot-head__label').innerText()).startsWith('Snapshot from '));
+check('the risk assessment is shown as finalized', (await page.locator('risk-assessment .ra-final').count()) === 1);
+check('no status can be clicked', (await page.locator('risk-assessment risk-status button').count()) === 0);
+check('no View snapshot on any card', (await page.locator('outcome-card button:has-text("snapshot")').count()) === 0);
 
 console.log('\nRule 8 - severity change applies everywhere and lifts the lock');
 await go('03');
@@ -303,9 +280,9 @@ check('the lock lift did not add a stream event',
   (await page.locator('event-row:has(ui-pill)').count()) === 2);
 // The stream may carry exactly two kinds of event: the case's own creation,
 // once and at the head, and severity changes. Anything else is a regression.
-check('every stream event is a severity change or the case creation', await page.evaluate(() =>
+check('every stream event is a known kind', await page.evaluate(() =>
   [...document.querySelectorAll('event-row')].every((e) =>
-    /Severity (escalation|de-escalation)|Manual case created - (Referral|OGMS|CCMM)/.test(e.textContent)),
+    /Severity (escalation|de-escalation)|Manual case created - (Referral|OGMS|CCMM)|New trigger added - |Resync completed/.test(e.textContent)),
 ));
 check('the creation event appears once, at the head of the stream', await page.evaluate(() => {
   const rows = [...document.querySelectorAll('.stream > event-row')];
@@ -366,13 +343,15 @@ const arrival = () =>
     };
   });
 
-// Control: an OPEN case must show the arrival, or the test below proves nothing.
+// Control: an OPEN case records the arrival - as a workflow entry, not amber.
 await go('01');
+const openBefore = await arrival();
 await page.locator('dev-state-switcher button:has-text("New trigger")').click();
 await page.waitForTimeout(400);
 const openArrival = await arrival();
-check('open case shows the arrival (control)',
-  openArrival.rows === 1 && openArrival.markers === 1, JSON.stringify(openArrival));
+check('open case records the arrival (control)',
+  openArrival.count === openBefore.count + 1 && openArrival.rows === 0 && openArrival.markers === 0 &&
+  (await page.locator('event-row:has-text("New trigger added")').count()) === 1, JSON.stringify(openArrival));
 
 // Force an arrival onto a RESOLVED case: the data changes, the signal must not.
 await go('07');

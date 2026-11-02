@@ -4,6 +4,7 @@
  * Business rule references (rule N) map to PROTOTYPE.md "Business rules".
  */
 import mockCases from './mock-cases.json';
+import { RiskAnswer, RiskStatus } from './risk-assessment';
 
 /** Rule 2. IDLE appears in the spec but is undefined there (open question 1) - not implemented. */
 export type CaseStatus = 'OPEN' | 'RESOLVED';
@@ -106,20 +107,27 @@ export function lockStatusLine(
  */
 export const NOT_LOCKED_HINT = 'Not locked. Lock the case to record outcomes.';
 
+/**
+ * 'assess-risk' records the agent's risk on ONE Risk assessment field; the
+ * field is carried on the draft and the outcome. It replaced
+ * 'open-source-searches', which is now the assessment of that field.
+ * 'finalize-risk-assessment' closes the assessment and gates the decision.
+ */
 export type ActionTypeId =
-  | 'open-source-searches'
+  | 'assess-risk'
+  | 'finalize-risk-assessment'
   | 'player-contact'
   | 'note'
   | 'decision';
 
 /**
- * Rule 4. The two mandatory actions. Order is presentation order only -
- * they are completable in ANY order and Submit checks set membership.
+ * Rule 4. The required actions that are not risk assessments. Order is
+ * presentation order only - they are completable in ANY order and Submit
+ * checks set membership. The required ASSESSMENTS are derived from the Risk
+ * assessment section (every field that is or was Action required), and
+ * Finalize risk assessment closes the list.
  */
-export const REQUIRED_ACTIONS: readonly ActionTypeId[] = [
-  'open-source-searches',
-  'player-contact',
-] as const;
+export const REQUIRED_ACTIONS: readonly ActionTypeId[] = ['player-contact'] as const;
 
 /** Rule 5, open question 5. Single source of truth for the per-file size cap. */
 export const ATTACHMENT_MAX_MB = 10;
@@ -272,7 +280,7 @@ export interface AttachmentError {
   message: string;
 }
 
-/** Rule 6. Immutable once saved; carries its own snapshot reference. */
+/** Rule 6. Immutable once saved. */
 export interface OutcomeItem {
   kind: 'outcome';
   id: string;
@@ -282,7 +290,50 @@ export interface OutcomeItem {
   at: string;
   note: string;
   attachments: Attachment[];
-  snapshotAt: string;
+  /** An 'assess-risk' outcome: which field, what the agent decided, and what it was before. */
+  assessment?: { fieldId: string; fieldLabel: string; risk: RiskAnswer; previous: RiskStatus };
+  /** A 'finalize-risk-assessment' outcome: each section's result as it stood. */
+  finalized?: SectionRisk[];
+}
+
+/** One row of the finalize table. A section is a risk if any field in it is. */
+export interface SectionRisk {
+  section: string;
+  risk: boolean;
+}
+
+/**
+ * A trigger arriving while the case is open. It no longer blocks anything or
+ * forces a refresh: it is recorded in the workflow, and the next resync picks
+ * up whatever it changed.
+ */
+export interface TriggerAddedEvent {
+  kind: 'event';
+  id: string;
+  type: 'trigger-added';
+  name: string;
+  detail: string;
+  actor: string;
+  at: string;
+}
+
+/**
+ * The result of a resync. Labels, not ids, for the copy: the entry is a
+ * record of what was true when it ran, so it carries the words it was
+ * written with. The ids are what the Risk assessment derives status from.
+ */
+export interface ResyncCompletedEvent {
+  kind: 'event';
+  id: string;
+  type: 'resync-completed';
+  /** Every field whose value changed. Empty means no changes. */
+  updated: string[];
+  /** The ids of fields whose RISK changed too; these went back to Action required. */
+  riskChangedIds: string[];
+  /** Their labels, for the entry's copy. */
+  riskChanged: string[];
+  actor: string;
+  at: string;
 }
 
 export interface SeverityChangeEvent {
@@ -338,7 +389,11 @@ export interface CaseCreatedEvent {
  * the workflow stream carries outcomes (including the decision), severity
  * changes and the case's own creation, and nothing else.
  */
-export type EventItem = SeverityChangeEvent | CaseCreatedEvent;
+export type EventItem =
+  | SeverityChangeEvent
+  | CaseCreatedEvent
+  | TriggerAddedEvent
+  | ResyncCompletedEvent;
 export type StreamItem = OutcomeItem | EventItem;
 
 export interface TimelineEntry {
@@ -377,16 +432,22 @@ export interface Draft {
   attempted: boolean;
   /** True when the form replaced a required-action placeholder. */
   fromPlaceholder: boolean;
+  /** 'assess-risk' only: the field being assessed. */
+  riskFieldId?: string | null;
+  /** 'assess-risk' only: the agent's answer. Null until chosen. */
+  risk?: RiskAnswer | null;
+  /** Scroll the form into view and focus its note. Set on open from a status, and again when a start is refused. */
+  reveal?: boolean;
+  /**
+   * The field whose status opened this form. Focus goes back to that status
+   * when the form is saved or cancelled, so a keyboard user lands where they
+   * started rather than at the top of the page.
+   */
+  returnTo?: string | null;
 }
 
-export type DialogId = 'severity' | 'decision' | 'confirm-unlock' | null;
-export type InfoTab = 'snapshot' | 'past-cases' | 'starred' | 'timeline';
-
-export interface SnapshotView {
-  outcomeId: string;
-  title: string;
-  at: string;
-}
+export type DialogId = 'severity' | 'decision' | 'confirm-unlock' | 'resync' | null;
+export type InfoTab = 'risk' | 'past-cases' | 'starred' | 'timeline';
 
 export const SEVERITY_LABEL: Record<Severity, string> = {
   AML: 'AML',
@@ -399,8 +460,8 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
  * labels do not fit on one row (Figma frame 09).
  */
 export const SHORT_ACTION_LABEL: Partial<Record<ActionTypeId, string>> = {
-  'open-source-searches': 'Searches',
   'player-contact': 'Contact',
+  'finalize-risk-assessment': 'Finalize',
 };
 
 export function isOutcome(item: StreamItem): item is OutcomeItem {
@@ -417,6 +478,10 @@ export function isSeverityChange(item: StreamItem): item is SeverityChangeEvent 
 
 export function isCaseCreated(item: StreamItem): item is CaseCreatedEvent {
   return item.kind === 'event' && item.type === 'case-created';
+}
+
+export function isResyncCompleted(item: StreamItem): item is ResyncCompletedEvent {
+  return item.kind === 'event' && item.type === 'resync-completed';
 }
 
 /**

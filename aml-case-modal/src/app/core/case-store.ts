@@ -25,26 +25,176 @@ import {
   Player,
   REQUIRED_ACTIONS,
   SHORT_ACTION_LABEL,
+  ResyncCompletedEvent,
+  SectionRisk,
   Severity,
-  SnapshotView,
   StarredCommentary,
   StreamItem,
   TimelineEntry,
   Trigger,
+  TriggerAddedEvent,
   isOutcome,
+  isResyncCompleted,
   severityDirection,
 } from './models';
+import {
+  GENERATIONS,
+  RISK_FIELDS,
+  RISK_SECTIONS,
+  RISK_STATUS_LABEL,
+  RiskAnswer,
+  RiskFieldDef,
+  RiskStatus,
+  joinLabels,
+  riskFieldDef,
+  sameValue,
+} from './risk-assessment';
 
-/** Why recording is currently impossible. `null` means the agent may record. */
-export type RecordBlock = 'resolved' | 'unlocked' | 'locked-to-other' | 'out-of-sync' | null;
+/**
+ * Why recording is currently impossible. `null` means the agent may record.
+ *
+ * 'out-of-sync' is gone: a new trigger no longer blocks recording. It is
+ * written into the workflow, and the next resync picks up what it changed.
+ */
+export type RecordBlock = 'resolved' | 'unlocked' | 'locked-to-other' | null;
 
 export interface RequiredActionState {
-  id: ActionTypeId;
+  /** Unique per item: 'assess:<field id>', the action type, or 'finalize'. */
+  key: string;
+  actionType: ActionTypeId;
+  /** The Risk assessment field, for an assessment. */
+  fieldId: string | null;
   label: string;
   /** Abbreviated form, used by the narrow / dual-modal layout. */
   shortLabel: string;
   done: boolean;
   recordedAt: string | null;
+  /**
+   * An assessment's current status, so the chip and the placeholder can show
+   * the same pill the Risk assessment row shows. Null for the other items.
+   */
+  status: RiskStatus | null;
+  /**
+   * Whether it can be started yet. False only for Finalize risk assessment
+   * while any field is still Action required: it stays in view, disabled.
+   */
+  available: boolean;
+}
+
+/** One field of the Risk assessment section, as it stands now. */
+export interface RiskFieldState {
+  def: RiskFieldDef;
+  value: string[];
+  status: RiskStatus;
+  /** Set when the agent's assessment is what the status says. */
+  assessedBy: string | null;
+  assessedAt: string | null;
+  /**
+   * A required assessment: manual fields always, plus any field a resync sent
+   * back to Action required. Once required, it stays on the list - done or not.
+   */
+  required: boolean;
+}
+
+/** How long the simulated resync takes. Long enough to read the overlay. */
+export const RESYNC_MS = 1500;
+
+/**
+ * The Risk assessment, derived - never stored field by field.
+ *
+ * The current generation supplies the values and the system's risk. The
+ * stream is then replayed in order: an agent's assessment sets a field's
+ * status, and a resync that changed a field's risk sends it back to Action
+ * required. Deriving it means a seeded stream and a recorded one produce the
+ * same panel, and the panel cannot disagree with the workflow beside it.
+ */
+export function deriveRiskFields(generation: number, stream: StreamItem[]): RiskFieldState[] {
+  const readings = GENERATIONS[Math.min(generation, GENERATIONS.length - 1)];
+  const state = new Map<string, RiskFieldState>(
+    RISK_FIELDS.map((def) => {
+      const reading = readings[def.id];
+      const status: RiskStatus = def.informational
+        ? 'informational'
+        : def.manual
+          ? 'action-required'
+          : (reading.systemRisk ?? 'action-required');
+      return [
+        def.id,
+        { def, value: reading.value, status, assessedBy: null, assessedAt: null, required: !!def.manual },
+      ];
+    }),
+  );
+  for (const item of stream) {
+    if (isOutcome(item) && item.assessment) {
+      const field = state.get(item.assessment.fieldId);
+      if (!field) continue;
+      field.status = item.assessment.risk;
+      field.assessedBy = item.actor;
+      field.assessedAt = item.at;
+    } else if (isResyncCompleted(item)) {
+      for (const id of item.riskChangedIds) {
+        const field = state.get(id);
+        if (!field) continue;
+        field.status = 'action-required';
+        field.assessedBy = null;
+        field.assessedAt = null;
+        field.required = true;
+      }
+    }
+  }
+  return RISK_FIELDS.map((def) => state.get(def.id)!);
+}
+
+/** The finalize table: every assessed section, risk if any field in it is. */
+export function sectionRisksOf(fields: RiskFieldState[]): SectionRisk[] {
+  return RISK_SECTIONS.filter((section) =>
+    fields.some((f) => f.def.section === section && f.status !== 'informational'),
+  ).map((section) => ({
+    section,
+    risk: fields.some((f) => f.def.section === section && f.status === 'risk'),
+  }));
+}
+
+/** The modal's own copy of a trigger's detail: the resync sentence no longer applies. */
+/**
+ * The resync entry's second line, and the announcement. "No changes", or the
+ * updated labels followed by the ones whose risk moved.
+ */
+export function resyncSummary(e: ResyncCompletedEvent): string {
+  if (!e.updated.length) return 'No changes.';
+  const updated = `Updated values: ${e.updated.join(', ')}.`;
+  if (!e.riskChanged.length) return updated;
+  return `${updated} Risk associated with ${joinLabels(e.riskChanged)} changed - manual action needed.`;
+}
+
+/**
+ * The resync rules, field by field, between two generations:
+ *   - value unchanged: nothing
+ *   - value changed, risk unchanged: listed as updated, nothing else
+ *   - value and risk changed: listed as updated AND as risk changed, which
+ *     sends the field back to Action required
+ * A manual field has no system risk to compare, so a new value is itself a
+ * reason to look again. An informational field never carries a risk.
+ */
+export function resyncDiff(fromGen: number, toGen: number): {
+  updated: RiskFieldDef[];
+  riskChanged: RiskFieldDef[];
+} {
+  const from = GENERATIONS[fromGen];
+  const to = GENERATIONS[toGen];
+  const updated: RiskFieldDef[] = [];
+  const riskChanged: RiskFieldDef[] = [];
+  for (const def of RISK_FIELDS) {
+    if (sameValue(from[def.id].value, to[def.id].value)) continue;
+    updated.push(def);
+    if (def.informational) continue;
+    if (def.manual || from[def.id].systemRisk !== to[def.id].systemRisk) riskChanged.push(def);
+  }
+  return { updated, riskChanged };
+}
+
+export function triggerDetail(detail: string): string {
+  return detail.replace(/\s*Snapshot resync required[^.]*\.?/i, '').trim();
 }
 
 /** Candidate file handed to the store by the record-form before validation. */
@@ -265,9 +415,18 @@ export class CaseStore {
   readonly lockOwner = signal<Agent | null>(null);
   readonly lockedSince = signal<string | null>(null);
 
-  // Rule 11.
-  readonly snapshotGeneratedAt = signal<string>(this.fx.case.snapshot.generatedAt);
-  readonly snapshotOutOfSync = signal<boolean>(false);
+  // Rule 11, as revised: the Risk assessment and its resync.
+  /** When the values on the Risk assessment were generated. */
+  readonly riskGeneratedAt = signal<string>(this.fx.case.snapshot.generatedAt);
+  /** Which generation of values the section shows. See risk-assessment.ts. */
+  readonly riskGeneration = signal(0);
+  /** A trigger has arrived since the last resync, so the next one finds new values. */
+  readonly pendingRegeneration = signal(false);
+  /** The overlay is up and the section is being regenerated. */
+  readonly resyncing = signal(false);
+  /** What the last resync found, for the screen-reader announcement. */
+  readonly lastResyncSummary = signal('');
+  private resyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly triggers = signal<Trigger[]>([]);
   readonly stream = signal<StreamItem[]>([]);
@@ -275,11 +434,12 @@ export class CaseStore {
 
   // ---------------------------------------------------------------- ui state
   readonly draft = signal<Draft | null>(null);
+  /** Why a new action did not open: there is a draft with work in it. Shown on that draft. */
+  readonly draftConflict = signal<string | null>(null);
   readonly openDialog = signal<DialogId>(null);
   readonly addMenuOpen = signal(false);
   readonly triggersExpanded = signal(false);
-  readonly infoTab = signal<InfoTab>('snapshot');
-  readonly viewedSnapshot = signal<SnapshotView | null>(null);
+  readonly infoTab = signal<InfoTab>('risk');
   /** Which past case the agent asked to open from the Past AML cases tab. */
   readonly viewedPastCase = signal<string | null>(null);
   readonly activeSegment = signal<'workflow' | 'player-info'>('workflow');
@@ -317,6 +477,12 @@ export class CaseStore {
   readonly streamScroll = signal(0);
   /** Scroll offset of the player-info body. */
   readonly infoScroll = signal(0);
+  /**
+   * Whether the Risk assessment's informational block (Account information)
+   * is open. Closed by default: it has no status and nothing to do, and open
+   * it put six rows between the agent and the first field that needs them.
+   */
+  readonly accountInfoExpanded = signal(false);
 
   constructor() {
     this.reset();
@@ -336,12 +502,11 @@ export class CaseStore {
   /** Rule 3 + rule 10. Only the lock owner can act, and never once resolved. */
   readonly canAct = computed(() => !this.isResolved() && this.lockState() === 'locked-to-me');
 
-  /** Rule 11. Recording is additionally blocked while the snapshot is out of sync. */
+  /** Rule 3 and rule 10. A new trigger no longer blocks recording. */
   readonly recordBlock = computed<RecordBlock>(() => {
     if (this.isResolved()) return 'resolved';
     if (this.lockState() === 'locked-to-other') return 'locked-to-other';
     if (this.lockState() === 'unlocked') return 'unlocked';
-    if (this.snapshotOutOfSync()) return 'out-of-sync';
     return null;
   });
 
@@ -349,19 +514,107 @@ export class CaseStore {
 
   readonly outcomes = computed<OutcomeItem[]>(() => this.stream().filter(isOutcome));
 
-  /** Rule 4. Set membership, not order. */
-  readonly requiredActions = computed<RequiredActionState[]>(() =>
-    REQUIRED_ACTIONS.map((id) => {
+  // ---------------------------------------------------------------- risk assessment
+
+  readonly riskFields = computed(() => deriveRiskFields(this.riskGeneration(), this.stream()));
+
+  /** The section's fields grouped for display, in the PDF's order. */
+  readonly riskSections = computed(() =>
+    RISK_SECTIONS.map((section) => ({
+      section,
+      fields: this.riskFields().filter((f) => f.def.section === section),
+    })).filter((g) => g.fields.length),
+  );
+
+  readonly actionRequiredFields = computed(() =>
+    this.riskFields().filter((f) => f.status === 'action-required'),
+  );
+
+  /** Finalize is enabled once every non-informational field is Risk or No risk. */
+  readonly canFinalize = computed(() => this.actionRequiredFields().length === 0);
+
+  /** The finalize outcome, once there is one. */
+  readonly riskFinalization = computed(
+    () => this.outcomes().find((o) => o.actionType === 'finalize-risk-assessment') ?? null,
+  );
+
+  readonly isRiskFinalized = computed(() => !!this.riskFinalization());
+
+  readonly sectionRisks = computed(() => sectionRisksOf(this.riskFields()));
+
+  /**
+   * Whether a risk status can be clicked to assess it. Needs the lock, and
+   * stops once the assessment is finalized or while it is being regenerated.
+   */
+  readonly canAssessRisk = computed(
+    () => this.canRecord() && !this.isRiskFinalized() && !this.resyncing(),
+  );
+
+  /** Resync is always visible; this is whether it can be pressed. */
+  readonly canResync = computed(
+    () => this.canAct() && !this.isRiskFinalized() && !this.resyncing(),
+  );
+
+  /** Why Resync is disabled, for its tooltip. Null when it is enabled. */
+  readonly resyncBlockReason = computed<string | null>(() => {
+    if (this.canResync()) return null;
+    if (this.isResolved()) return 'This case is resolved.';
+    if (this.isRiskFinalized()) return 'The risk assessment is finalized.';
+    if (this.resyncing()) return 'Resyncing.';
+    if (this.lockState() === 'locked-to-other') return 'Another agent holds the lock.';
+    return 'Lock the case to resync.';
+  });
+
+  /**
+   * Rule 4. Set membership, not order.
+   *
+   * Three kinds, in this order: every required assessment (manual fields,
+   * plus any field a resync sent back to Action required), the other required
+   * actions, then Finalize risk assessment last - it can only be done once
+   * every assessment is.
+   */
+  readonly requiredActions = computed<RequiredActionState[]>(() => {
+    const assessments: RequiredActionState[] = this.riskFields()
+      .filter((f) => f.required)
+      .map((f) => ({
+        key: `assess:${f.def.id}`,
+        actionType: 'assess-risk' as const,
+        fieldId: f.def.id,
+        label: `Assess risk - ${f.def.label}`,
+        shortLabel: f.def.label,
+        done: f.status !== 'action-required',
+        recordedAt: f.assessedAt,
+        status: f.status,
+        available: true,
+      }));
+    const actions: RequiredActionState[] = REQUIRED_ACTIONS.map((id) => {
       const hit = this.outcomes().find((o) => o.actionType === id);
       return {
-        id,
+        key: id,
+        actionType: id,
+        fieldId: null,
         label: this.labelFor(id),
         shortLabel: SHORT_ACTION_LABEL[id] ?? this.labelFor(id),
         done: !!hit,
         recordedAt: hit?.at ?? null,
+        status: null,
+        available: true,
       };
-    }),
-  );
+    });
+    const finalization = this.riskFinalization();
+    const finalize: RequiredActionState = {
+      key: 'finalize',
+      actionType: 'finalize-risk-assessment',
+      fieldId: null,
+      label: 'Finalize risk assessment',
+      shortLabel: SHORT_ACTION_LABEL['finalize-risk-assessment'] ?? 'Finalize',
+      done: !!finalization,
+      recordedAt: finalization?.at ?? null,
+      status: null,
+      available: this.canFinalize(),
+    };
+    return [...assessments, ...actions, finalize];
+  });
 
   readonly allRequiredRecorded = computed(() => this.requiredActions().every((r) => r.done));
 
@@ -409,11 +662,13 @@ export class CaseStore {
   readonly showFooter = computed(() => !this.isResolved());
 
   readonly visibleInfoTabs = computed<InfoTab[]>(() =>
-    this.isResolved()
-      ? ['snapshot', 'timeline']
-      : ['snapshot', 'past-cases', 'starred', 'timeline'],
+    this.isResolved() ? ['risk', 'timeline'] : ['risk', 'past-cases', 'starred', 'timeline'],
   );
 
+  /**
+   * Kept for the trigger strip, which the table's trigger popover also hosts.
+   * Always 0 in the modal now: a new trigger is no longer flagged in amber.
+   */
   readonly newTriggerCount = computed(() => this.triggers().filter((t) => t.isNew).length);
 
   /**
@@ -464,10 +719,15 @@ export class CaseStore {
 
   readonly sortedTimeline = computed<TimelineEntry[]>(() => [...this.timeline()].sort(newestFirst));
 
-  /** Rule 5. A draft may only be saved with a note, an explicit lock choice, and a synced snapshot. */
+  /**
+   * Rule 5. A draft may only be saved with a note and a lock choice. An
+   * assessment also needs its Risk answer; Finalize needs every field assessed.
+   */
   readonly draftValid = computed(() => {
     const d = this.draft();
     if (!d) return false;
+    if (d.actionType === 'assess-risk' && !d.risk) return false;
+    if (d.actionType === 'finalize-risk-assessment' && !this.canFinalize()) return false;
     return d.note.trim().length > 0 && d.lockAfter !== null && this.canRecord();
   });
 
@@ -481,8 +741,12 @@ export class CaseStore {
     this.lockState.set('unlocked');
     this.lockOwner.set(null);
     this.lockedSince.set(null);
-    this.snapshotGeneratedAt.set(this.fx.case.snapshot.generatedAt);
-    this.snapshotOutOfSync.set(false);
+    this.riskGeneratedAt.set(this.fx.case.snapshot.generatedAt);
+    this.riskGeneration.set(0);
+    this.pendingRegeneration.set(false);
+    this.clearResyncTimer();
+    this.resyncing.set(false);
+    this.lastResyncSummary.set('');
     // The fixture ships the rule-11 arrival inline; the base case predates it.
     this.triggers.set((this.fx.triggers as Trigger[]).filter((t) => !t.isNew));
     // Not empty: a manual case opens with its own creation event, which is the
@@ -510,20 +774,23 @@ export class CaseStore {
       },
     ]);
     this.draft.set(null);
+    this.draftConflict.set(null);
     this.openDialog.set(null);
     this.addMenuOpen.set(false);
     this.triggersExpanded.set(false);
-    this.infoTab.set('snapshot');
-    this.viewedSnapshot.set(null);
+    this.infoTab.set('risk');
     this.viewedPastCase.set(null);
     this.activeSegment.set('workflow');
     this.lastActivePanel.set('workflow');
     this.streamScroll.set(0);
     this.infoScroll.set(0);
+    this.accountInfoExpanded.set(false);
   }
 
   labelFor(id: ActionTypeId): string {
     if (id === 'decision') return 'Decision - case resolved';
+    if (id === 'finalize-risk-assessment') return 'Finalize risk assessment';
+    if (id === 'assess-risk') return 'Assess risk';
     return this.actionTypes().find((t) => t.id === id)?.label ?? id;
   }
 
@@ -532,8 +799,10 @@ export class CaseStore {
     switch (id) {
       case 'player-contact':
         return 'Player contact';
-      case 'open-source-searches':
-        return 'Open source searches';
+      case 'assess-risk':
+        return 'Assess risk';
+      case 'finalize-risk-assessment':
+        return 'Risk assessment finalized';
       case 'note':
         return 'Note';
       case 'decision':
@@ -597,12 +866,51 @@ export class CaseStore {
    * Opens the inline record-form. Allowed while out of sync so an in-flight
    * draft is not thrown away (open question 2) - Save is what stays blocked.
    */
-  startRecord(actionType: ActionTypeId, fromPlaceholder = false): void {
-    if (this.isResolved() || this.lockState() !== 'locked-to-me') return;
+  startRecord(
+    actionType: ActionTypeId,
+    fromPlaceholder = false,
+    riskFieldId: string | null = null,
+    reveal = false,
+  ): boolean {
+    if (this.isResolved() || this.lockState() !== 'locked-to-me') return false;
+    if (actionType === 'assess-risk' && !this.canAssessRisk()) return false;
+    if (actionType === 'finalize-risk-assessment' && !this.canFinalize()) return false;
     this.addMenuOpen.set(false);
+    const field = riskFieldId ? this.riskFields().find((f) => f.def.id === riskFieldId) : null;
+    const title =
+      actionType === 'assess-risk' && field
+        ? `Assess risk - ${field.def.label}`
+        : actionType === 'finalize-risk-assessment'
+          ? 'Finalize risk assessment'
+          : this.outcomeTitleFor(actionType);
+
+    /**
+     * Never replace a draft with something in it.
+     *
+     * Starting another action used to overwrite the open form, note and files
+     * included. With a risk status in the other panel able to start one, that
+     * was a click away from wiping work the agent could not even see. The open
+     * form is brought into view instead, with a line saying why.
+     */
+    const open = this.draft();
+    if (open && this.draftDirty()) {
+      const same = open.actionType === actionType && (open.riskFieldId ?? null) === riskFieldId;
+      if (!same) this.draftConflict.set(`Save or cancel this draft before starting ${title}.`);
+      this.draft.set({ ...open, reveal: true });
+      return false;
+    }
+
+    this.draftConflict.set(null);
     this.draft.set({
       actionType,
-      title: this.outcomeTitleFor(actionType),
+      title,
+      riskFieldId,
+      returnTo: null,
+      // Prefilled with what the field says now when that is an answer, so an
+      // override starts from the current call. Action required has no answer
+      // to start from, so the agent has to choose.
+      risk: field && (field.status === 'risk' || field.status === 'no-risk') ? field.status : null,
+      reveal,
       note: '',
       attachments: [],
       errors: [],
@@ -612,6 +920,7 @@ export class CaseStore {
       attempted: false,
       fromPlaceholder,
     });
+    return true;
   }
 
   patchDraft(patch: Partial<Draft>): void {
@@ -621,7 +930,28 @@ export class CaseStore {
   }
 
   cancelDraft(): void {
+    this.draftConflict.set(null);
     this.draft.set(null);
+  }
+
+  /**
+   * A risk status was clicked in the Risk assessment section.
+   *
+   * Opens the same form the required placeholder opens. It takes that
+   * placeholder's slot when the field is a pending required assessment, and
+   * is appended to the stream otherwise. In the segmented layout the workflow
+   * is brought forward, because that is where the form is.
+   */
+  assessRisk(fieldId: string): void {
+    if (!this.canAssessRisk()) return;
+    const pending = this.requiredActions().some((r) => r.fieldId === fieldId && !r.done);
+    if (this.startRecord('assess-risk', pending, fieldId, true)) {
+      this.patchDraft({ returnTo: fieldId });
+    }
+    // Either way the workflow comes forward: it holds the new form, or the
+    // draft that has to be dealt with first.
+    this.activeSegment.set('workflow');
+    this.lastActivePanel.set('workflow');
   }
 
   /**
@@ -692,22 +1022,59 @@ export class CaseStore {
       return false;
     }
     const at = nowIso();
+    const field =
+      d.actionType === 'assess-risk' && d.riskFieldId
+        ? this.riskFields().find((f) => f.def.id === d.riskFieldId)
+        : null;
     const outcome: OutcomeItem = {
       kind: 'outcome',
       id: nextId('out'),
       actionType: d.actionType,
-      title: d.title,
+      title: d.actionType === 'finalize-risk-assessment' ? 'Risk assessment finalized' : d.title,
       actor: this.me().name,
       at,
       note: d.note.trim(),
-      attachments: d.attachments, // frozen from here (rule 6)
-      snapshotAt: this.snapshotGeneratedAt(),
+      // Finalize carries no attachments, by definition.
+      attachments: d.actionType === 'finalize-risk-assessment' ? [] : d.attachments, // frozen from here (rule 6)
+      ...(field && d.risk
+        ? {
+            assessment: {
+              fieldId: field.def.id,
+              fieldLabel: field.def.label,
+              risk: d.risk,
+              previous: field.status,
+            },
+          }
+        : {}),
+      ...(d.actionType === 'finalize-risk-assessment' ? { finalized: this.sectionRisks() } : {}),
     };
     this.stream.update((s) => [...s, outcome]);
-    this.pushTimeline(at, `Outcome recorded: ${d.title}`, this.me().name);
+    if (field && d.risk) {
+      this.pushTimeline(
+        at,
+        `Risk assessed: ${field.def.label} - ${RISK_STATUS_LABEL[d.risk]}`,
+        this.me().name,
+      );
+    } else if (d.actionType === 'finalize-risk-assessment') {
+      this.pushTimeline(at, 'Risk assessment finalized', this.me().name);
+    } else {
+      this.pushTimeline(at, `Outcome recorded: ${d.title}`, this.me().name);
+    }
     // The row is live: a required type still to do completes its item, anything
     // else is custom and moves only the count.
-    this.collection.recordWork(this.caseId(), d.actionType, at, this.me().name);
+    //
+    // Only the work the TABLE knows about is written back. Assessing open
+    // source searches is the table's "Open source searches" work item, so it
+    // completes that. The other assessments and Finalize are modal-only and
+    // leave the table exactly as it was.
+    const work =
+      field?.def.id === 'open-source-searches'
+        ? 'open-source-searches'
+        : d.actionType === 'player-contact' || d.actionType === 'note'
+          ? d.actionType
+          : null;
+    if (work) this.collection.recordWork(this.caseId(), work, at, this.me().name);
+    this.draftConflict.set(null);
     this.draft.set(null);
 
     // Rule 5: the agent's explicit choice is applied after the save.
@@ -767,7 +1134,6 @@ export class CaseStore {
         at,
         note: note.trim(),
         attachments: [],
-        snapshotAt: this.snapshotGeneratedAt(),
       } satisfies OutcomeItem,
     ]);
     this.status.set('RESOLVED');
@@ -775,70 +1141,102 @@ export class CaseStore {
     this.openDialog.set(null);
     this.draft.set(null);
     this.addMenuOpen.set(false);
-    // Rule 10: the left panel starts empty until an outcome's snapshot is opened.
-    this.viewedSnapshot.set(null);
-    this.infoTab.set('snapshot');
+    // Rule 10: the left panel shows the risk assessment as it was finalized.
+    this.infoTab.set('risk');
     return true;
   }
 
   // ---------------------------------------------------------------- rule 11: triggers
 
-  /** Dev button. Inserts a system trigger, marks the snapshot out of sync. */
+  /**
+   * Dev button. A system trigger arrives while the case is open.
+   *
+   * Nothing is forced: no refresh, no out-of-sync state, no amber, and
+   * recording carries on. The arrival is written into the workflow with a
+   * warning icon, and the next resync of the Risk assessment picks up what it
+   * changed.
+   */
   simulateNewTrigger(): void {
     const fixture = (this.fx.triggers as Trigger[]).find((t) => t.isNew);
     const already = this.triggers().some((t) => t.id === fixture?.id);
     const trigger: Trigger =
       fixture && !already
-        ? { ...fixture, at: nowIso(), isNew: true }
+        ? { ...fixture, detail: triggerDetail(fixture.detail), at: nowIso(), isNew: false }
         : {
             id: nextId('trg'),
             name: 'System - Threshold',
-            detail:
-              'Large deposit while case open. Snapshot resync required before recording outcomes.',
+            detail: 'Large deposit while case open.',
             at: nowIso(),
-            isNew: true,
+            isNew: false,
           };
 
     this.triggers.update((list) => [trigger, ...list]);
-    this.snapshotOutOfSync.set(true);
-    this.pushTimeline(
-      trigger.at,
-      `Trigger added: ${trigger.name}; snapshot out of sync`,
-      'system',
-    );
-    // Open question 6: only auto-expand if the strip was already expanded.
-    // (Left deliberately as a no-op - the strip keeps whatever state it had.)
+    this.pendingRegeneration.set(true);
+    this.pushEvent({
+      kind: 'event',
+      id: nextId('ev'),
+      type: 'trigger-added',
+      name: trigger.name,
+      detail: trigger.detail,
+      actor: 'system',
+      at: trigger.at,
+    } satisfies TriggerAddedEvent);
+    this.pushTimeline(trigger.at, `Trigger added: ${trigger.name}`, 'system');
   }
 
-  resync(): void {
+  /** Resync was pressed. It asks first: some actions may have to be recorded again. */
+  requestResync(): void {
+    if (!this.canResync()) return;
+    this.openDialog.set('resync');
+  }
+
+  /** Confirmed. The overlay goes up and the section is regenerated. */
+  confirmResync(): void {
+    if (!this.canResync()) return;
+    this.openDialog.set(null);
+    this.resyncing.set(true);
+    this.lastResyncSummary.set('');
+    this.clearResyncTimer();
+    this.resyncTimer = setTimeout(() => this.completeResync(), RESYNC_MS);
+  }
+
+  /**
+   * The overlay comes down on the new values. See resyncDiff() for the rules.
+   *
+   * No history is kept on the section itself - the new values replace the
+   * old, and the workflow entry is the record of what changed.
+   */
+  completeResync(): void {
+    this.clearResyncTimer();
+    const fromGen = this.riskGeneration();
+    const toGen = this.pendingRegeneration()
+      ? Math.min(fromGen + 1, GENERATIONS.length - 1)
+      : fromGen;
+    const { updated, riskChanged } = resyncDiff(fromGen, toGen);
+
     const at = nowIso();
-    this.snapshotOutOfSync.set(false);
-    this.snapshotGeneratedAt.set(at);
-    this.triggers.update((list) => list.map((t) => ({ ...t, isNew: false })));
-    this.pushTimeline(at, 'Snapshot resynced', this.me().name);
-    // Open question 2: an open draft survives resync untouched and Save re-enables.
+    this.riskGeneration.set(toGen);
+    this.pendingRegeneration.set(false);
+    this.riskGeneratedAt.set(at);
+    const event: ResyncCompletedEvent = {
+      kind: 'event',
+      id: nextId('ev'),
+      type: 'resync-completed',
+      updated: updated.map((d) => d.label),
+      riskChangedIds: riskChanged.map((d) => d.id),
+      riskChanged: riskChanged.map((d) => d.label),
+      actor: this.me().name,
+      at,
+    };
+    this.pushEvent(event);
+    this.pushTimeline(at, 'Risk assessment resynced', this.me().name);
+    this.resyncing.set(false);
+    this.lastResyncSummary.set(`Resync completed. ${resyncSummary(event)}`);
   }
 
-  // ---------------------------------------------------------------- snapshots
-
-  viewSnapshot(outcome: OutcomeItem): void {
-    // A toggle: pressing the control on the card already being viewed returns
-    // to the current snapshot. Same button, same place, both directions.
-    if (this.viewedSnapshot()?.outcomeId === outcome.id) {
-      this.clearSnapshot();
-      return;
-    }
-    this.viewedSnapshot.set({
-      outcomeId: outcome.id,
-      title: outcome.title,
-      at: outcome.snapshotAt,
-    });
-    this.infoTab.set('snapshot');
-    this.activeSegment.set('player-info');
-  }
-
-  clearSnapshot(): void {
-    this.viewedSnapshot.set(null);
+  private clearResyncTimer(): void {
+    if (this.resyncTimer) clearTimeout(this.resyncTimer);
+    this.resyncTimer = null;
   }
 
   /**
@@ -877,12 +1275,14 @@ export class CaseStore {
     timeline?: TimelineEntry[];
     triggers?: Trigger[];
     triggersExpanded?: boolean;
-    snapshotOutOfSync?: boolean;
     draft?: Draft | null;
     openDialog?: DialogId;
     addMenuOpen?: boolean;
-    viewedSnapshot?: SnapshotView | null;
     infoTab?: InfoTab;
+    riskGeneration?: number;
+    pendingRegeneration?: boolean;
+    resyncing?: boolean;
+    riskGeneratedAt?: string;
     lastActivePanel?: 'workflow' | 'player-info';
   }): void {
     if (patch.status !== undefined) this.status.set(patch.status);
@@ -895,12 +1295,14 @@ export class CaseStore {
     if (patch.timeline !== undefined) this.timeline.set(patch.timeline);
     if (patch.triggers !== undefined) this.triggers.set(patch.triggers);
     if (patch.triggersExpanded !== undefined) this.triggersExpanded.set(patch.triggersExpanded);
-    if (patch.snapshotOutOfSync !== undefined) this.snapshotOutOfSync.set(patch.snapshotOutOfSync);
     if (patch.draft !== undefined) this.draft.set(patch.draft);
     if (patch.openDialog !== undefined) this.openDialog.set(patch.openDialog);
     if (patch.addMenuOpen !== undefined) this.addMenuOpen.set(patch.addMenuOpen);
-    if (patch.viewedSnapshot !== undefined) this.viewedSnapshot.set(patch.viewedSnapshot);
     if (patch.infoTab !== undefined) this.infoTab.set(patch.infoTab);
+    if (patch.riskGeneration !== undefined) this.riskGeneration.set(patch.riskGeneration);
+    if (patch.pendingRegeneration !== undefined) this.pendingRegeneration.set(patch.pendingRegeneration);
+    if (patch.resyncing !== undefined) this.resyncing.set(patch.resyncing);
+    if (patch.riskGeneratedAt !== undefined) this.riskGeneratedAt.set(patch.riskGeneratedAt);
     if (patch.lastActivePanel !== undefined) this.lastActivePanel.set(patch.lastActivePanel);
   }
 
@@ -939,6 +1341,28 @@ export class CaseStore {
   fixtureStream(upTo: 'first' | 'required' | 'all'): StreamItem[] {
     const raw = this.fx.workflow as any[];
     const items: StreamItem[] = raw.map((r) => {
+      // The fixture still says 'open-source-searches': that record IS the
+      // assessment of the Open source searches field now. The fixture's note
+      // reads as a clear result, so it is replayed as No risk.
+      if (r.kind === 'outcome' && r.actionType === 'open-source-searches') {
+        const def = riskFieldDef('open-source-searches')!;
+        return {
+          kind: 'outcome',
+          id: r.id,
+          actionType: 'assess-risk',
+          title: `Assess risk - ${def.label}`,
+          actor: r.actor,
+          at: r.at,
+          note: r.note,
+          attachments: (r.attachments ?? []).map(mapAttachment),
+          assessment: {
+            fieldId: def.id,
+            fieldLabel: def.label,
+            risk: 'no-risk',
+            previous: 'action-required',
+          },
+        } satisfies OutcomeItem;
+      }
       if (r.kind === 'outcome') {
         return {
           kind: 'outcome',
@@ -949,7 +1373,6 @@ export class CaseStore {
           at: r.at,
           note: r.note,
           attachments: (r.attachments ?? []).map(mapAttachment),
-          snapshotAt: r.snapshotAt,
         } satisfies OutcomeItem;
       }
       // Direction is recomputed from SEVERITY_RANK rather than read from the
@@ -969,9 +1392,54 @@ export class CaseStore {
     });
 
     if (upTo === 'first') return this.withCreation(items.slice(0, 1));
-    if (upTo === 'required')
-      return this.withCreation(items.filter((i) => !(isOutcome(i) && i.actionType === 'decision')));
-    return this.withCreation(items);
+    // The fixture predates the Risk assessment, so its history has no
+    // Document requests assessment and no finalize. Both are written in here,
+    // after the last required action and before the decision - a resolved
+    // case must have a finalized assessment behind it.
+    const decisionAt = items.findIndex((i) => isOutcome(i) && i.actionType === 'decision');
+    const before = decisionAt === -1 ? items : items.slice(0, decisionAt);
+    const decision = decisionAt === -1 ? null : items[decisionAt];
+    const completed = [...before, ...this.closingAssessments(before, decision)];
+    if (upTo === 'required') return this.withCreation(completed);
+    return this.withCreation(decisionAt === -1 ? completed : [...completed, ...items.slice(decisionAt)]);
+  }
+
+  /**
+   * @internal dev-only - the Document requests assessment and the finalize
+   * that the fixture's history is missing, timed just after its last item.
+   */
+  private closingAssessments(items: StreamItem[], decision: StreamItem | null): OutcomeItem[] {
+    const last = items[items.length - 1];
+    const base = last ? Date.parse(last.at) : Date.parse(this.fx.case.createdAt);
+    // Inside the gap before the decision when there is one, so the stream
+    // still reads in time order; five and ten minutes on when there is not.
+    const gap = decision ? (Date.parse(decision.at) - base) / 3 : 5 * 60_000;
+    const actor = (last as OutcomeItem | undefined)?.actor ?? this.otherAgent().name;
+    const def = riskFieldDef('document-requests')!;
+    const assess: OutcomeItem = {
+      kind: 'outcome',
+      id: 'fx-assess-docs',
+      actionType: 'assess-risk',
+      title: `Assess risk - ${def.label}`,
+      actor,
+      at: new Date(base + gap).toISOString(),
+      note: 'Affordability documents approved. Proof of address received and consistent with the registered address.',
+      attachments: [],
+      assessment: { fieldId: def.id, fieldLabel: def.label, risk: 'no-risk', previous: 'action-required' },
+    };
+    const fields = deriveRiskFields(0, [...items, assess]);
+    const finalize: OutcomeItem = {
+      kind: 'outcome',
+      id: 'fx-finalize',
+      actionType: 'finalize-risk-assessment',
+      title: 'Risk assessment finalized',
+      actor,
+      at: new Date(base + 2 * gap).toISOString(),
+      note: 'Linked accounts, VPN use and the deposit pattern carry risk. Identity and documents are clear. Overall: enhanced monitoring.',
+      attachments: [],
+      finalized: sectionRisksOf(fields),
+    };
+    return [assess, finalize];
   }
 
   /**

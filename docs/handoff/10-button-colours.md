@@ -37,8 +37,8 @@ decision, Open case.
 
 ## Outlined
 
-`mat-stroked-button` — Unlock, Adjust severity, Add action, Add files, View
-snapshot.
+`mat-stroked-button` — Unlock, Adjust severity, Add action, Add files, Resync
+(in the Risk assessment header).
 
 | State | Background | Label | Border | Layer | Ring | Contrast |
 |---|---|---|---|---|---|---|
@@ -129,35 +129,75 @@ The one control in the strip.
 The hover tint covers the **full row including its hairlines**, not just the
 label.
 
-## View snapshot, selected
+## Resync, unavailable
 
-`.card__snap--on` — persistent while that card's snapshot is up.
+`disabledInteractive` on the outlined button: Material's disabled look, with
+the button left in the tab order and `aria-disabled="true"`.
 
-Sits on a card filled with `--color-background-info` (`#DBEAFE`), and its own
-12% primary tint composites over that.
+| State | Background | Label | Border | Note |
+|---|---|---|---|---|
+| Unavailable | surface unchanged | `rgba(0,0,0,.38)` | 1px `rgba(0,0,0,.12)` | identical to Disabled above; `cursor: default`; no state layer, no ripple |
+| Unavailable, focused | surface unchanged | `rgba(0,0,0,.38)` | 1px `rgba(0,0,0,.12)` | the global 2px `#1A73C9` ring - this is the state Disabled cannot have |
 
-| State | Background | Label | Border | Layer | Contrast |
+The reason it is unavailable is read with it (`aria-describedby`) and shown as
+its tooltip.
+
+## Risk status buttons
+
+`risk-status` in its button form - the Risk flagged / No risk / Action
+required control on a Risk assessment row. Each status keeps its own hue in
+every state; hover deepens the fill rather than greying it. Pressed is the
+hover fill at `scale(0.97)`; focus is the hover fill plus the ring. Labels are
+12px 600, so the AA bar is 4.5.
+
+| Status | State | Background | Label | Rim (1px) | Contrast |
 |---|---|---|---|---|---|
-| Rest | `#C4DCF8` | `#1E3A8A` | 1px `#1A73C9` (3.43) | — | 7.35 |
-| Hover | `#BDD8F6` | `#1E3A8A` | 1px `#1A73C9` (3.29) | primary @ 0.04 | 7.04 |
-| Pressed | `#BAD5F5` | `#1E3A8A` | 1px `#1A73C9` (3.22) | primary @ 0.06 | 6.88 |
-| Focus | `#BAD5F5` | `#1E3A8A` | 1px `#1A73C9` (3.22) | primary @ 0.06 | 6.88 |
+| Risk flagged | Rest | `#FEF2F2` (`--danger-bg`) | `#B91C1C` | `#FECACA` | 5.91 |
+| Risk flagged | Hover / pressed / focus | `#FEE2E2` (`--danger-bg-strong`) | `#B91C1C` | `#FECACA` | 5.30 |
+| No risk | Rest | **none** - the panel's `#FFFFFF` (`#F4F5F7` in the stream) | `#14532D` | `--success` at 32% = `#B3C8BB` on white (1.77) | 9.11 (8.35 on the stream) |
+| No risk | Hover / pressed / focus | `#F0FDF4` (`--success-bg-subtle`) | `#14532D` | as rest | 8.70 |
+| Action required | Rest | `#FEF3C7` (`--warn-bg`) | `#78350F` | `#FDE68A` | 8.15 |
+| Action required | Hover / pressed / focus | `#EDDCAD` (`color-mix` 88% fill, 12% `--warn`) | `#78350F` | `#FDE68A` | 6.67 |
 
-> **Why the layer is primary and not black.** On a button already carrying a
-> blue tint, a black layer greys it down instead of deepening it. A primary
-> layer stays in the same hue.
+The red and amber rims are deliberately faint (1.12–1.32 against their fills):
+the fill and the word identify the status, the rim only draws its edge. No
+risk has no fill, so its rim does more work and is darker - 1.77:1 on white,
+1.75 on the stream - though the word and tick still carry it.
 
-> **Why the label is `--color-foreground-on-info` and not `--primary-ink`.**
-> The card underneath is `--color-background-info`, and this button's tint sits
-> on top of it, so the ground is darker than it was on the old `--primary-bg`
-> card. `--primary-ink` measured **4.41 hovered and 4.31 pressed** there —
-> under AA. `foreground-on-info` is the token that pairs with this background
-> by name, and it clears AA in every state with room to spare.
+The label form (no edit glyph, not a button) has the Rest row only.
 
-> The 1px border is non-text, so it is held to 3:1, not 4.5. It clears that in
-> every state but with little margin — 3.22 at its tightest.
+> **Why `color-mix` and not another token.** The amber hover fill and the
+> green rim exist nowhere else yet. If a second surface wants them they become
+> tokens and the mixes go.
 
----
+## Risk assessment info button
+
+| State | Background | Glyph | Contrast |
+|---|---|---|---|
+| Rest | transparent on `#FFFFFF` | `#52525B` | 7.73 |
+| Hover | `#F0F0F0` (`--colors-alpha-alpha-soft-hover`, black 6%) | `#09090B` | 17.46 |
+| Focus | as rest | `#52525B` | ring, offset 0 (the button is a 24px circle; the 40px hit area is a pseudo-element) |
+
+## The open Risk assessment row
+
+Not a button, but a tinted surface text sits on, so it belongs with these.
+
+| Element | On `#DBEAFE` (`--color-background-info`) | Contrast |
+|---|---|---|
+| Label | `#09090B` | 16.31 |
+| Value lines | `#52525B` | 6.34 |
+| `Assessing` | `#1E3A8A` (`--color-foreground-on-info`) | 8.49 |
+| The status button | its own fill, unchanged - the pill carries its own ground | as above |
+
+## Focus returned by a dialog
+
+Material paints the focus state layer on keyboard focus only - except on a
+`disabledInteractive` button, which it paints on plain `:focus`. Resync is
+one, so after its dialog returned focus it sat at black 12% until the next
+click. One global rule (`styles.scss`, beside the focus-ring block) limits
+that layer to `:focus-visible`: a mouse user sees the button return to rest,
+a keyboard user still gets the layer and the ring. The other dialog openers
+were never affected. Hover 0.04 and press 0.12 are unchanged.
 
 ## The focus ring
 

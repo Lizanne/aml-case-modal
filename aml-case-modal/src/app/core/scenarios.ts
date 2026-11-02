@@ -1,5 +1,12 @@
-import { CaseStore, sampleUrlFor } from './case-store';
-import { Attachment, Draft } from './models';
+import { CaseStore, resyncDiff, sampleUrlFor, triggerDetail } from './case-store';
+import {
+  Attachment,
+  Draft,
+  ResyncCompletedEvent,
+  StreamItem,
+  TriggerAddedEvent,
+  isOutcome,
+} from './models';
 import { WorkspaceStore } from './workspace-store';
 
 /**
@@ -41,6 +48,54 @@ function lockedToMe(store: CaseStore) {
   };
 }
 
+/** The fixture's own new trigger, as the workflow entry it now becomes. */
+function triggerArrival(store: CaseStore): TriggerAddedEvent {
+  const t = store.allFixtureTriggers().find((x) => x.isNew)!;
+  return {
+    kind: 'event',
+    id: 'seed-trigger-added',
+    type: 'trigger-added',
+    name: t.name,
+    detail: triggerDetail(t.detail),
+    actor: 'system',
+    at: t.at,
+  };
+}
+
+/** Every fixture trigger, none of them flagged: a new trigger is no longer amber. */
+function allTriggersUnflagged(store: CaseStore) {
+  return store.allFixtureTriggers().map((t) => ({ ...t, detail: triggerDetail(t.detail), isNew: false }));
+}
+
+/** A resync from generation 0 to 1, built with the same rules the real one uses. */
+function resyncEntry(store: CaseStore, at: string): ResyncCompletedEvent {
+  const { updated, riskChanged } = resyncDiff(0, 1);
+  return {
+    kind: 'event',
+    id: 'seed-resync',
+    type: 'resync-completed',
+    updated: updated.map((d) => d.label),
+    riskChangedIds: riskChanged.map((d) => d.id),
+    riskChanged: riskChanged.map((d) => d.label),
+    actor: store.me().name,
+    at,
+  };
+}
+
+/**
+ * Everything required done EXCEPT the finalize: both assessments and the
+ * contact. With the new trigger slotted in where its timestamp puts it.
+ */
+function requiredButFinalize(store: CaseStore, withTrigger: boolean): StreamItem[] {
+  const items = store
+    .fixtureStream('required')
+    .filter((i) => !(isOutcome(i) && i.actionType === 'finalize-risk-assessment'));
+  if (!withTrigger) return items;
+  const arrival = triggerArrival(store);
+  const at = items.findIndex((i) => Date.parse(i.at) > Date.parse(arrival.at));
+  return at === -1 ? [...items, arrival] : [...items.slice(0, at), arrival, ...items.slice(at)];
+}
+
 function draft(partial: Partial<Draft> & Pick<Draft, 'actionType' | 'title'>): Draft {
   return {
     note: '',
@@ -78,21 +133,23 @@ export const SCENARIOS: Scenario[] = [
   {
     id: '01',
     label: '01 - Locked to you, nothing recorded',
-    hint: 'Two pending chips, two placeholders, Submit decision disabled.',
+    hint: 'Required: assess open source searches and document requests, contact the player, then Finalize (disabled until both are assessed).',
     apply: (s) => {
       s.seed(lockedToMe(s));
     },
   },
   {
     id: '02',
-    label: '02 - Recording, with attachment errors',
-    hint: 'Rule 5: invalid files error inline and never clear the valid ones.',
+    label: '02 - Assess risk - Open source searches, with attachment errors',
+    hint: 'Rule 5: invalid files error inline and never clear the valid ones. Risk Yes/No sits after the attachments.',
     apply: (s) => {
       s.seed({
         ...lockedToMe(s),
         draft: draft({
-          actionType: 'open-source-searches',
-          title: 'Open source searches',
+          actionType: 'assess-risk',
+          title: 'Assess risk - Open source searches',
+          riskFieldId: 'open-source-searches',
+          risk: null,
           note: 'Adverse media check complete. Two hits reviewed, both false positives relating to a namesake.',
           // One image, because there is one image fixture. The PDFs that used
           // to sit beside it went with PDF support; duplicating the single
@@ -123,8 +180,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: '03',
-    label: '03 - Both required actions recorded',
-    hint: 'Rule 4 satisfied, so rule 9 unlocks Submit decision. Severity escalated to AML.',
+    label: '03 - Everything required done, risk assessment finalized',
+    hint: 'Both assessments, the player contact and Finalize are recorded, so rule 9 unlocks Submit decision.',
     apply: (s) => {
       const stream = s.fixtureStream('required');
       s.seed({
@@ -140,14 +197,18 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: '04',
-    label: '04 - Viewing a historical snapshot',
-    hint: 'Left panel shows the snapshot captured by an outcome, with a way back.',
-    apply: (s, ws) => {
-      SCENARIOS.find((x) => x.id === '03')!.apply(s, ws);
-      const first = s.outcomes()[0];
+    label: '04 - Overriding a risk from the Risk assessment',
+    hint: 'Clicking No risk on Employment & occupation opened the Assess risk form in the workflow, prefilled with the current answer.',
+    apply: (s) => {
       s.seed({
-        viewedSnapshot: { outcomeId: first.id, title: first.title, at: first.snapshotAt },
-        infoTab: 'snapshot',
+        ...lockedToMe(s),
+        draft: draft({
+          actionType: 'assess-risk',
+          title: 'Assess risk - Employment & occupation',
+          riskFieldId: 'employment-occupation',
+          risk: 'no-risk',
+          fromPlaceholder: false,
+        }),
       });
     },
   },
@@ -172,7 +233,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: '07',
     label: '07 - Resolved',
-    hint: 'Rule 10: read-only, tabs reduced, no footer, no snapshot selected.',
+    hint: 'Rule 10: read-only, tabs reduced, no footer. The risk assessment shows as finalized.',
     apply: (s) => {
       const stream = s.fixtureStream('all');
       s.seed({
@@ -183,15 +244,14 @@ export const SCENARIOS: Scenario[] = [
         lockedSince: null,
         stream,
         timeline: s.fixtureTimeline(),
-        viewedSnapshot: null,
-        infoTab: 'snapshot',
+        infoTab: 'risk',
       });
     },
   },
   {
     id: '08',
     label: '08 - Add action menu open',
-    hint: 'Rule 7: three uncapped extra actions, none of which re-gate Submit.',
+    hint: 'Rule 7: uncapped extra actions, none of which re-gate Submit.',
     apply: (s, ws) => {
       SCENARIOS.find((x) => x.id === '03')!.apply(s, ws);
       s.seed({ addMenuOpen: true });
@@ -216,14 +276,15 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: '10',
-    label: '10 - Triggers expanded, 20 triggers, new arrival',
-    hint: 'Rule 11: amber NEW row pinned top, snapshot out of sync, recording blocked.',
+    label: '10 - New trigger arrived, triggers expanded',
+    hint: 'No amber and nothing blocked: the arrival is a workflow entry with a warning icon. Resync picks up what it changed.',
     apply: (s) => {
       s.seed({
         ...lockedToMe(s),
-        triggers: s.allFixtureTriggers(),
+        triggers: allTriggersUnflagged(s),
         triggersExpanded: true,
-        snapshotOutOfSync: true,
+        stream: [...s.stream(), triggerArrival(s)],
+        pendingRegeneration: true,
       });
     },
   },
@@ -234,6 +295,60 @@ export const SCENARIOS: Scenario[] = [
     apply: (s, ws) => {
       SCENARIOS.find((x) => x.id === '03')!.apply(s, ws);
       s.seed({ infoTab: 'past-cases' });
+    },
+  },
+  {
+    id: '12',
+    label: '12 - Resync confirm',
+    hint: 'Resync asks first: some actions might need to be recorded again.',
+    apply: (s, ws) => {
+      SCENARIOS.find((x) => x.id === '10')!.apply(s, ws);
+      s.seed({ triggersExpanded: false, openDialog: 'resync' });
+    },
+  },
+  {
+    id: '13',
+    label: '13 - Resyncing',
+    hint: 'The Risk assessment is covered by the Resyncing overlay until the new values are in.',
+    apply: (s, ws) => {
+      SCENARIOS.find((x) => x.id === '10')!.apply(s, ws);
+      s.seed({ triggersExpanded: false, resyncing: true });
+    },
+  },
+  {
+    id: '14',
+    label: '14 - Resync completed, two risks changed',
+    hint: 'Latest fraud scores and Deposit spike went back to Action required and joined the required list. Finalize is disabled until they are assessed.',
+    apply: (s) => {
+      const base = requiredButFinalize(s, true);
+      const last = base[base.length - 1];
+      const resync = resyncEntry(s, new Date(Date.parse(last.at) + 4 * 60_000).toISOString());
+      const stream = [...base, resync];
+      s.seed({
+        ...lockedToMe(s),
+        triggers: allTriggersUnflagged(s),
+        severity: s.severityAfter(stream),
+        stream,
+        riskGeneration: 1,
+        riskGeneratedAt: resync.at,
+      });
+    },
+  },
+  {
+    id: '15',
+    label: '15 - Finalize risk assessment',
+    hint: 'Every field assessed, so Finalize is enabled: the section table, a note, no attachments.',
+    apply: (s) => {
+      const stream = requiredButFinalize(s, false);
+      s.seed({
+        ...lockedToMe(s),
+        severity: s.severityAfter(stream),
+        stream,
+        draft: draft({
+          actionType: 'finalize-risk-assessment',
+          title: 'Finalize risk assessment',
+        }),
+      });
     },
   },
 ];

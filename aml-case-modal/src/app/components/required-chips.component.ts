@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
+import { RISK_STATUS_LABEL } from '../core/risk-assessment';
+import { RiskStatusComponent } from './risk-status.component';
 import { PillComponent } from './ui-pill.component';
 
 /**
@@ -14,7 +16,7 @@ import { PillComponent } from './ui-pill.component';
 @Component({
   selector: 'required-chips',
   standalone: true,
-  imports: [MatIconModule, PillComponent],
+  imports: [MatIconModule, PillComponent, RiskStatusComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -30,7 +32,23 @@ import { PillComponent } from './ui-pill.component';
       @if (!store.layoutNarrow()) {
         <span class="chip-bar__label">Required</span>
       }
-      @for (action of store.requiredActions(); track action.id) {
+      <!--
+        An assessment's chip IS its risk status - the same pill, same fill,
+        same icon as the field's row in the Risk assessment - with the field
+        name as the word and the status on the accessible name and title.
+        A done assessment therefore reads No risk or Risk flagged here, never
+        a generic tick, and the two panels say the same thing about one field.
+        Contact player and Finalize keep the pending / done pill.
+      -->
+      @for (action of store.requiredActions(); track action.key) {
+        @if (action.status) {
+          <risk-status
+            class="chip--assess"
+            [status]="action.status"
+            [label]="action.shortLabel"
+            [name]="action.label + ': ' + statusWord(action.status)"
+          />
+        } @else {
         <ui-pill
           [tone]="action.done ? 'success' : 'outline'"
           [attr.aria-label]="action.label + ': ' + (action.done ? 'done' : 'pending')"
@@ -38,8 +56,12 @@ import { PillComponent } from './ui-pill.component';
           <mat-icon class="chip__icon" aria-hidden="true">{{
             action.done ? 'check_circle' : 'radio_button_unchecked'
           }}</mat-icon>
+          <!-- An assessment shows its field alone: "Assess risk - " on every
+               chip took a second and third row of height for no information.
+               The aria-label keeps the full name. -->
           {{ store.layoutNarrow() ? action.shortLabel : action.label }}
         </ui-pill>
+        }
       }
     </div>
   `,
@@ -88,5 +110,6 @@ import { PillComponent } from './ui-pill.component';
 })
 export class RequiredChipsComponent {
   readonly store = inject(CaseStore);
+  readonly statusWord = (s: keyof typeof RISK_STATUS_LABEL) => RISK_STATUS_LABEL[s];
 }
 

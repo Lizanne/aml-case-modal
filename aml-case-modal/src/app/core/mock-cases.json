@@ -23,11 +23,6 @@
       "hint": "Log another contact with the player"
     },
     {
-      "id": "open-source-searches",
-      "label": "Open source searches",
-      "hint": "Record an additional search"
-    },
-    {
       "id": "note",
       "label": "Add a note",
       "hint": "Free note with optional attachments"

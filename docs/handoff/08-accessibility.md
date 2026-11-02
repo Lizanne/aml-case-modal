@@ -115,10 +115,14 @@ click is inert, Escape closes.
 
 | Region | Mechanism | Note |
 |---|---|---|
-| Required actions bar | `role="status"` | Each chip names its own state: `"Note added: done"` |
+| Required actions bar | `role="status"` | Each chip names its own state: `"Contact player: pending"`, `"Assess risk - Document requests: Action required"`, `"Assess risk - Document requests: No risk"` |
 | Lock status in the header | `role="status"` | `aria-label="Lock status: …"` |
 | Attachment errors | `aria-live="assertive"` on the `<ul>` | **Not** `role="alert"` |
-| Resync banner, warn notes, field errors | `role="alert"` | |
+| Warn notes, field errors, the draft-guard line | `role="alert"` | |
+| Risk assessment | `role="status" aria-live="polite"` | `Resyncing risk assessment`, then `Resync completed. <summary>` |
+| Risk assessment body, during a resync | `aria-busy="true"` | |
+| Resync, unavailable | `aria-disabled="true"` + `aria-describedby` | The reason is read with the button: `Lock the case to resync.` etc. |
+| Open Risk assessment row | `aria-current="true"` | The field whose form is open |
 
 > **Why the chips must name their own state:** the visible chip carries no state
 > *word* — an outlined ring and a green tick do that, and both icons are
@@ -129,8 +133,26 @@ click is inert, Escape closes.
 > **replaces** the list role on the element, orphaning the `<li>` children and
 > breaking list semantics. `aria-live` announces without overwriting the role.
 
-`aria-pressed` carries the outcome card's viewing state, because a label that
-changes (`View snapshot` → `Viewing`) is not a state a screen reader can infer.
+A risk status button's name says the field, the status and the verb -
+`Linked accounts: Risk flagged. Assess risk` - because the visible word alone
+does not say that pressing it changes anything. The info button is `About
+<Field>`, and its tooltip shows on keyboard focus, not only on hover.
+
+## Focus is handed back, never dropped
+
+Three places used to drop focus to the page body:
+
+| After | Focus goes to |
+|---|---|
+| Saving or cancelling a form opened from a risk status | that status (its info button if it became a label) |
+| Saving a form opened from a placeholder or the menu | the new outcome card (`tabindex="-1"`) |
+| Cancelling a form opened from a placeholder | its button; from the menu, Add action |
+| Confirming a resync | stays on Resync - it is `disabledInteractive` while it runs, not `disabled` |
+
+> **Why `disabledInteractive`:** a `disabled` button cannot hold focus, so
+> confirming the dialog returned focus to a control that immediately dropped
+> it. Material's attribute keeps the disabled look and `aria-disabled` while
+> leaving the button in the tab order.
 
 ## Required fields
 
@@ -176,6 +198,11 @@ highlight and the clickable area are concentric — one of the recurring bugs in
 
 Side-nav items are `min-height: 44px`.
 
+The Risk assessment's two small controls keep their 24px look and take a
+larger hit area through a `::before` pseudo-element: the info button 40 × 40,
+the status button 40px tall. The extra lands in the row's own padding, so
+neighbouring rows do not overlap.
+
 ## Motion
 
 See [07-motion.md](07-motion.md). `prefers-reduced-motion: reduce` is honoured
@@ -197,7 +224,10 @@ flashes.
 - [ ] Tab through every state — order is logical, no traps outside dialogs
 - [ ] Record an outcome and submit a decision **without a mouse**
 - [ ] Enter and Space both toggle the trigger strip divider
-- [ ] Arrow keys select within the lock-choice radio group
+- [ ] Arrow keys select within the lock-choice radio group, and the Risk Yes/No group
+- [ ] Tab to a Risk assessment info button shows its tooltip; Tab to a status and press Enter opens the form with focus in the note
+- [ ] Save the assessment from the keyboard - focus returns to the status
+- [ ] Tab to Resync while unlocked - it takes focus and its reason is read; Enter does nothing
 - [ ] Escape closes the newest panel; Escape inside a dialog closes only the
       dialog
 - [ ] Dialog focus returns to the control that opened it
@@ -210,6 +240,9 @@ flashes.
 - [ ] Lock status announces on change
 - [ ] Attachment errors announce **and** the list keeps its `li` children
 - [ ] Textareas announce as required in all three forms
+- [ ] A status button announces field, status and `Assess risk`
+- [ ] Confirming a resync announces `Resyncing risk assessment`, then the summary
+- [ ] The finalize table reads as a table: section row headers, Risk / No risk
 
 ### Visual
 - [ ] Zoom to 200% — layout usable at every threshold in
@@ -220,6 +253,7 @@ flashes.
 
 ### Motion
 - [ ] `prefers-reduced-motion: reduce` — panel animation disabled, widget
-      controls instant, no bar pulse
+      controls instant, no bar pulse, no Resyncing spinner, no smooth scroll to
+      the form
 - [ ] Toggle the OS setting **without reloading** — it takes effect live
 - [ ] Nothing flashes more than three times per second

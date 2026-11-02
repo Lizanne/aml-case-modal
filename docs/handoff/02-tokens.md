@@ -72,7 +72,7 @@ constant.
 | Token | Meaning |
 |---|---|
 | `--foreground-success` / `--success-bg-subtle` | "You can act here" |
-| `--warn` / `--warn-bg` | Warn state, and severity EDD |
+| `--warn` / `--warn-bg` | Warn state, severity EDD, and **Action required** on a Risk assessment field |
 | `--danger` / `--danger-bg` | Destructive intent |
 | `--danger-strong` / `--danger-bg-strong` | The stronger step, used for hover on danger |
 
@@ -83,7 +83,31 @@ required actions, the resolved decision card.
 > is precisely where you *cannot* act.
 
 **Amber is severity EDD and the warn state**, so it is never used for neutral
-counts.
+counts. On the Risk assessment it is the third status, Action required, and
+the new-trigger event's icon: both are "look at this", which is what warn
+means here.
+
+## Risk assessment
+
+The statuses reuse the state pairs above with the subdued rims that already
+existed for the status pills:
+
+| Status | Fill | Rim | Ink |
+|---|---|---|---|
+| Risk flagged | `--danger-bg` | `--border-negative-subdued` | `--danger` |
+| No risk | none (outline form); `--success-bg-subtle` on hover | `--success` at 32% | `--success` |
+| Action required | `--warn-bg` | `--border-warning-subdued` | `--warn` |
+
+Hover deepens the fill in its own hue: `--danger-bg-strong` for risk,
+`color-mix(in oklch, --warn-bg 88%, --warn)` for action required, and the
+subtle fill for no risk. A token for the mixed values would be the right next
+step if they are reused anywhere else.
+
+| Token | Used for |
+|---|---|
+| `--color-background-info` | The Risk assessment row whose form is open (it was the viewed-snapshot card's fill) |
+| `--color-background-info-subdued` / `--color-foreground-on-info` | The draft-guard line on the record form; `on-info` is also the `Assessing` mark |
+| `--colors-alpha-alpha-soft-hover` | The info button's hover |
 
 ## Primary and link
 
@@ -102,6 +126,21 @@ colour.
 `--brand-bar`, `--brand-bar-ink`, `--brand-bar-accent`, `--player-bar`,
 `--player-bar-ink`. Sampled from the host app. **Nothing inside a panel may use
 these.**
+
+## Spacing — the LDS core scale
+
+`--lds-core-spacing-*` on `:root`, added 2 Nov 2026: the LDS core spacing
+scale, `0 · px · 0-5 · 1 · 1-5 · 2 · 2-5 · 3 · 3-5 · 4 · 5 · 6 · 7 · 8 · 9 ·
+10 · 11 · 12 · 14 · 16 · 20 · 24 · 28 · 32 · 36 · 40 · 44 · 48 · 52 · 56 · 60 ·
+64 · 72 · 80 · 96` → `0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36,
+40, 44, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256,
+288, 320, 384` px. A dot in a step name becomes a hyphen (`0-5`), because a
+custom property cannot carry one.
+
+**New spacing is taken from the scale.** The Risk assessment's section bands
+are the first consumer (`spacing-6` above, `spacing-2` / `spacing-5`
+padding, `spacing-px` rule). Existing values elsewhere are all on the scale
+already and are not retrofitted yet; moving them is a rename.
 
 ## Metrics
 
@@ -156,9 +195,10 @@ Declared in `aml-case-modal/src/app/core/models.ts`:
 | Smallest | 32px | In-card and in-strip controls, lock action, icon buttons |
 
 **One primary per surface**, given to whichever action moves the agent forward:
-`Lock case` when unlocked, `Open case` when locked to you, `Record` in a
-placeholder, `Submit decision` in the footer, `Resync` when the snapshot is
-stale.
+`Lock case` when unlocked, `Open case` when locked to you, `Record` /
+`Assess` / `Finalize` in a placeholder, `Submit decision` in the footer,
+`Resync` in the resync confirm. The Risk assessment's own Resync is outlined -
+it is always on screen, and a primary that is always on screen is not one.
 
 ## Pills
 

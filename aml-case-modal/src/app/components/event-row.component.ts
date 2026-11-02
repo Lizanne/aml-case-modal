@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { StampPipe } from '../core/format';
+import { resyncSummary } from '../core/case-store';
 import { CaseCreatedEvent, EventItem, SeverityChangeEvent } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
@@ -16,7 +17,11 @@ import { PillComponent } from './ui-pill.component';
  *
  * Lock and unlock used to render here too. They do not any more - they are case
  * history and belong to the Timeline tab alone, so `EventItem` no longer admits
- * them and this component only ever sees a severity change.
+ * them.
+ *
+ * Four kinds now: a severity change, the case's own creation, a trigger that
+ * arrived while the case was open (with a warning icon, and nothing else -
+ * no amber, no banner), and the result of a Risk assessment resync.
  */
 @Component({
   selector: 'event-row',
@@ -40,6 +45,13 @@ import { PillComponent } from './ui-pill.component';
         <!-- One label slot for both kinds. The direction arrow is gone: the
              label already says escalation or de-escalation, and the pills say
              which way. -->
+        @if (event.type === 'trigger-added') {
+          <mat-icon
+            class="row__icon row__icon--warn"
+            fontSet="material-icons-outlined"
+            aria-hidden="true"
+          >warning_amber</mat-icon>
+        }
         <span class="row__label">{{ headLabel }}</span>
 
         <!--
@@ -53,7 +65,7 @@ import { PillComponent } from './ui-pill.component';
           <ui-pill size="sm" [severity]="sev.to">{{ sev.to }}</ui-pill>
         }
 
-        <span class="row__meta">{{ event.actor }} · {{ event.at | stamp }}</span>
+        <span class="row__meta">{{ actorLabel }} · {{ event.at | stamp }}</span>
       </div>
 
       <!-- Line two either way: the severity reason, or the creation
@@ -126,6 +138,11 @@ import { PillComponent } from './ui-pill.component';
          the row stays secondary ink so the event still reads as an annotation.
          3.92:1 against the stream background, clear of the 3:1 non-text bar. */
       .row__icon--escalation {
+        color: var(--warn);
+      }
+      /* The new-trigger icon. Icon only: the row stays an unboxed annotation,
+         and the word "New trigger added" carries the meaning beside it. */
+      .row__icon--warn {
         color: var(--warn);
       }
       /* 16px, matching the direction arrow. They are a pair on the same line
@@ -207,16 +224,38 @@ export class EventRowComponent {
     return this.event.type === 'case-created' ? this.event : null;
   }
 
-  /** Line one. Both kinds get a label; only a severity change gets pills. */
+  /** Line one. Every kind gets a label; only a severity change gets pills. */
   get headLabel(): string {
-    if (this.event.type === 'case-created') {
-      return `Manual case created - ${this.event.reason}`;
+    switch (this.event.type) {
+      case 'case-created':
+        return `Manual case created - ${this.event.reason}`;
+      case 'trigger-added':
+        return `New trigger added - ${this.event.name}`;
+      case 'resync-completed':
+        return 'Resync completed';
+      default:
+        return this.event.direction === 'escalation'
+          ? 'Severity escalation'
+          : 'Severity de-escalation';
     }
-    return this.event.direction === 'escalation' ? 'Severity escalation' : 'Severity de-escalation';
   }
 
-  /** Line two: the severity reason, or the creation motivation. */
+  /** Line two: the reason, the motivation, the trigger's detail or what the resync changed. */
   get lineTwo(): string {
-    return this.event.type === 'case-created' ? this.event.description : this.event.reason;
+    switch (this.event.type) {
+      case 'case-created':
+        return this.event.description;
+      case 'trigger-added':
+        return this.event.detail;
+      case 'resync-completed':
+        return resyncSummary(this.event);
+      default:
+        return this.event.reason;
+    }
+  }
+
+  /** 'system' is stored lower case; it is shown as a name. */
+  get actorLabel(): string {
+    return this.event.actor === 'system' ? 'System' : this.event.actor;
   }
 }

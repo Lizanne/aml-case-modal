@@ -199,12 +199,16 @@ check('required chips are a status region', await page.evaluate(() => {
 // The visible chip carries no state word - the icon and colour do that, and the
 // icon is aria-hidden. So the accessible name is the ONLY thing telling a
 // screen reader whether an action is done; it must name the state explicitly.
+// Two kinds of chip: Contact and Finalize say pending / done; an assessment
+// chip is the field's risk status pill and says that status instead.
 check('each chip states its own status in its accessible name', await page.evaluate(() => {
-  const chips = [...document.querySelectorAll('required-chips ui-pill')];
+  const plain = [...document.querySelectorAll('required-chips ui-pill')];
+  const assess = [...document.querySelectorAll('required-chips risk-status .status')];
   return (
-    chips.length > 0 &&
-    chips.every((c) => /: (pending|done)$/.test(c.getAttribute('aria-label') || '')) &&
-    chips.every((c) => !/pending|done/i.test(c.textContent))
+    plain.length > 0 && assess.length > 0 &&
+    plain.every((c) => /: (pending|done)$/.test(c.getAttribute('aria-label') || '')) &&
+    plain.every((c) => !/pending|done/i.test(c.textContent)) &&
+    assess.every((c) => /: (Action required|No risk|Risk flagged)$/.test(c.getAttribute('aria-label') || ''))
   );
 }));
 await go('02');
@@ -359,7 +363,9 @@ console.log('\nA full record-and-submit journey, keyboard only');
 // BUTTONS matched on their own label: the dev switcher's <select> contains
 // every state name, "02 - Record form open" among them, so a loose text match
 // lands there and Enter does nothing.
-const tabToButton = async (text, max = 80) => {
+// 200: the Risk assessment puts an info button and a status button on every
+// field, all ahead of the workflow in tab order.
+const tabToButton = async (text, max = 200) => {
   for (let i = 0; i < max; i++) {
     await page.keyboard.press('Tab');
     const hit = await page.evaluate((t) => {
@@ -375,7 +381,8 @@ const tabToButton = async (text, max = 80) => {
 await page.goto(`${BASE}/?state=01`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('action-placeholder button', { timeout: 15000 });
 await page.waitForTimeout(700);
-check('Tab reaches Record', await tabToButton('Record'));
+// The button's name says what it records now: several placeholders share a verb.
+check('Tab reaches Record', await tabToButton('Record Contact player'));
 await page.keyboard.press('Enter');
 await page.waitForTimeout(600);
 check('Enter opens the form', (await page.locator('record-form form').count()) === 1);

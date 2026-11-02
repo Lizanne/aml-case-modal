@@ -17,6 +17,10 @@ hover to any of these has introduced a bug**, not polish.
 | Severity dialog `Choose` placeholder | **Inert** | A slot, not a control |
 | `minimised-bar` surface | **Inert** | Only its two icon buttons are live |
 | Trigger strip divider | **Interactive** | The one control in the strip |
+| Risk assessment row | **Inert** | Text and an info button; it is **tinted** (not hovered) while its form is open |
+| `risk-status` | **Interactive for the lock owner**, a label otherwise | It opens Assess risk. A real `<button>` with an edit glyph - the only thing on the row that changes |
+| Risk assessment info button | **Interactive** | Tooltip on hover and focus, nothing else |
+| `section-risk-table` row | **Inert** | A summary |
 
 > **Why Past AML cases has hover and the others do not:** two components that
 > look alike but differ in clickability must *look* different. The hover is the
@@ -35,7 +39,10 @@ hover to any of these has introduced a bug**, not polish.
 | Record (placeholder) | disabled | enabled | disabled | **absent** |
 | Add action | disabled | enabled | disabled | **absent** |
 | Adjust severity | disabled | enabled | disabled | **absent (no footer)** |
-| Resync | disabled | enabled | disabled | disabled |
+| Assess (placeholder) | disabled | enabled | disabled | **absent** |
+| Finalize (placeholder) | disabled | enabled once nothing is Action required | disabled | **absent** |
+| Risk status | label | **button**, until finalized | label | label |
+| Resync | unavailable (focusable) | enabled, until finalized | unavailable (focusable) | **absent** |
 | Submit decision | disabled | per rule 4 | disabled | **absent** |
 | Widget `Open case` | absent | present | absent | absent |
 
@@ -44,10 +51,11 @@ hover to any of these has introduced a bug**, not polish.
 > thing on the panel that could be done without the lock. Adjusting severity *is*
 > acting on the case.
 
-> **Why `canAct` and not `canRecord` for severity:** recording carries the extra
-> rule-11 block, because an outcome is a statement about what the triggers said.
-> A severity is a judgement about the case and does not go stale with the
-> snapshot.
+> `canRecord` used to carry an extra rule-11 block (recording stopped while the
+> snapshot was out of sync). That block is gone - a new trigger no longer stops
+> anything - so `canRecord` and `canAct` are the same gate now. Both names
+> remain: `canAct` for acting on the case, `canRecord` where a form is involved.
+> Resync's own gate, `canResync`, adds "not finalized, not already resyncing".
 
 **Force unlock is demoted at rest** — no border or fill, muted ink — and turns
 danger-coloured on hover and focus.
@@ -65,7 +73,7 @@ is `0.08` rather than the default `0.12`.
 
 ---
 
-## The sixteen states
+## The states
 
 ### 00a — Unlocked, no owner
 
@@ -91,51 +99,66 @@ act. A timeline event is written.
 
 ### 01 — Locked to you, nothing recorded
 
-Both required indicators outlined and hollow. Two dashed placeholders with
-`Record` primary. Add action available. Submit disabled, with its reason in the
-pinned required bar and a tooltip on the button — **not** in footer helper text.
+Four required items: `Document requests` and `Open source searches` as
+**amber Action required pills** - the same pill their rows show in the Risk
+assessment - then `Contact player` and `Finalize risk assessment` outlined
+and hollow. Four dashed placeholders: two `Assess` with the field name and
+its Action required pill, one `Record`, and Finalize with its button
+**disabled** and `Assess Document requests and Open source searches first.`
+beneath. Add action available. Submit disabled, with its reason in the pinned
+required bar and a tooltip on the button — **not** in footer helper text.
 
-There is no empty-stream line. The two dashed placeholders name the
-outstanding actions directly, and a manual case opens with its creation event,
-so the stream is neither blank nor unexplained.
+The Risk assessment shows generation 0: Account information collapsed to its
+one-line disclosure, the summary `2 to assess · 10 flagged · 6 no risk`, the
+two manual fields Action required, the rest as the system read them. Resync
+enabled.
 
-### 02 — Recording, with attachment errors
+There is no empty-stream line. The placeholders name the outstanding items
+directly, and a manual case opens with its creation event, so the stream is
+neither blank nor unexplained.
 
-The form is inline in the stream, replacing the placeholder. Note required;
-attachments optional, JPG or PNG only; keep-locked / unlock radio **preselected
-to `Keep the case locked to me`**, with neither option styled as recommended.
+### 02 — Assess risk - Open source searches, with attachment errors
 
-Save is gated on the note alone. There is no rule above the footer: 32px of
-space carries the separation instead of a line.
+The form is inline in the stream, replacing the placeholder, headed with the
+field. Note required; attachments optional, JPG or PNG only; then **Your
+assessment** - radios `Risk flagged` / `No risk`, neither chosen yet (the
+field is Action required); keep-locked / unlock radio **preselected to `Keep the case locked to me`**, with neither option
+styled as recommended.
+
+Save is gated on the note and the Risk answer. There is no rule above the
+footer: 32px of space carries the separation instead of a line. The Open
+source searches row in the Risk assessment is tinted and reads `Assessing`.
 
 Per-file inline errors name the file and the rule. They **never clear valid
 files**.
 
-### 02b — Recording clean, reverse order
+### 02b — Recording Player contact first
 
-The same form, with the required actions completed in the opposite order.
-Proves rule 4: order does not matter, Submit checks set membership.
+The Record variant of the form, opened before either assessment. Proves rule
+4: order does not matter, Submit checks set membership. The other three
+placeholders stay.
 
-### 03 — Both required actions recorded
+### 03 — Everything required done, risk assessment finalized
 
-Both chips filled success with a tick. Submit enabled. Extras still available and
-they never re-gate Submit.
+All four chips done: the two assessments as green **No risk** pills, Contact
+player and Finalize as success ticks. The stream holds both assessment
+cards (each with `No risk` and `Was Action required`), the player contact,
+the severity escalation and the `Risk assessment finalized` card with its
+section table. The Risk assessment shows the Finalized line, every status a
+label, Resync unavailable. Submit enabled. Extras still available and they
+never re-gate Submit.
 
-### 04 — Viewing a historical snapshot
+### 04 — Overriding a risk from the Risk assessment
 
-The left panel swaps to a plain view header — label over timestamp, with `Back`
-in the same slot `Resync` occupies.
+`No risk` on Employment & occupation was clicked. The form opened in the
+workflow, **appended** (the field is not a required assessment), headed
+`Assess risk - Employment & occupation`, with **No risk already chosen**, so
+an override starts from the current call. The row is tinted and reads
+`Assessing`.
 
-> **Why the same slot:** so the header does not reflow between modes.
-
-The source outcome card takes a persistent **selected** treatment — the whole
-card fills with `--color-background-info` (`#DBEAFE`) and its border goes
-transparent — and its button reads `Viewing`. Only one card is selected at a
-time.
-
-> **Why each action stores its own snapshot:** the player keeps playing while the
-> case is open. A reviewer needs to see not just what the agent decided but what
-> they were looking at.
+> **Why the status opens the form rather than toggling:** the override has to
+> be recorded with a note, like every other act on the case. The status is the
+> way in, not the answer.
 
 ### 05 — Adjust severity dialog
 
@@ -157,18 +180,21 @@ that submitting resolves the case. When an unsaved draft exists the amber warnin
 
 ### 07 — Resolved, read-only
 
-Tabs reduce to Snapshot and Timeline. No required bar, no placeholders, no Add
-action, no footer, **no lock row at all**. The left panel shows no snapshot
-selected until an outcome's `View snapshot` is clicked.
+Tabs reduce to Risk assessment and Timeline. No required bar, no placeholders,
+no Add action, no footer, **no lock row at all**. The Risk assessment shows as
+finalized: the Finalized line, every status a plain label, no Resync. The
+finalize card in the stream carries the section table as it stood.
 
 > **Why the live view and the audit view are the same view with the controls
 > removed:** so they cannot drift apart.
 
 ### 08 — Add action menu open
 
-Three items — Contact player, Open source searches, Add a note — each opening the
-same record form. Menu opens on Enter, closes on Esc **returning focus to the
-trigger**.
+Two items — Contact player, Add a note — each opening the same record form.
+Assessing a field is done from its status or its placeholder, never from this
+menu. Menu opens on Enter, closes on Esc **returning focus to the trigger**.
+With a draft that has content open, an item does not open a second form: the
+open one is revealed with the draft-guard line.
 
 ### 09 — Dual modals
 
@@ -185,17 +211,40 @@ keeps it until it leaves.
 **Neither widget renders while both panels are open** — see
 [06-edge-cases.md](06-edge-cases.md).
 
-### 10 — Triggers expanded, new arrival
+### 10 — New trigger arrived, triggers expanded
 
-Twenty triggers, one unresynced arrival. The arrival is the **newest**, therefore
-the last row in either mode, with an amber row background and a `New` badge after
-the trigger name.
+Twenty triggers; the newest is the arrival, the last row in either mode, **with
+no amber and no badge**. The stream carries `New trigger added - System -
+Threshold` with a warning icon. Nothing is blocked: Record and Assess are
+enabled, Resync is enabled, and the next resync will find new values.
 
-The snapshot is marked out of sync and recording is blocked until Resync.
-Arriving while expanded, the strip scrolls back to it.
+> **Why nothing is flagged in the strip:** the 2 Nov change removed every
+> forced-refresh signal. The arrival is recorded where the agent is working,
+> in order, and Resync is a choice.
 
-**The highlight persists until resync, not until it is seen.** Several arrivals
-before a resync all stay highlighted.
+### 12 — Resync confirm
+
+`Resync risk assessment?` over state 10. Focus on the primary `Resync`.
+Cancel changes nothing.
+
+### 13 — Resyncing
+
+The Risk assessment body under the overlay, `aria-busy`; Resync unavailable
+but still focused. The header and the tabs stay readable.
+
+### 14 — Resync completed, two risks changed
+
+The `Resync completed` entry lists five updated values and names Latest fraud
+scores and Deposit spike as risks that changed. Both fields are Action required
+- amber in the Risk assessment **and** amber in the chip bar - and on the
+required list; VPN usage kept its risk with a new value; the
+Generated stamp is the resync time. Finalize is disabled again and names the
+two fields.
+
+### 15 — Finalize risk assessment
+
+Every field assessed, so Finalize's form is open: the live section table,
+the note, the lock choice, `Finalize`. No attachments.
 
 ### 11 — Past AML cases tab
 
@@ -240,6 +289,9 @@ in prototyping.
 | Attachment remove | transparent | compact danger | ring | — | absent when saved |
 | Bar icon buttons | transparent | tint filling the **whole** 40×40 | ring | — | n/a |
 | Tab | 14/20 regular | tint | ring | — | n/a |
+| Risk status button | status fill + rim + edit glyph @0.7 | deeper fill in its own hue, glyph @1 | ring, offset 2 | `scale(0.97)` | becomes a label |
+| Risk info button | transparent, secondary ink | `--colors-alpha-alpha-soft-hover`, primary ink | ring | — | n/a |
+| Resync | outlined | Material layer | ring | Material layer | `disabledInteractive`: disabled look, still focusable, reason on describedby and tooltip |
 
 **Focus is `:focus-visible` throughout**, with a global 2px `--primary` ring.
 There is no bare `outline: none` anywhere.

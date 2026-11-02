@@ -2,8 +2,9 @@
 
 Two kinds of thing live here, and they are not the same kind of thing:
 
-1. **Open questions** — eleven places where the spec is silent or contradicts
-   itself. Each has a **build assumption**. The prototype is built to the
+1. **Open questions** — eleven places where the original spec is silent or
+   contradicts itself, and five more from the Risk assessment change of
+   2 Nov 2026. Each has a **build assumption**. The prototype is built to the
    assumption and flags it in a code comment. These are not settled decisions
    and must not be read as such.
 2. **Disagreements between the code and the designs** — places where the two
@@ -11,7 +12,7 @@ Two kinds of thing live here, and they are not the same kind of thing:
 
 ---
 
-## Part one — the eleven open questions
+## Part one — the open questions
 
 Verbatim from the amber card at the far left of *Round 2 — AML Case Modal*,
 with what the prototype actually does.
@@ -25,14 +26,13 @@ creates it and nothing ends it.
 
 **Needs:** define it, or cut it from the epic.
 
-### 2 · A new trigger arriving mid-draft
+### 2 · A new trigger arriving mid-draft — **closed 2 Nov 2026**
 
-**Built as:** the draft is **preserved**, and Save is blocked with a warn note
-until Resync.
+**Built as:** the draft is **untouched and Save stays available**. A new
+trigger blocks nothing any more; it is a workflow entry, and the next Resync
+picks up what it changed. See [11-risk-assessment.md](11-risk-assessment.md).
 
-**Alternative rejected:** discarding the draft. See
-[06-edge-cases.md](06-edge-cases.md) — losing typing silently is the thing this
-panel is most careful about.
+The old answer (draft kept, Save withheld until Resync) is superseded.
 
 ### 3 · Force unlock and the other agent's draft
 
@@ -45,14 +45,13 @@ There is no mechanism for it in this prototype.
 > This is the one open question with a missing piece of product, not just a
 > missing decision.
 
-### 4 · Historical snapshot placement
+### 4 · Historical snapshot placement — **superseded 2 Nov 2026**
 
-**Built as:** the left panel swaps to a plain view header, `Back` in the slot
-`Resync` occupies, and the source outcome card takes a persistent selected
-treatment.
-
-**Status:** this is a **design proposal over spec silence**. It needs sign-off,
-not just implementation.
+There is no historical snapshot any more: the Risk assessment shows current
+values only, `View snapshot` is gone from every outcome card, and what a
+resync changed is recorded on the `Resync completed` entry. The selected-card
+treatment (`--color-background-info` fill) moved to the Risk assessment row
+whose form is open.
 
 ### 5 · Attachment size cap
 
@@ -63,17 +62,18 @@ it.
 **Needs:** confirmation of the number. The constant is the only place to change
 it; the error copy interpolates from it.
 
-### 6 · New trigger arrival behaviour
+### 6 · New trigger arrival behaviour — **superseded 2 Nov 2026**
 
-**Built as:** the highlight persists **until resync**, not until it is seen.
-Several arrivals before a resync all stay highlighted. Auto-expand happens
-**only if the strip was already expanded** — an arrival never forces the strip
-open.
+**Built as:** no highlight at all in the case modal. The arrival is an event
+row in the workflow with a warning icon, and nothing forces a refresh. The amber
+row and the `New` badge remain in the trigger strip component for the cases
+table's popover, which still flags arrivals.
 
 ### 7 · Extras and Submit
 
-**Built as:** once both required actions are recorded, extra actions **never
-re-gate Submit**. An open draft does not disable it either.
+**Built as:** once every required item is done - the required assessments,
+Player contact and Finalize risk assessment - extra actions **never re-gate
+Submit**. An open draft does not disable it either.
 
 **Status:** built as assumed. Not confirmed.
 
@@ -89,8 +89,9 @@ recommendation**, not scope.
 ### 9 · Export for audit or a GC assessment
 
 **Not in this epic.** The constraint that follows from it: nothing built here
-may drop data an export would need. Timeline entries, commentaries, snapshots
-and severity-at-resolution are all retained for that reason.
+may drop data an export would need. Timeline entries, commentaries, every
+assessment and resync as workflow entries, the finalized section table and
+severity-at-resolution are all retained for that reason.
 
 **Requested:** acknowledgement as a future ticket.
 
@@ -123,6 +124,47 @@ severity dialog.
 
 **Built as:** no helper text. The radios are unlabelled beyond the severity
 name.
+
+### 12 · Document requests has no risk rule
+
+The PDF's *Risk If* column reads `NOte after`. **Built as:** always manual -
+the field opens as Action required on every case, and only an agent's
+assessment moves it. **Needs:** the rule, or confirmation that it stays manual.
+
+### 13 · Open source searches has no value
+
+The PDF's mock value is `???`. **Built as:** the line `No searches recorded`.
+**Needs:** what the field should show, and where it comes from.
+
+### 14 · Is Contact player required on every case?
+
+The 2 Nov notes name Contact player as an existing required action and add to
+the list rather than removing it. **Built as:** required on every case,
+alongside the assessments and Finalize. **Confirmed as far as the handover
+specifies;** the notes do not say whether every AML case needs it.
+
+### 15 · What a finalized assessment allows
+
+The notes say only that the case cannot close until Finalize is done. **Built
+as:** Finalize locks the assessment - statuses stop being clickable and Resync
+is unavailable - because a resync after finalizing could reopen Action required
+fields under a finalized summary, and nothing says what should happen then.
+**Needs:** confirmation, or the rule for resync-after-finalize.
+
+### 16 · The section list
+
+The PRD names four assessed groups (verification, login and geography, payment
+methods, deposit and transaction behaviour). The PDF, and the build, have six:
+those four plus Product & gameplay analysis and Open source intelligence - and
+the PRD itself requires an open source searches assessment, which needs a
+section to live in. **Built as:** the PDF's six. **Needs:** the PRD list
+confirmed as incomplete, or two sections cut.
+
+Also noted, not built: the PDF's *Link to player doc reqs section* (no
+documents section exists in the prototype), currencies other than GBP (the
+values are mock text), and the PRD's suggestion that field tooltips could be
+replaced by separate documentation (the tooltips are built; the definitions
+live in one file, `core/risk-assessment.ts`, which could feed a document).
 
 ### Resolved already
 
@@ -245,10 +287,15 @@ both the build and the Figma handoff on:
 | Adjust severity always enabled | Gated on `canAct()` |
 | Figma page *Round 1* | *Round 2* |
 | **Six** open questions | **Eleven** |
-| States 00a – **10** | 00a – **13** |
+| States 00a – **10** | 00a – **15** |
 
 > **Recommendation:** either regenerate it from this handoff or mark it
 > historical at the top. As it stands it is a live document that will mislead.
+>
+> **Except its Risk assessment material.** Business rules 4 and 10–14, the
+> "Risk assessment" section, the states list and open questions 2 and 6–9 in
+> `PROTOTYPE.md` were rewritten on 2 Nov 2026 alongside the build and agree
+> with it. Section [11](11-risk-assessment.md) is still the fuller account.
 
 ### H · A stray constant comment
 
@@ -275,14 +322,16 @@ folding it into a handoff commit.
 
 ---
 
-## States 12 and 13 have no dev-switcher entry
+## Figma's 12 and 13 have no dev-switcher entry; the switcher's 12–15 are something else
 
-`core/scenarios.ts` defines **fourteen** scenarios, 00a through 11. States **12
-(starred commentaries)** and **13 (case timeline)** exist in Figma and in the
-build, but are reachable only by clicking their tab from another state.
+`core/scenarios.ts` defines **eighteen** scenarios, 00a through 15. Switcher
+states **12–15 are the Risk assessment flow** (resync confirm, resyncing, resync
+completed, finalize), added 2 Nov 2026. Figma's frames **12 (starred
+commentaries)** and **13 (case timeline)** are tabs, reachable from any
+unresolved state, with no switcher entry of their own.
 
-Consequence: `verify:a11y` sweeps 14 states, not 16. The two tab bodies are
-covered incidentally, not directly.
+Consequence: `verify:a11y` sweeps the eighteen switcher states; the two tab
+bodies are covered incidentally, not directly.
 
-**Recommendation:** add two scenarios that land on those tabs, so the sweep and
-the Figma inventory line up.
+**Recommendation:** add two scenarios that land on those tabs, numbered so they
+do not collide with 12–15.

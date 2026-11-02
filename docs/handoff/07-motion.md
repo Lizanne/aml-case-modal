@@ -65,35 +65,51 @@ An auto-minimised bar **pulses once** so the agent can see where it went.
 **No success toasts for anything the agent did.** The UI state changing where
 they are looking is the confirmation.
 
-Two persistent, single-line, non-fading notices at the top of the workflow,
-dismissed by the action:
+There are **no banners and no snackbars** in the built panel. Two things that
+used to be notices are workflow entries now:
 
-| Notice | Action |
+| Event | Where it shows |
 |---|---|
-| Lock lost to another agent | `Lock to me` |
-| New trigger arrived | `View trigger` |
+| New trigger arrived | An event row in the stream: warning icon, `New trigger added - <type>`, the trigger's detail on line two. No amber anywhere, nothing blocked |
+| Resync completed | An event row: `Resync completed`, with `No changes.` or the updated values and the risks that moved. While it runs, the Risk assessment is covered by the Resyncing overlay |
 
-**Only one renders at a time, and lock lost wins.**
+> **Why entries and not notices:** both are things that happened to the case,
+> in order, between the things the agent did. The stream is the record of that.
+> A notice at the top would restate it out of sequence and then disappear.
 
 A failed save is an **inline error inside the record form with the draft kept**,
-not a panel notice.
+not a panel notice. A refused start (a draft with content is open) is an
+**inline line on that draft**, and the form scrolls into view.
 
-**One snackbar only:** snapshot resynced, positioned **above the footer** so it
-never covers the buttons.
+> The Figma handoff card describes a lock-lost notice with a `Lock to me`
+> action. It is not built; open question 3 covers the missing notification.
 
 ## Scroll-to-reveal
 
-A trigger arriving while the strip is expanded lands in a list the agent may have
-scrolled away from, so the strip scrolls back to it. Keyed on the arrival
-**count**, so several landing before a resync each bring the list back rather
-than only the first.
+Two things scroll into view, both with `block: 'nearest'`, both `smooth`
+unless reduced motion is on:
 
-> **Why not keyed on the trigger list:** that also changes when a resync clears
-> the flags, which is the agent finishing with the strip rather than something
-> new to show them.
+| What | When |
+|---|---|
+| The record form | Opened from a risk status in the other panel, or revealed because a start was refused. The note takes focus (not on touch - the keyboard would cover the form) |
+| Nothing in the trigger strip, in the case modal | The strip's scroll-to-an-arrival is keyed on flagged arrivals, and the case modal no longer flags them (rule 11, revised). It still runs in the table's trigger popover, which does |
 
-Collapsed needs none of this — the pair renders the newest as its second row, and
-two rows do not scroll.
+> **Why the form and not the arrival:** the arrival is in the stream, in order,
+> where the agent is already reading. The form is the thing that moved.
+
+## The Resyncing overlay
+
+A translucent cover (`--panel` at 82%) over the Risk assessment's body - not
+its header, so the Generated stamp and Resync stay readable - with a 24px
+Material spinner and the word `Resyncing`, stuck to the top of the visible area
+so it is on screen however far down the list the agent was. `RESYNC_MS` (1500)
+is the simulated duration. Under reduced motion the spinner is hidden; the word
+carries the state.
+
+## Risk status buttons
+
+`background-color` and `border-color` over 120ms `ease-out` on hover, and a
+`scale(0.97)` press. Both are `none` under reduced motion.
 
 ## Reduced motion
 
@@ -106,6 +122,9 @@ two rows do not scroll.
 | Widget controls returning | `animation: none` |
 | Segment / tab transitions | `transition: none` |
 | Skip link | `transition: none` |
+| Record form scroll-into-view | `behavior: 'auto'` |
+| Resyncing overlay | Spinner hidden; the word stays |
+| Risk status hover and press | `transition: none`, `transform: none` |
 
 > **Why the panel animation is disabled rather than shortened:** a slide is a
 > slide. Angular animations do not consult `prefers-reduced-motion`, so the

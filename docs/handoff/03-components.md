@@ -13,7 +13,7 @@ open, minimised, and how wide each gets).
 
 ## `aml-case-modal` — the shell
 
-Owns the layout mode and hosts the severity and decision dialogs.
+Owns the layout mode and hosts the severity, decision and resync dialogs.
 
 **Layout:** see [01-layout.md](01-layout.md). Radius `0` solo, `12px` dual.
 `max-width: 100vw` as a backstop.
@@ -22,7 +22,7 @@ Owns the layout mode and hosts the severity and decision dialogs.
 and `layoutStacked` (panel < `MIN_DUAL_PANEL_PX`), so components that are not
 children of this template can adapt their own density.
 
-**Hosts:** `severity-dialog`, `decision-dialog`. **Not** `confirm-unlock-dialog`
+**Hosts:** `severity-dialog`, `decision-dialog`, `resync-dialog`. **Not** `confirm-unlock-dialog`
 — that lives in `app.component`.
 
 > **Why the unlock dialog is hosted outside the panel:** Force unlock also
@@ -136,26 +136,36 @@ line, detail full-width beneath.
 
 ## `player-info-panel`
 
-421 wide, full body height. Tabs: Snapshot, Past AML cases, Starred, Timeline.
-Resolved cases show **Snapshot and Timeline only**.
+421 wide, full body height. Tabs: **Risk assessment**, Past AML cases, Starred,
+Timeline. Resolved cases show **Risk assessment and Timeline only**.
 
 | Property | Value |
 |---|---|
 | Tab label | 14px / 20px, `padding: 0 10px`, 600 + 2px `--primary` underline when active |
 | `.info__body` | `padding: 16px 20px`, scrolls independently |
-| `.info__body--flush` | side padding `0` — Past AML cases only |
-| Snapshot head | `min-height: 40px`, `gap: 12px` |
-| Snapshot label / value | 12/16 muted, over 14/20 semibold |
+| `.info__body--flush` | side padding `0` — Past AML cases, Starred and Timeline |
 | Placeholder | radius 12, `padding: 16px`, `margin: 16px 0 0`, dashed `--line-strong` |
 
-> **Why Past AML cases gives up its side padding:** its rows are buttons. A hover
-> tint that stops 20px short of the panel edge reads as a floating strip rather
-> than a row of a list. Their own 20px keeps the *content* on the same gutter as
-> every other tab, so only the tint moves.
+> **Why the row-list tabs give up their side padding:** their rows carry a rule
+> or a tint that must reach the panel edge. Their own 20px keeps the *content*
+> on the same gutter as every other tab, so only the tint moves.
 
-**Both snapshot modes share one header geometry** — label over timestamp, with
-the control in the same slot — so switching between current and historical does
-not reflow.
+The Snapshot tab is gone. Its header geometry (`min-height: 40px`, label over
+a bold stamp, one control hard right) lives on as the Risk assessment's header.
+
+---
+
+## `risk-assessment`, `risk-status`, `section-risk-table`, `resync-dialog`
+
+The Risk assessment tab and its parts. Specified in full in
+[11-risk-assessment.md](11-risk-assessment.md); the short form:
+
+| Component | What it is |
+|---|---|
+| `risk-assessment` | Header (Generated stamp, always-visible Resync), a summary line with a jump to the first field to assess, optional Finalized line, seven sections of rows with Account information collapsed by default, the Resyncing overlay, a live region |
+| `risk-status` | The status: a label, or a button for the lock owner that opens Assess risk. 24 tall, 14px icon + word; Risk flagged and Action required filled with a subdued rim, No risk an outline; the button adds an edit glyph and a 40px hit area |
+| `section-risk-table` | The finalize table: section, Risk / No risk. A real `<table>`, used in the Finalize form and on its card |
+| `resync-dialog` | `Resync risk assessment?` / `Some actions might need to be recorded again.` Cancel, primary Resync (focused) |
 
 ---
 
@@ -169,8 +179,12 @@ other list in the panel.
 
 > **Why:** it is a narrative ending in the decision.
 
-Contains outcome cards, severity events and the decision. **Lock events never
-appear here** — they go to the timeline.
+Contains outcome cards, the decision, and four kinds of event: severity
+change, case creation, **a trigger arriving** and **a resync completing**.
+**Lock events never appear here** — they go to the timeline.
+
+There is no banner above the stream any more. The out-of-sync notice went with
+rule 11's revision; a new trigger is an event row.
 
 `.stream` sits on `--stream-bg`, `padding: 20px`, `gap: 12px` — with **24px
 below the case creation event**, which gets a clear break before the first slot
@@ -185,8 +199,23 @@ rather than sitting in the work's rhythm.
 | Bar | `min-height: --panel-bar-h` (48), `padding: 12px 20px`, `gap: 8px` |
 | Chip | Static styled `<span>` — **never `mat-chip`** |
 
-Exactly two chip states, no third: **pending** (outlined, hollow circle, muted)
-and **done** (filled success, tick).
+Four kinds of item, in this order: one chip per **required assessment** (the
+two manual fields, plus any a resync sent back), **Contact player**, then
+**Finalize risk assessment**.
+
+**Two kinds of chip.** Contact player and Finalize keep the two-state pill:
+**pending** (outlined, hollow circle, muted) and **done** (filled success,
+tick). **An assessment chip is the field's risk status pill** - the same
+`risk-status` component as the field's row in the Risk assessment, same fill,
+same icon - with the field name as its word (`Open source searches`), the
+status word on its `title`, and `Assess risk - Open source searches: Action
+required` as its accessible name. A done assessment therefore reads **No risk**
+(green, check) or **Risk flagged** (red, flag), never a generic tick.
+
+> **Why the chip is the status and not a tick:** the chip bar and the Risk
+> assessment are one list. With a green "done" tick beside a field the agent
+> had just flagged red, the two panels disagreed on screen about one fact. The
+> same pill in both places is what makes them read as one system.
 
 > **Why static spans:** chips carry hover, focus, ripple and listbox semantics
 > these do not earn. This bar is also where the reason for a disabled Submit
@@ -202,22 +231,21 @@ and **done** (filled success, tick).
 | Title | 16px / 24px, 600 |
 | Actor + time | 12px, right-aligned |
 | Note | 14px / 1.55, `overflow-wrap: anywhere` |
-| Footer | flex **column**, `gap: 12px` |
+| Footer | Attachments only, rendered only when there are any; `margin-top: 16px` |
+| Assessment line | Under the title: the `risk-status` label, then `Was <previous>` 12/16 secondary when the agent changed it |
+| Finalize table | `section-risk-table`, `margin-top: 12px` |
 
-**View snapshot sits on its own row beneath the attachments, always.**
+**There is no View snapshot.** The snapshot became the Risk assessment, which
+shows current values only; what an assessment decided is on its own card and
+what a resync changed is on the Resync completed entry.
 
-> **Why:** sharing a wrapping row made the button's position a function of how
-> many chips preceded it, so the one control on the card was the hardest thing on
-> it to find twice.
+Three variants: standard, **assessment** (status + `Was …`), **finalize**
+(the section table), and the decision card (green fill). The selected /
+viewing variant is gone with View snapshot; its `--color-background-info`
+fill moved to the Risk assessment row whose form is open.
 
-Three variants: standard, decision (green fill), selected (viewing its
-snapshot — the whole card takes `--color-background-info` `#DBEAFE`, its border
-goes transparent, and the button reads `Viewing`).
-
-> **Why the border goes transparent rather than being removed:** the card is
-> `border-box` with 16px of padding, so dropping the border outright would hand
-> its content 2px more width than every unselected card beside it, and the text
-> would shift as selection moved down the stream.
+The card is `tabindex="-1"` with `aria-label` = its title: focus lands on it
+after a save from a placeholder. Ring on `:focus-visible` only.
 
 **Immutable once saved** — no edit or delete affordance anywhere on the card.
 
@@ -256,8 +284,18 @@ valid files.
 
 ## `event-row`
 
-Two kinds of event share this row: a **severity change**, and a **manual case
-creation** at the head of the stream.
+Four kinds of event share this row: a **severity change**, a **manual case
+creation** at the head of the stream, **a trigger arriving** and **a resync
+completing**.
+
+| Kind | Line one | Line two |
+|---|---|---|
+| Trigger added | 16px outlined `warning_amber` in `--warn`, `New trigger added - <type>`, `System · <stamp>` | the trigger's detail |
+| Resync completed | `Resync completed`, `<agent> · <stamp>` | `No changes.` or `Updated values: … Risk associated with … changed - manual action needed.` |
+
+> **Why the warning icon and nothing else:** the row stays an unboxed
+> annotation; the words carry the meaning, the icon says "look". No amber fill
+> - that vocabulary is gone from the case modal with rule 11's revision.
 
 | Property | Value |
 |---|---|
@@ -297,8 +335,19 @@ with the creation event at the head the stream is not visually empty anyway.
 
 Radius 12, `padding: 12px 16px`, `gap: 16px`, dashed border.
 
+Three kinds, one component:
+
+| Kind | Title | Button | Accessible name |
+|---|---|---|---|
+| Assessment | `<Field>` + the field's **risk status pill** (`Action required`) | `Assess` (`edit_note`) | `Assess <Field>` |
+| Contact | `Contact player - not recorded` | `Record` | `Record Contact player` |
+| Finalize | `Finalize risk assessment` | `Finalize` (`task_alt`) | its label |
+
 Two states: **enabled** (locked to you) and **disabled** (with a one-line reason
-beneath the label). Replaced *in place* by the inline record form.
+beneath the title). Finalize has a third reason: not available yet - `Assess
+<A> and <B> first.` - and **stays in view, disabled**, until every field is
+assessed. Replaced *in place* by the inline record form. `data-key` carries
+the required item's key so focus can return to it.
 
 > **Why dashed:** it means a slot waiting to be filled — the same vocabulary as
 > the `Choose` placeholder in the severity dialog, so agents read it without
@@ -312,15 +361,32 @@ Inline in the stream, replacing the placeholder. **Never a dialog.**
 
 > **Why:** the player data stays readable while the agent writes.
 
+Three variants of one form:
+
+| Variant | Heading | Fields | Save |
+|---|---|---|---|
+| Record | `Record <action>` | note, attachments, lock choice | `Save outcome` |
+| Assess risk | `Assess risk - <Field>` | note, attachments, **Your assessment** - radios `Risk flagged` / `No risk`, stacked like the lock choice (after the attachments), lock choice | `Save assessment` |
+| Finalize | `Finalize risk assessment` | **the section table**, note, lock choice - no attachments | `Finalize` |
+
 Note textarea (required), attachment list, keep-locked / unlock radio with **no
 default styling on either**, then Cancel and Save. Footer `gap: 8px`; Cancel is
-padded to 16px sides to match Save.
+padded to 16px sides to match Save. `Cmd` / `Ctrl` + `Enter` in the note
+saves.
+
+A **draft-guard line** (info tint, `role="alert"`) appears at the top when
+another start was refused because this draft has content. The form scrolls
+into view and focuses its note whenever the store asks: on open from a risk
+status, and on a refused start. On save or cancel it hands focus back - see
+[11-risk-assessment.md](11-risk-assessment.md), *Focus*.
+
+There is no out-of-sync warning on the form any more.
 
 > **Why Cancel needed padding:** Material gives a text button less side padding
 > than a filled one, so it sat visibly tighter than the primary beside it.
 
-Save requires **only** the note. Removing a file that errored, or the last file,
-must leave Save enabled.
+Save requires the note, plus the Risk answer on an assessment. Removing a file
+that errored, or the last file, must leave Save enabled.
 
 ---
 
@@ -342,7 +408,7 @@ with its scroll position, active tab and any half-written draft.
 
 ---
 
-## Dialogs — `dialog-shell` and its three users
+## Dialogs — `dialog-shell` and its four users
 
 Surface tier radius 16, full-viewport scrim, footer actions at **default**
 Material density (40).
@@ -352,6 +418,7 @@ Material density (40).
 | `severity-dialog` | Inert dashed `Choose` placeholder until a radio is picked, then the solid pill and direction badge. Save disabled until the reason is filled |
 | `decision-dialog` | **Exactly one notice slot** — green by default, amber replacing it entirely when a draft exists |
 | `confirm-unlock-dialog` | Danger confirm labelled `Unlock case`; initial focus on Cancel |
+| `resync-dialog` | `Resync risk assessment?` / `Some actions might need to be recorded again.`; primary `Resync`, **initial focus on Resync** - nothing is lost by confirming |
 
 The unlock dialog's lead states the fact and stops:
 `M. Torres has held the lock since 11 Aug 2026, 10:58.` The red note carries the

@@ -77,8 +77,11 @@ let stripSeq = 0;
  *
  * It used to have a second signal: the count badge turned amber too, and that
  * survived the row scrolling out of view. The badge is gone with the header,
- * so the row's own amber and its New badge are the whole of it here. The
- * workflow panel's out-of-sync notice is what still says it at panel level.
+ * so the row's own amber and its New badge are the whole of it here.
+ *
+ * The case modal no longer flags arrivals at all: a new trigger is a workflow
+ * entry there instead. The amber and the badge remain for a host that still
+ * flags them - the cases table's trigger popover.
  *
  * The highlight persists until RESYNC, not until it is seen (open question 6).
  * Several arrivals before a resync all stay highlighted, and the collapsed
@@ -130,8 +133,8 @@ let stripSeq = 0;
         unresynced arrival, so a new trigger had two signals - the row and the
         chip - and the chip was the one that survived the row scrolling out of
         an expanded list. The row keeps its amber and its New badge; the second
-        signal is gone. The out-of-sync notice in the workflow panel is what
-        still says it at panel level.
+        signal is gone. The case modal no longer flags arrivals; a
+        new trigger is a workflow entry there.
       -->
       @if (visible().length) {
         <!-- A scrollable region must be focusable or keyboard users cannot

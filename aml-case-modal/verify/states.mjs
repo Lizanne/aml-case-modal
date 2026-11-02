@@ -23,7 +23,8 @@ const CHECKS = {
     'header shows the opening severity': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === OPENING_SEVERITY,
     'lock button says Lock to me': (await p.locator('case-header button:has-text("Lock to me")').count()) === 1,
     'record buttons disabled': await p.locator('action-placeholder button').first().isDisabled(),
-    'two placeholders': (await p.locator('action-placeholder').count()) === 2,
+    // Two assessments, the contact and Finalize.
+    'four placeholders': (await p.locator('action-placeholder').count()) === 4,
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
   }),
   '00b': async (p) => ({
@@ -33,8 +34,11 @@ const CHECKS = {
     'header offers Force unlock': (await p.locator('case-header button:has-text("Force unlock")').count()) === 1,
   }),
   '01': async (p) => ({
-    'two pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"]').count()) === 2,
-    'two placeholders': (await p.locator('action-placeholder').count()) === 2,
+    'four pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count()) === 4,
+    'the assessment chips are Action required pills': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 2,
+    'four placeholders': (await p.locator('action-placeholder').count()) === 4,
+    'Finalize visible but disabled':
+      await p.locator('action-placeholder:has-text("Finalize risk assessment") button').isDisabled(),
     'record enabled': await p.locator('action-placeholder button').first().isEnabled(),
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
     // A manual case opens with its creation event, and the empty line is about
@@ -60,16 +64,27 @@ const CHECKS = {
     // Save back. This frame seeds a note, so the form is complete and Save is
     // live; what the frame still proves is that the errors do not block it.
     'lock choice preselected': (await p.locator('record-form .mat-mdc-radio-checked').count()) === 1,
-    'save enabled despite the file errors': await p.locator('record-form button:has-text("Save outcome")').isEnabled(),
+    'it is the Open source searches assessment': (await p.locator('record-form .form__title').innerText()).trim() === 'Assess risk - Open source searches',
+    'Risk has no answer yet': (await p.locator('record-form fieldset.field--risk input:checked').count()) === 0,
+    'save waits for the Risk answer': await p.locator('record-form button:has-text("Save assessment")').isDisabled(),
+    // Answering is all it takes: the file errors still do not block it.
+    'save enabled despite the file errors once answered': await (async () => {
+      await p.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
+      await p.waitForTimeout(100);
+      return p.locator('record-form button:has-text("Save assessment")').isEnabled();
+    })(),
   }),
   '02b': async (p) => ({
     'form is Player contact': (await p.locator('record-form .form__title').innerText()).toLowerCase().includes('player contact'),
     'no errors': (await p.locator('record-form .error').count()) === 0,
     'save enabled': await p.locator('record-form button:has-text("Save outcome")').isEnabled(),
-    'open-source placeholder still present': (await p.locator('action-placeholder').count()) === 1,
+    // Both assessments and Finalize are still outstanding.
+    'the other placeholders still present': (await p.locator('action-placeholder').count()) === 3,
   }),
   '03': async (p) => ({
-    'both chips done': (await p.locator('required-chips ui-pill[data-tone="success"]').count()) === 2,
+    'every chip done, Finalize included': (await p.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count()) === 4,
+    'done assessment chips read No risk, not done': (await p.locator('required-chips risk-status [data-risk="no-risk"]').count()) === 2,
+    'the risk assessment shows as finalized': (await p.locator('risk-assessment .ra-final').count()) === 1,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
     // Two event rows now: the case's own creation heads the stream, and the
     // severity change sits between the outcomes. Counted apart, because only
@@ -82,12 +97,11 @@ const CHECKS = {
     'header severity is the post-escalation one': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === POST_ESCALATION,
   }),
   '04': async (p) => ({
-    // The historical view is the shared snapshot header now, not a tinted
-    // banner: the source action is the header LABEL.
-    'snapshot header shown': (await p.locator('player-info-panel .snapshot-head').count()) === 1,
-    'names source action': (await p.locator('player-info-panel .snapshot-head__label').innerText()).includes('Open source searches'),
-    'timestamp reads as captured': (await p.locator('player-info-panel .snapshot-head__value').innerText()).startsWith('Captured '),
-    'way back is the header control': (await p.locator('player-info-panel .snapshot-head .snapshot-head__back').count()) === 1,
+    // Overriding a system risk: the form opened from the field's status.
+    'the form assesses Employment & occupation': (await p.locator('record-form .form__title').innerText()).trim() === 'Assess risk - Employment & occupation',
+    'prefilled with the current answer': (await p.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').isChecked()),
+    'appended, not in a placeholder slot': (await p.locator('action-placeholder').count()) === 4,
+    'the field shows No risk': (await p.locator('risk-assessment [data-field="employment-occupation"] risk-status .status').getAttribute('data-risk')) === 'no-risk',
   }),
   '05': async (p) => ({
     'severity dialog open': (await p.locator('severity-dialog').count()) === 1,
@@ -142,21 +156,18 @@ const CHECKS = {
     'no add action': (await p.locator('add-action-menu').count()) === 0,
     'no footer': (await p.locator('workflow-panel .footer').count()) === 0,
     'two tabs only': (await p.locator('player-info-panel .mat-mdc-tab').count()) === 2,
-    'no snapshot selected': (await p.locator('player-info-panel .empty').innerText()).includes('No snapshot selected'),
+    'the first tab is Risk assessment': (await p.locator('player-info-panel .mat-mdc-tab').first().innerText()).trim() === 'Risk assessment',
+    'the risk assessment shows as finalized': (await p.locator('risk-assessment .ra-final').count()) === 1,
+    'no status can be clicked': (await p.locator('risk-assessment risk-status button').count()) === 0,
+    'no Resync on a resolved case': (await p.locator('risk-assessment .ra-head__resync').count()) === 0,
     'decision card present': (await p.locator('outcome-card .card--decision').count()) === 1,
-    // The header meta carries the moment; the footer must not restate it.
-    'no card restates the snapshot time': await (async () => {
-      const cards = await p.locator('outcome-card').all();
-      for (const c of cards) if (/Captured/i.test(await c.innerText())) return false;
-      return cards.length > 0;
-    })(),
-    'View snapshot is the whole label': (
-      await p.locator('outcome-card .card__actions').first().innerText()
-    ).replace(/\s+/g, ' ').trim().endsWith('View snapshot'),
+    'finalize card with its table': (await p.locator('outcome-card section-risk-table').count()) === 1,
+    'no View snapshot anywhere': (await p.locator('outcome-card button:has-text("snapshot")').count()) === 0,
   }),
   '08': async (p) => ({
     'menu panel open': (await p.locator('.mat-mdc-menu-panel').count()) === 1,
-    'three items': (await p.locator('.mat-mdc-menu-panel button.mat-mdc-menu-item').count()) === 3,
+    // Contact player and Add a note. Assessing is done from a field's status.
+    'two items': (await p.locator('.mat-mdc-menu-panel button.mat-mdc-menu-item').count()) === 2,
   }),
   '09': async (p) => ({
     // "Dual modal" means two modals sharing the width - the companion SG-alert
@@ -182,7 +193,10 @@ const CHECKS = {
       await p.waitForTimeout(500);
       return n === 1;
     })(),
-    'chips use short labels': (await p.locator('required-chips ui-pill').first().innerText()).includes('Searches'),
+    'chips use short labels': await (async () => {
+      const labels = (await p.locator('required-chips ui-pill').allInnerTexts()).map((t) => t.replace(/^\S+\s*/, '').trim());
+      return labels.includes('Contact') && labels.includes('Finalize') && !labels.some((l) => l.startsWith('Assess risk'));
+    })(),
     // The narrow footer no longer splits into two full-width halves - it is
     // the same right-aligned pair as every other footer.
     'footer buttons sit right at their natural width': await (async () => {
@@ -199,14 +213,33 @@ const CHECKS = {
     // the strip EXPANDED, so every trigger is in the DOM and the count is the
     // row count.
     '20 triggers total': (await p.locator('trigger-strip .trigger').count()) === 20,
-    'new marker present': (await p.locator('trigger-strip .trigger--new').count()) === 1,
-    // The strip reads oldest to newest in BOTH modes now, so the arrival - by
-    // definition the newest trigger - is the LAST row whether 10's seeded
-    // expansion is open or not. On screen either way, which is the guarantee
-    // rule 11 actually needs.
-    'new row is last': (await p.locator('trigger-strip .trigger').last().getAttribute('class')).includes('trigger--new'),
-    'resync banner shown': (await p.locator('workflow-panel .resync').count()) === 1,
-    'recording blocked': await p.locator('action-placeholder button').first().isDisabled(),
+    // Rule 11, revised: no amber, no NEW marker, no banner, nothing blocked.
+    'no new marker': (await p.locator('trigger-strip .trigger--new').count()) === 0,
+    'the arrival is a workflow entry with a warning icon': (await p.locator('event-row:has-text("New trigger added - System - Threshold") mat-icon.row__icon--warn').count()) === 1,
+    'no resync banner': (await p.locator('workflow-panel .resync').count()) === 0,
+    'recording not blocked': await p.locator('action-placeholder:has-text("Contact player") button').isEnabled(),
+    'Resync visible and enabled': (await p.locator('risk-assessment .ra-head__resync').getAttribute('aria-disabled')) === null,
+  }),
+  '12': async (p) => ({
+    'resync dialog open': (await p.locator('resync-dialog').count()) === 1,
+    'asks first': /Some actions might need to be recorded again/.test(await p.locator('resync-dialog').innerText()),
+  }),
+  '13': async (p) => ({
+    'overlay shown': /Resyncing/.test(await p.locator('risk-assessment .ra-overlay').innerText()),
+    'section busy': (await p.locator('risk-assessment .ra-body').getAttribute('aria-busy')) === 'true',
+    'Resync disabled while it runs': (await p.locator('risk-assessment .ra-head__resync').getAttribute('aria-disabled')) === 'true',
+  }),
+  '14': async (p) => ({
+    'resync entry names the changed risks': /Risk associated with Latest fraud scores and Deposit spike changed - manual action needed\./.test(await p.locator('event-row:has-text("Resync completed")').innerText()),
+    'both fields Action required': (await p.locator('risk-assessment [data-field="latest-fraud-scores"] .status, risk-assessment [data-field="deposit-spike"] .status').evaluateAll((els) => els.every((e) => e.getAttribute('data-risk') === 'action-required'))),
+    'two new assessment placeholders and Finalize': (await p.locator('action-placeholder').count()) === 3,
+    'Finalize disabled': await p.locator('action-placeholder:has-text("Finalize risk assessment") button').isDisabled(),
+  }),
+  '15': async (p) => ({
+    'finalize form open': (await p.locator('record-form .form__title').innerText()).trim() === 'Finalize risk assessment',
+    'section table shown': (await p.locator('record-form section-risk-table tbody tr').count()) === 6,
+    'no attachments': (await p.locator('record-form .field__actions').count()) === 0,
+    'button says Finalize': (await p.locator('record-form button[type="submit"]').innerText()).trim() === 'Finalize',
   }),
 };
 
@@ -245,5 +278,5 @@ for (const [state, check] of Object.entries(CHECKS)) {
 }
 
 await browser.close();
-console.log(failures === 0 ? '\nAll 13 states pass.' : `\n${failures} state(s) failed.`);
+console.log(failures === 0 ? `\nAll ${Object.keys(CHECKS).length} states pass.` : `\n${failures} state(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

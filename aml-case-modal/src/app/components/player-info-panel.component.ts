@@ -14,10 +14,11 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { InfoTab } from '../core/models';
+import { RiskAssessmentComponent } from './risk-assessment.component';
 import { PillComponent } from './ui-pill.component';
 
 const TAB_LABEL: Record<InfoTab, string> = {
-  snapshot: 'Snapshot',
+  risk: 'Risk assessment',
   'past-cases': 'Past AML cases',
   starred: 'Starred',
   timeline: 'Timeline',
@@ -26,13 +27,13 @@ const TAB_LABEL: Record<InfoTab, string> = {
 /**
  * Left panel. Scrolls independently of the workflow stream.
  *
- * Rule 10: once resolved the tab set reduces to Snapshot + Timeline, and the
- * Snapshot tab shows nothing until an outcome's View snapshot is used.
+ * Rule 10: once resolved the tab set reduces to Risk assessment + Timeline,
+ * and the Risk assessment is shown read-only, as it was finalized.
  */
 @Component({
   selector: 'player-info-panel',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTabsModule, StampPipe, PillComponent],
+  imports: [MatButtonModule, MatIconModule, MatTabsModule, StampPipe, PillComponent, RiskAssessmentComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="info" aria-label="Player information">
@@ -48,8 +49,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
       </mat-tab-group>
 
       <!-- tabindex + label, the same contract .stream has: this scrolls, and
-           hiding the snapshot Resync left it with no focusable child at all,
-           so a keyboard user had no way to scroll it. -->
+           a tab with no focusable child would leave a keyboard user no way to
+           scroll it. -->
       <div
         class="info__body"
         [class.info__body--flush]="isFlushTab()"
@@ -59,86 +60,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
         (scroll)="onScroll()"
       >
         @switch (store.infoTab()) {
-          @case ('snapshot') {
-            @if (store.viewedSnapshot(); as snap) {
-              <!--
-                Same header as the current view, filled differently: label over
-                timestamp on the left, the view's ONE control on the right.
-                Switching between the two modes must not move anything.
-              -->
-              <div class="snapshot-head">
-                <div class="snapshot-head__text">
-                  <p class="snapshot-head__label">Snapshot from {{ snap.title }}</p>
-                  <p class="snapshot-head__value">Captured {{ snap.at | stamp }}</p>
-                </div>
-                <!-- A plain button, not mat-button: it occupies the slot a
-                     36px stroked Resync occupies, and Material's button would
-                     bring a ripple, a min-width and a border to a text
-                     action. -->
-                <button
-                  type="button"
-                  class="snapshot-head__back"
-                  aria-label="Back to current snapshot"
-                  (click)="store.clearSnapshot()"
-                >
-                  <mat-icon aria-hidden="true">chevron_left</mat-icon>
-                  Back
-                </button>
-              </div>
-              <p class="placeholder">
-                Player snapshot as it stood at {{ snap.at | stamp }}. Snapshot content is out of
-                scope for this epic.
-              </p>
-            } @else if (store.isResolved()) {
-              <!-- Rule 10. -->
-              <p class="empty">No snapshot selected.</p>
-              <p class="placeholder">
-                Use View snapshot on any outcome to see the player data as it stood when that
-                outcome was recorded.
-              </p>
-            } @else {
-              <div class="snapshot-head">
-                <div class="snapshot-head__text">
-                  <p class="snapshot-head__label">Snapshot generated</p>
-                  <p class="snapshot-head__value">{{ store.snapshotGeneratedAt() | stamp }}</p>
-                </div>
-                <!-- Hidden while the workflow panel's out-of-sync notice is
-                     up: that notice owns the action there, and in the
-                     two-panel layout both are on screen at once, so leaving
-                     this one visible put two Resync buttons in front of the
-                     agent. -->
-                <!--
-                  Enabled for the lock owner, whether or not anything has gone
-                  out of sync: taking a fresh snapshot is something you may
-                  simply want to do. It was hardcoded disabled, which made it a
-                  label shaped like a button.
-
-                  Still hidden while the workflow panel's out-of-sync notice is
-                  up - see the note above - so the two never appear together.
-                -->
-                @if (!store.snapshotOutOfSync()) {
-                  <button
-                    mat-stroked-button
-                    type="button"
-                    [disabled]="!store.canAct()"
-                    (click)="store.resync()"
-                  >
-                    <mat-icon>sync</mat-icon>
-                    Resync
-                  </button>
-                }
-              </div>
-              @if (store.snapshotOutOfSync()) {
-                <p class="warn-note" role="alert">
-                  <mat-icon fontSet="material-icons-outlined">sync_problem</mat-icon>
-                  Out of sync. A trigger arrived after this snapshot was taken.
-                </p>
-              }
-              <p class="placeholder">
-                Player snapshot content is out of scope for this epic. This panel proves the
-                generation stamp, the resync control and the historical view.
-              </p>
-            }
+          @case ('risk') {
+            <risk-assessment />
           }
 
           @case ('past-cases') {
@@ -305,123 +228,6 @@ const TAB_LABEL: Record<InfoTab, string> = {
         margin-left: 20px;
         margin-right: 20px;
       }
-      /**
-       * One header, two fillings.
-       *
-       * Left: a small label over a bold timestamp. Right: whatever single
-       * control the view has - a stroked Resync when you are on the current
-       * snapshot, a text Back when you are on a historical one.
-       *
-       * min-height is the point of the whole block. The two controls are not
-       * the same height (a stroked Material button is 36px, a text button is
-       * its line box), so without a floor the header would grow and shrink as
-       * you moved between the modes and everything under it would jump.
-       */
-      .snapshot-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        min-height: 40px;
-      }
-      .snapshot-head__text {
-        min-width: 0;
-      }
-      /* One line each, both modes. The historical label is the longest string
-         either mode puts here, and a wrap would defeat the fixed height. */
-      .snapshot-head__label {
-        margin: 0;
-        font-size: 12px;
-        line-height: 16px;
-        color: var(--foreground-secondary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .snapshot-head__value {
-        margin: 2px 0 0;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 600;
-        color: var(--foreground-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      /* Text style: no border, no fill, no min-width. The visible label is
-         just "Back"; aria-label carries the full sentence, because "Back" on
-         its own does not say where to out of context. */
-      .snapshot-head__back {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        flex: none;
-        padding: 0;
-        border: 0;
-        background: none;
-        font: inherit;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 600;
-        color: var(--link);
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      /* Colour only - no underline. The icon has to be told as well: mat-icon
-         sets its own colour, so a rule on the button alone leaves the chevron
-         behind at the rest colour. */
-      .snapshot-head__back:hover,
-      .snapshot-head__back:hover mat-icon {
-        color: var(--link-hover);
-      }
-      .snapshot-head__back:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 3px;
-        border-radius: 2px;
-      }
-      .snapshot-head__back mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        flex: none;
-      }
-      /**
-       * Resync's glyph at 16 - Material's 18 overridden. The same size Add
-       * action, Add files, View snapshot and Adjust severity carry; the 18 was
-       * only ever the default nobody had set.
-       *
-       * Scoped to the BUTTON, not to .snapshot-head. Written against the
-       * wrapper it also matched the back chevron, at equal specificity to that
-       * element's own rule and later in the file, so it silently took the
-       * chevron from 20px to 16.
-       */
-      .snapshot-head .mat-mdc-outlined-button mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
-        flex: none;
-      }
-      .warn-note {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        margin: 16px 0 0;
-        padding: 16px;
-        border-radius: 8px;
-        background: var(--warn-bg);
-        color: var(--warn);
-        font-size: 14px;
-        line-height: 20px;
-      }
-      .warn-note mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        flex: none;
-      }
       .placeholder {
         margin: 16px 0 0;
         padding: 16px;
@@ -429,12 +235,6 @@ const TAB_LABEL: Record<InfoTab, string> = {
         border-radius: 10px;
         font-size: 14px;
         line-height: 20px;
-        color: var(--foreground-secondary);
-      }
-      .empty {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 600;
         color: var(--foreground-secondary);
       }
       /**

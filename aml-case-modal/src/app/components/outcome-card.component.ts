@@ -1,83 +1,64 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-  inject,
-} from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
 
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { OutcomeItem } from '../core/models';
+import { RISK_STATUS_LABEL } from '../core/risk-assessment';
 import { AttachmentListComponent } from './attachment-list.component';
+import { RiskStatusComponent } from './risk-status.component';
+import { SectionRiskTableComponent } from './section-risk-table.component';
 
 /**
  * Rule 6. A saved outcome. Immutable - no edit affordance anywhere on this card,
- * attachments are frozen, and the snapshot reference it captured is offered as
- * a read-only view.
+ * and attachments are frozen.
  *
- * The card header already carries the moment (actor + timestamp), so the button
- * is just "View snapshot"; it does not restate when the snapshot was taken.
+ * View snapshot is gone. The snapshot became the Risk assessment, which shows
+ * current values only: what an assessment decided is on its own card, and
+ * what a resync changed is on the Resync completed entry.
+ *
+ * An assessment card says the field's new status, and what it was before
+ * when the agent changed it. A finalize card carries the section table.
  */
 @Component({
   selector: 'outcome-card',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, AttachmentListComponent, StampPipe],
+  imports: [AttachmentListComponent, StampPipe, RiskStatusComponent, SectionRiskTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- tabindex -1: focus lands here after a save, so a keyboard user is
+         put on what they just recorded. Not a tab stop. -->
     <article
       class="card"
+      tabindex="-1"
+      [attr.aria-label]="outcome.title"
       [class.card--decision]="outcome.actionType === 'decision'"
       [class.card--narrow]="store.layoutNarrow()"
-      [class.card--viewing]="isViewing()"
     >
       <div class="card__head">
         <h3 class="card__title">{{ outcome.title }}</h3>
         <p class="card__meta">{{ outcome.actor }} · {{ outcome.at | stamp }}</p>
       </div>
 
+      @if (outcome.assessment; as a) {
+        <p class="card__assessment">
+          <risk-status [status]="a.risk" />
+          @if (changedFrom(); as was) {
+            <span class="card__was">Was {{ was }}</span>
+          }
+        </p>
+      }
+
       <p class="card__note">{{ outcome.note }}</p>
 
-      <!--
-        TWO ROWS, ALWAYS: the attachments, then View snapshot beneath them.
-        Never side by side, at any width.
+      @if (outcome.finalized; as rows) {
+        <section-risk-table class="card__table" [rows]="rows" caption="Risk by section, as finalized" />
+      }
 
-        They used to share one wrapping flex row, which made the button's place
-        a function of how many chips preceded it and how wide the card was - it
-        sat to the right of a single chip, dropped below two, and moved again
-        the moment the column resized. The one control on the card was the
-        hardest thing on it to find twice.
-
-        Stacked, its place is the same in every card in the stream: hard left,
-        directly under whatever the attachments came to, including nothing.
-      -->
-      <footer class="card__foot">
-        @if (outcome.attachments.length) {
+      @if (outcome.attachments.length) {
+        <footer class="card__foot">
           <attachment-list class="card__files" [attachments]="outcome.attachments" [removable]="false" />
-        }
-        <div class="card__actions">
-          <!--
-            One control both ways: pressed and reading "Viewing" while this
-            card's snapshot is up, and clicking it again returns to current.
-            aria-pressed carries the state, because a label that changes is
-            not by itself a state a screen reader can report.
-          -->
-          <button
-            mat-stroked-button
-            type="button"
-            class="card__snap"
-            [class.card__snap--on]="isViewing()"
-            [attr.aria-pressed]="isViewing()"
-            (click)="viewSnapshot.emit(outcome)"
-          >
-            <mat-icon>history</mat-icon>
-            {{ isViewing() ? 'Viewing' : 'View snapshot' }}
-          </button>
-        </div>
-      </footer>
+        </footer>
+      }
     </article>
   `,
   styles: [
@@ -95,62 +76,29 @@ import { AttachmentListComponent } from './attachment-list.component';
         background: var(--panel);
         padding: 16px;
       }
-      /**
-       * The card whose snapshot the left panel is showing. Persistent, not a
-       * hover: it is the answer to "which of these am I looking at", and it has
-       * to hold while the agent reads the other panel.
-       *
-       * The tint carries it alone - no border, and no left accent either. The
-       * selected card is the only tinted thing in the stream, so an outline
-       * around it is a second marker for a state that is already unambiguous,
-       * and it fought the tint at the corners.
-       *
-       * border-color: transparent, not border: 0. The card is border-box with
-       * 16px of padding, so dropping the border outright would hand its
-       * content 2px more width than every unselected card beside it and shift
-       * the text as selection moved down the stream.
-       */
-      .card--viewing {
-        border-color: transparent;
-        background: var(--color-background-info);
+      /* An assessment's result, under its title: the status, then what it
+         replaced when the agent changed it. */
+      .card:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
-      /* 16px side padding and a 16px glyph, matching Add action and Add files.
-         mat-icon.mat-icon, not just the class: Material sets 24px at .mat-icon
-         inside its own button rule, so the element tag is what wins. */
-      .card__snap {
-        padding-left: 16px;
-        padding-right: 16px;
+      .card:focus:not(:focus-visible) {
+        outline: none;
       }
-      .card__snap mat-icon.mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
+      .card__assessment {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 0;
+      }
+      .card__was {
+        font-size: 12px;
         line-height: 16px;
+        color: var(--foreground-secondary);
       }
-      /* Pressed, not merely hovered - it stays down while the snapshot is up. */
-      .card__snap--on {
-        --mdc-outlined-button-outline-color: var(--primary);
-        /*
-         * foreground-on-info, not --primary-ink.
-         *
-         * The card underneath is --color-background-info now, and the button's
-         * own 12% primary tint sits on top of it, so the ground this label
-         * stands on is darker than it was on the old --primary-bg card.
-         * --primary-ink measured 4.41 hovered and 4.31 pressed there - under
-         * AA. foreground-on-info is the token that pairs with this background
-         * by name, and it clears AA in every state with room to spare.
-         */
-        --mdc-outlined-button-label-text-color: var(--color-foreground-on-info);
-        /* The state layer is PRIMARY here, not Material's black. On a button
-           that already carries a blue tint, a black layer greys it down rather
-           than deepening it, and it was that greying which put the label under
-           AA when this button last used --primary-ink. A primary layer stays
-           in the same hue. */
-        --mat-outlined-button-state-layer-color: var(--primary);
-        --mat-outlined-button-hover-state-layer-opacity: 0.04;
-        --mat-outlined-button-focus-state-layer-opacity: 0.06;
-        --mat-outlined-button-pressed-state-layer-opacity: 0.06;
-        background: rgba(26, 115, 201, 0.12);
+      .card__table {
+        margin-top: 12px;
       }
       /**
        * The decision card (state 07). Background, border colour and border
@@ -171,19 +119,6 @@ import { AttachmentListComponent } from './attachment-list.component';
            for one colour is just somewhere for them to diverge again. */
         border-color: var(--foreground-success);
         border-width: 2px;
-      }
-      /**
-       * On the tinted card a transparent button melts into the background, so
-       * the one action here gets its own white surface to sit on.
-       *
-       * The outline stays Material's default. That composites to roughly
-       * 1.26:1 against the tint, so the outline is not what identifies this
-       * control - its label does, at 21:1. WCAG 1.4.11 asks 3:1 only of visual
-       * information REQUIRED to identify a component, so the faint edge is not
-       * a failure here; it just means the label is carrying it.
-       */
-      .card--decision .card__actions button {
-        background-color: var(--panel);
       }
       .card__head {
         display: flex;
@@ -214,16 +149,13 @@ import { AttachmentListComponent } from './attachment-list.component';
         white-space: pre-wrap;
       }
       /**
-       * A column, so the button is on its own row under the attachments.
+       * The attachments, when there are any. Rendered only then, so a card
+       * without them ends at its note rather than on an empty band.
        *
-       * align-items is left at its stretch default deliberately: both children
-       * take the card's width, which is what lets the chips wrap inside the
-       * list rather than the list itself shrinking to its content and pushing
-       * a long row of them past the card's edge.
-       *
-       * The gap only applies BETWEEN rows, so a card with no attachments gets
-       * no empty band above its button - the footer is simply the button, at
-       * the same left edge and the same distance below the rule as always.
+       * align-items is left at its stretch default deliberately: the list takes
+       * the card's width, which is what lets the chips wrap inside it rather
+       * than the list shrinking to its content and pushing a long row of them
+       * past the card's edge.
        */
       .card__foot {
         display: flex;
@@ -232,20 +164,8 @@ import { AttachmentListComponent } from './attachment-list.component';
         gap: 12px;
         margin-top: 16px;
       }
-      /* Its own row. flex-start rather than stretch, so the button keeps its
-         natural width instead of spanning the card. */
-      .card__actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        min-width: 0;
-        gap: 12px;
-      }
 
-      /* Narrow: tighter card, and the footer loses its rule. The two rows
-         stay two rows - a narrow column is where a shared line went wrong
-         soonest, so it is the last place to put one back. */
+      /* Narrow: a tighter card. */
       .card--narrow {
         padding: 16px;
       }
@@ -272,17 +192,11 @@ export class OutcomeCardComponent {
   readonly store = inject(CaseStore);
 
   @Input({ required: true }) outcome!: OutcomeItem;
-  @Output() viewSnapshot = new EventEmitter<OutcomeItem>();
 
-  /**
-   * Whether THIS card is the one the left panel is showing.
-   *
-   * Derived from the single viewedSnapshot signal rather than held per card,
-   * which is what makes "only one selected at a time" structural: there is one
-   * value, so there is nothing to keep in step. Clearing it - by Back, or by
-   * pressing this button again - deselects everything at once.
-   */
-  isViewing(): boolean {
-    return this.store.viewedSnapshot()?.outcomeId === this.outcome.id;
+  /** What the field said before, when the agent's answer changed it. */
+  changedFrom(): string | null {
+    const a = this.outcome.assessment;
+    if (!a || a.previous === a.risk || a.previous === 'informational') return null;
+    return RISK_STATUS_LABEL[a.previous];
   }
 }

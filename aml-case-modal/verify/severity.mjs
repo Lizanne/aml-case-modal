@@ -427,40 +427,9 @@ for (const r of contrast.results) {
 }
 check(`worst element clears AA (${worst.ratio}:1 on "${worst.text}")`, worst.ratio >= worst.required);
 
-// The one action on the card must not melt into the tint. Alpha is composited
-// before measuring: Material's default outline is rgba(0,0,0,0.12), which a
-// naive ratio would score as if it were solid black.
-const action = await page.evaluate(() => {
-  const chan = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-  const parse = (s) => s.match(/[\d.]+/g).map(Number);
-  const over = (fg, bg) => {
-    const f = parse(fg), b = parse(bg), a = f.length > 3 ? f[3] : 1;
-    return [0, 1, 2].map((i) => f[i] * a + b[i] * (1 - a));
-  };
-  const lumArr = (a) => {
-    const [r, g, b] = a.map((n) => n / 255);
-    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
-  };
-  const ratio = (fg, bg) => {
-    const f = lumArr(over(fg, bg)), b2 = lumArr(parse(bg).slice(0, 3));
-    const [hi, lo] = [f, b2].sort((x, y) => y - x);
-    return Number(((hi + 0.05) / (lo + 0.05)).toFixed(2));
-  };
-  const card = document.querySelector('outcome-card .card--decision');
-  const btn = card.querySelector('.card__actions button');
-  const cc = getComputedStyle(card), bc = getComputedStyle(btn);
-  return {
-    fillIsWhite: bc.backgroundColor === 'rgb(255, 255, 255)',
-    boundary: ratio(bc.borderTopColor, cc.backgroundColor),
-    label: ratio(bc.color, bc.backgroundColor),
-  };
-});
-check('View snapshot sits on a white fill', action.fillIsWhite);
-// The outline is deliberately Material's default, so the boundary is faint.
-// What must hold is that the LABEL identifies the control (WCAG 1.4.11 asks
-// 3:1 only of visual information required for identification).
-console.log(`       (button boundary vs card tint: ${action.boundary}:1 - label carries identification)`);
-check(`its label clears AA on that fill (${action.label}:1, needs 4.5)`, action.label >= 4.5);
+// The View snapshot button that sat on this card is gone with the snapshot,
+// so there is no action on the decision card to measure any more.
+
 
 
 // ------------------------------------------------------------- past AML cases
@@ -551,9 +520,9 @@ check('past-cases tab: the row carries the 20px instead', flush.rowPad === '20px
 check('past-cases tab: content still sits on the 20px gutter',
   flush.contentInset.every((v) => v === 20), flush.contentInset.join(','));
 
-// Timeline is a full-bleed row list too now, so Snapshot is the comparison:
-// it is the tab whose content is prose rather than rows.
-for (const tab of ['Snapshot']) {
+// Timeline is a full-bleed row list too now, so Risk assessment is the
+// comparison: its rows keep the 20px gutter on the body, not on each row.
+for (const tab of ['Risk assessment']) {
   await page.locator(`player-info-panel .mat-mdc-tab:has-text("${tab}")`).click();
   await page.waitForTimeout(400);
   const pad = await page.evaluate(() => {
