@@ -483,6 +483,13 @@ export class CaseStore {
    * it put six rows between the agent and the first field that needs them.
    */
   readonly accountInfoExpanded = signal(false);
+  /**
+   * The Risk assessment's "to assess" view: the fields pinned when the agent
+   * pressed the summary's count, or null for the whole panel. A set, not a
+   * flag, so a field assessed while the view is on stays in it with its new
+   * status - the view shows the work getting done rather than emptying.
+   */
+  readonly toAssessOnly = signal<ReadonlySet<string> | null>(null);
 
   constructor() {
     this.reset();
@@ -785,6 +792,7 @@ export class CaseStore {
     this.streamScroll.set(0);
     this.infoScroll.set(0);
     this.accountInfoExpanded.set(false);
+    this.toAssessOnly.set(null);
   }
 
   labelFor(id: ActionTypeId): string {

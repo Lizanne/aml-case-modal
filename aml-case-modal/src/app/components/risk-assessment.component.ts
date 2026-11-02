@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ViewChild, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -21,9 +21,11 @@ import { RiskStatusComponent } from './risk-status.component';
  * the field is and when it counts as a risk - text only, so a hover tooltip
  * is enough, and the button makes it reachable by keyboard.
  *
- * The status is the control: while the agent holds the lock, pressing it opens
- * the Assess risk form in the workflow. Once the assessment is finalized, or
- * the case is resolved, every status is a plain label.
+ * The status is a label; the action sits beside it. While the agent can
+ * assess, a field still to assess carries an Assess button and an assessed
+ * one a Change assessment icon button - both open the Assess risk form in the
+ * workflow. Once the assessment is finalized, the case is resolved or the
+ * lock is someone else's, the buttons go and the statuses stay.
  *
  * Resync is always on screen, in the header. It asks first, then covers the
  * section with a Resyncing overlay until the new values are in.
@@ -74,13 +76,20 @@ import { RiskStatusComponent } from './risk-status.component';
     </div>
 
     <!--
-      What needs doing, where the eye lands. The first part is a control
-      that jumps to the first field still to assess; the counts after it
-      mirror the chip bar, which is the same list.
+      What needs doing, where the eye lands. The count is a toggle: pressed,
+      the panel shows only the fields still to assess - all of them at once,
+      under their own section bands, however far apart they sit in the full
+      list - and "Show all" brings the rest back. The counts after it mirror
+      the chip bar, which is the same list.
     -->
     <p class="ra-sum">
-      @if (counts().todo > 0) {
-        <button type="button" class="ra-sum__jump" (click)="jumpToFirst()">
+      @if (counts().todo > 0 || filtered()) {
+        <button
+          type="button"
+          class="ra-sum__filter"
+          [attr.aria-pressed]="filtered()"
+          (click)="toggleToAssess()"
+        >
           {{ counts().todo }} to assess
         </button>
       } @else {
@@ -90,6 +99,10 @@ import { RiskStatusComponent } from './risk-status.component';
       <span class="ra-sum__part">{{ counts().risk }} flagged</span>
       <span class="ra-sum__dot" aria-hidden="true">·</span>
       <span class="ra-sum__part">{{ counts().noRisk }} no risk</span>
+      @if (filtered()) {
+        <span class="ra-sum__dot" aria-hidden="true">·</span>
+        <button type="button" class="ra-sum__all" (click)="toggleToAssess()">Show all</button>
+      }
     </p>
 
     @if (store.riskFinalization(); as done) {
@@ -101,6 +114,7 @@ import { RiskStatusComponent } from './risk-status.component';
 
     <div class="ra-body" [attr.aria-busy]="store.resyncing()">
       @for (group of store.riskSections(); track group.section) {
+        @if (shownFields(group).length > 0) {
         <section class="ra-sec" [attr.aria-labelledby]="sectionId(group.section)">
           @if (isInformational(group)) {
             <!--
@@ -133,7 +147,7 @@ import { RiskStatusComponent } from './risk-status.component';
           }
           @if (!isInformational(group) || store.accountInfoExpanded()) {
           <ul class="ra-list" [id]="sectionId(group.section) + '-list'">
-            @for (field of group.fields; track field.def.id) {
+            @for (field of shownFields(group); track field.def.id) {
               <!--
                 The row whose assessment is open in the workflow is tinted,
                 and stays tinted while the form is up. It answers the PRD's
@@ -150,9 +164,6 @@ import { RiskStatusComponent } from './risk-status.component';
               >
                 <div class="ra-row__head">
                   <span class="ra-row__label">{{ field.def.label }}</span>
-                  @if (isOpen(field.def.id)) {
-                    <span class="ra-row__assessing">Assessing</span>
-                  }
                   <button
                     type="button"
                     class="ra-info"
@@ -164,13 +175,7 @@ import { RiskStatusComponent } from './risk-status.component';
                     <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
                   </button>
                   @if (field.status !== 'informational') {
-                    <risk-status
-                      class="ra-row__status"
-                      [status]="field.status"
-                      [fieldLabel]="field.def.label"
-                      [interactive]="store.canAssessRisk()"
-                      (activate)="store.assessRisk(field.def.id)"
-                    />
+                    <risk-status class="ra-row__status" [status]="field.status" />
                   }
                 </div>
                 <div class="ra-row__value">
@@ -178,14 +183,53 @@ import { RiskStatusComponent } from './risk-status.component';
                     <span class="ra-row__line">{{ line }}</span>
                   }
                 </div>
-                @if (field.assessedBy) {
-                  <p class="ra-row__meta">Assessed by {{ field.assessedBy }} · {{ field.assessedAt | stamp }}</p>
+                <!--
+                  Who set the status, and the action on it. The pill holds the
+                  right edge of line 1 alone, so the statuses read as one
+                  column; the verb lives here, with the assessment it changes,
+                  as a text link - no icon next to the pill. The line is shown
+                  whether or not the agent can act, so taking or releasing the
+                  lock never changes a row's height.
+                -->
+                @if (field.status !== 'informational') {
+                  <p class="ra-row__meta">
+                    <span>{{ provenance(field) }}</span>
+                    <!-- The open row: the word takes the action's place, so the
+                         link that is missing is explained where it would be,
+                         and line 1 never reflows. -->
+                    @if (isOpen(field.def.id)) {
+                      <span class="ra-row__sep" aria-hidden="true">·</span>
+                      <span class="ra-row__assessing">Assessing</span>
+                    } @else if (store.canAssessRisk()) {
+                      <span class="ra-row__sep" aria-hidden="true">·</span>
+                      @if (field.status === 'action-required') {
+                        <button
+                          type="button"
+                          class="ra-act ra-act--assess"
+                          [attr.aria-label]="'Assess ' + field.def.label"
+                          (click)="store.assessRisk(field.def.id)"
+                        >
+                          Assess
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="ra-act ra-act--change"
+                          [attr.aria-label]="'Change assessment of ' + field.def.label"
+                          (click)="store.assessRisk(field.def.id)"
+                        >
+                          Change
+                        </button>
+                      }
+                    }
+                  </p>
                 }
               </li>
             }
           </ul>
           }
         </section>
+        }
       }
 
       @if (store.resyncing()) {
@@ -201,7 +245,7 @@ import { RiskStatusComponent } from './risk-status.component';
     <!-- Announced, not shown: the overlay and the workflow entry are what a
          sighted agent reads. -->
     <p class="ra-live" role="status" aria-live="polite">
-      {{ store.resyncing() ? 'Resyncing risk assessment' : store.lastResyncSummary() }}
+      {{ store.resyncing() ? 'Resyncing risk assessment' : (viewNote() || store.lastResyncSummary()) }}
     </p>
   `,
   styles: [
@@ -267,7 +311,8 @@ import { RiskStatusComponent } from './risk-status.component';
         color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
-      .ra-sum__jump {
+      .ra-sum__filter,
+      .ra-sum__all {
         padding: 0;
         border: 0;
         background: none;
@@ -277,12 +322,21 @@ import { RiskStatusComponent } from './risk-status.component';
         cursor: pointer;
         border-radius: 2px;
       }
-      .ra-sum__jump:hover {
+      .ra-sum__filter:hover,
+      .ra-sum__all:hover {
         color: var(--link-hover);
         text-decoration: underline;
         text-underline-offset: 2px;
       }
-      .ra-sum__jump:focus-visible {
+      /* Pressed: the underline stays, and the colour is the panel's own
+         ink - a view that is ON is a fact, no longer an invitation. */
+      .ra-sum__filter[aria-pressed='true'] {
+        color: var(--foreground-primary);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .ra-sum__filter:focus-visible,
+      .ra-sum__all:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
       }
@@ -302,8 +356,11 @@ import { RiskStatusComponent } from './risk-status.component';
         line-height: 16px;
         flex: none;
       }
+      /* isolation keeps the bands' and overlay's z-index local: they stack
+         against each other, never against the modal's own popovers. */
       .ra-body {
         position: relative;
+        isolation: isolate;
         margin-top: var(--lds-core-spacing-2);
       }
       /**
@@ -405,12 +462,12 @@ import { RiskStatusComponent } from './risk-status.component';
         padding-right: var(--ra-gutter);
         background: var(--color-background-info);
       }
+      /* Primary ink, not blue: it sits where Change does, and a blue word
+         there would read as a link that does nothing. The tint carries the
+         colour; the word carries the state. 16.31:1 on the tint. */
       .ra-row__assessing {
-        flex: none;
-        font-size: 12px;
-        line-height: 16px;
         font-weight: 600;
-        color: var(--color-foreground-on-info);
+        color: var(--foreground-primary);
       }
       .ra-row__head {
         display: flex;
@@ -429,6 +486,40 @@ import { RiskStatusComponent } from './risk-status.component';
       .ra-row__status {
         margin-left: auto;
         padding-left: 8px;
+      }
+      /**
+       * The row's action: a text link on the provenance line, in the summary
+       * jump's vocabulary - the same verb, the same look. 16px tall to look
+       * at, 40px to hit; the extra lands in the row padding, and meets the
+       * next row's info button without overlapping it.
+       */
+      .ra-act {
+        position: relative;
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-weight: 600;
+        color: var(--link);
+        cursor: pointer;
+        border-radius: 2px;
+      }
+      .ra-act::before {
+        content: '';
+        position: absolute;
+        inset: -12px -4px;
+      }
+      .ra-act:hover {
+        color: var(--link-hover);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .ra-act:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+      .ra-row__sep {
+        margin: 0 6px;
       }
       .ra-info {
         position: relative;
@@ -468,7 +559,9 @@ import { RiskStatusComponent } from './risk-status.component';
       .ra-row__value {
         display: flex;
         flex-direction: column;
-        margin-top: 2px;
+        /* spacing-1 under the head: the pill fills the head's 24px, so this
+           is the whole gap between the pill and the first value line. */
+        margin-top: var(--lds-core-spacing-1);
         font-size: 14px;
         line-height: 20px;
         color: var(--foreground-secondary);
@@ -480,6 +573,7 @@ import { RiskStatusComponent } from './risk-status.component';
         font-size: 12px;
         line-height: 16px;
         color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
       }
       /**
        * The overlay covers the section, not the tab bar or the header: the
@@ -531,6 +625,7 @@ import { RiskStatusComponent } from './risk-status.component';
 export class RiskAssessmentComponent {
   readonly store = inject(CaseStore);
   readonly tooltip = riskTooltip;
+  private readonly stampPipe = new StampPipe();
 
   @ViewChild('resyncTip') private resyncTip?: MatTooltip;
   private tipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -567,17 +662,48 @@ export class RiskAssessmentComponent {
     this.tipTimer = setTimeout(() => tip.hide(0), 2000);
   }
 
-  /** The summary's jump: the first field still to assess, scrolled to and focused. */
-  jumpToFirst(): void {
-    const host = document.querySelector<HTMLElement>('risk-assessment');
-    const status = host?.querySelector<HTMLElement>('.ra-row risk-status [data-risk="action-required"]');
-    const row = status?.closest<HTMLElement>('.ra-row');
-    if (!row) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    row.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
-    (status!.tagName === 'BUTTON' ? status! : row.querySelector<HTMLElement>('.ra-info'))?.focus({
-      preventScroll: true,
-    });
+  /** For the live region: what the view is showing, once it has been toggled. */
+  readonly viewNote = computed(() => {
+    const only = this.store.toAssessOnly();
+    if (only === null) return this.viewTouched() ? 'Showing all fields' : '';
+    return `Showing ${only.size} ${only.size === 1 ? 'field' : 'fields'} to assess`;
+  });
+  private readonly viewTouched = signal(false);
+
+  /** Whether the "to assess" view is on. */
+  readonly filtered = computed(() => this.store.toAssessOnly() !== null);
+
+  /**
+   * The summary's count, pressed: pin every field still to assess and show
+   * only those - both of them on one screen, with nothing to scroll past.
+   * Pressed again, or "Show all": the whole panel. A field assessed while
+   * the view is on stays in it, so the agent watches the two amber pills
+   * turn and nothing disappears from under the pointer.
+   */
+  toggleToAssess(): void {
+    this.viewTouched.set(true);
+    if (this.store.toAssessOnly()) {
+      this.store.toAssessOnly.set(null);
+      return;
+    }
+    const ids = this.store
+      .riskFields()
+      .filter((f) => f.status === 'action-required')
+      .map((f) => f.def.id);
+    this.store.toAssessOnly.set(new Set(ids));
+  }
+
+  /** The rows a section shows: all of them, or, in the "to assess" view, the pinned ones and any new Action required. */
+  shownFields<T extends { def: { id: string }; status: string }>(group: { fields: T[] }): T[] {
+    const only = this.store.toAssessOnly();
+    if (!only) return group.fields;
+    return group.fields.filter((f) => only.has(f.def.id) || f.status === 'action-required');
+  }
+
+  /** Who set the status: the agent who assessed it, the system, or nobody yet. */
+  provenance(field: { status: string; assessedBy?: string | null; assessedAt?: string | null }): string {
+    if (field.assessedBy) return `Assessed by ${field.assessedBy} · ${this.stampPipe.transform(field.assessedAt ?? '')}`;
+    return field.status === 'action-required' ? 'Not assessed yet' : 'From the system';
   }
 
   /** Whether this field's assessment form is the one open in the workflow. */

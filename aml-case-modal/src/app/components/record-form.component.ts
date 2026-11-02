@@ -16,6 +16,7 @@ import { CandidateFile, CaseStore } from '../core/case-store';
 import { ATTACHMENT_MAX_MB, AttachmentKind, Draft } from '../core/models';
 import { AttachmentListComponent } from './attachment-list.component';
 import { SectionRiskTableComponent } from './section-risk-table.component';
+import { scrollWithin } from '../core/scroll';
 
 /**
  * Rule 5. The record-form. Inline in the stream, replacing the placeholder it
@@ -339,8 +340,8 @@ export class RecordFormComponent {
             const form = this.formEl?.nativeElement;
             if (!form) return;
             this.store.patchDraft({ reveal: false });
-            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            form.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+            // The stream only, never the modal shell above it.
+            scrollWithin(form, { block: 'nearest' });
             // Not on touch: focusing would throw the keyboard over the form.
             if (!('ontouchstart' in window)) form.querySelector('textarea')?.focus({ preventScroll: true });
           },
@@ -423,7 +424,7 @@ export class RecordFormComponent {
         let target: HTMLElement | null = null;
         if (draft.returnTo) {
           const row = `risk-assessment [data-field="${draft.returnTo}"]`;
-          target = q(`${row} risk-status button`) ?? q(`${row} .ra-info`);
+          target = q(`${row} .ra-act`) ?? q(`${row} .ra-info`);
         } else if (how === 'saved') {
           const cards = document.querySelectorAll<HTMLElement>('workflow-panel outcome-card .card');
           target = cards[cards.length - 1] ?? null;

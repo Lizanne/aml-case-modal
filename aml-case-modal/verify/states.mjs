@@ -158,7 +158,7 @@ const CHECKS = {
     'two tabs only': (await p.locator('player-info-panel .mat-mdc-tab').count()) === 2,
     'the first tab is Risk assessment': (await p.locator('player-info-panel .mat-mdc-tab').first().innerText()).trim() === 'Risk assessment',
     'the risk assessment shows as finalized': (await p.locator('risk-assessment .ra-final').count()) === 1,
-    'no status can be clicked': (await p.locator('risk-assessment risk-status button').count()) === 0,
+    'no assess actions': (await p.locator('risk-assessment .ra-act').count()) === 0,
     'no Resync on a resolved case': (await p.locator('risk-assessment .ra-head__resync').count()) === 0,
     'decision card present': (await p.locator('outcome-card .card--decision').count()) === 1,
     'finalize card with its table': (await p.locator('outcome-card section-risk-table').count()) === 1,

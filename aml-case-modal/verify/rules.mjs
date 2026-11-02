@@ -238,7 +238,7 @@ check('no add action', (await page.locator('add-action-menu').count()) === 0);
 check('no lock control', (await page.locator('case-header button:has-text("Lock")').count()) === 0);
 check('tabs reduced to two', (await page.locator('player-info-panel .mat-mdc-tab').count()) === 2);
 check('the risk assessment is shown as finalized', (await page.locator('risk-assessment .ra-final').count()) === 1);
-check('no status can be clicked', (await page.locator('risk-assessment risk-status button').count()) === 0);
+check('no assess actions', (await page.locator('risk-assessment .ra-act').count()) === 0);
 check('no View snapshot on any card', (await page.locator('outcome-card button:has-text("snapshot")').count()) === 0);
 
 console.log('\nRule 8 - severity change applies everywhere and lifts the lock');

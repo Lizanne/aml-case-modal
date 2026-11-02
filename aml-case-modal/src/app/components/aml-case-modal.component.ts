@@ -164,7 +164,10 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
         border: 1px solid var(--line);
         border-radius: 12px;
         box-shadow: 0 20px 56px rgba(24, 24, 27, 0.14);
-        overflow: hidden;
+        /* clip, not hidden: a hidden box is still a scroll container, so
+           scrollIntoView and focus could scroll the shell itself and push
+           the case header off screen. A clipped box cannot be scrolled. */
+        overflow: clip;
       }
       /**
        * Square by default; rounded only in the dual state.

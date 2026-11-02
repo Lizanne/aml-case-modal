@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { RISK_STATUS_LABEL, RiskStatus } from '../core/risk-assessment';
@@ -15,12 +15,17 @@ const ICON: Record<RiskStatus, string | null> = {
  *
  * Three signals, never colour alone: a tinted fill, an icon and the word.
  * The PDF's colours are kept - red for a flagged risk, green for none, amber
- * for a field waiting on the agent.
+ * for a field waiting on the agent - and they are ui-pill's colours, token
+ * for token: the danger, success and warn tones with their subdued rims. A
+ * status here is the same green or red it is in the case header and the
+ * table, so nothing new is introduced for this one surface.
  *
- * Two forms. Static is a label. Interactive is a real button, because the
- * status is how an agent assesses or overrides a field: it opens the Assess
- * risk form. The button carries an edit glyph so it does not read as a
- * passive badge, and its accessible name says what pressing it does.
+ * Always a label, never a control. A pill is how this product states a fact
+ * (severity, SLA, the chip bar); a pill that is also a button is one shape
+ * with two meanings, and with the pill's own colours the only thing left to
+ * say "press me" was a 14px pencil. The action lives beside it on the row -
+ * an Assess button, or a Change assessment icon button - in the product's
+ * button vocabulary.
  */
 @Component({
   selector: 'risk-status',
@@ -28,28 +33,12 @@ const ICON: Record<RiskStatus, string | null> = {
   imports: [MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (interactive) {
-      <button
-        type="button"
-        class="status status--button"
-        [attr.data-risk]="status"
-        [attr.aria-label]="(fieldLabel ? fieldLabel + ': ' : '') + text + '. Assess risk'"
-        (click)="activate.emit()"
-      >
-        @if (icon) {
-          <mat-icon class="status__icon" aria-hidden="true">{{ icon }}</mat-icon>
-        }
-        <span class="status__text">{{ text }}</span>
-        <mat-icon class="status__edit" aria-hidden="true">edit</mat-icon>
-      </button>
-    } @else {
-      <span class="status" [attr.data-risk]="status" [attr.aria-label]="name" [attr.title]="name ? statusWord : null">
-        @if (icon) {
-          <mat-icon class="status__icon" aria-hidden="true">{{ icon }}</mat-icon>
-        }
-        <span class="status__text">{{ text }}</span>
-      </span>
-    }
+    <span class="status" [attr.data-risk]="status" [attr.aria-label]="name" [attr.title]="name ? statusWord : null">
+      @if (icon) {
+        <mat-icon class="status__icon" aria-hidden="true">{{ icon }}</mat-icon>
+      }
+      <span class="status__text">{{ text }}</span>
+    </span>
   `,
   styles: [
     `
@@ -66,23 +55,21 @@ const ICON: Record<RiskStatus, string | null> = {
         padding: 0 8px;
         border: 1px solid transparent;
         border-radius: 999px;
-        font: inherit;
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
         white-space: nowrap;
       }
+      /* Label and icon in the deepest red, as ui-pill's danger tone does on
+         its dotted form: 9.16:1 on the tint against 5.91 for --danger. */
       .status[data-risk='risk'] {
         background: var(--danger-bg);
         border-color: var(--border-negative-subdued);
-        color: var(--danger);
+        color: var(--danger-deep);
       }
-      /* No risk is the background state, so it is the one without a fill:
-         an outline, green ink and the tick. Red and amber stay filled, which
-         leaves danger and work as the only solid things on the panel. */
       .status[data-risk='no-risk'] {
-        background: transparent;
-        border-color: color-mix(in srgb, var(--success) 32%, transparent);
+        background: var(--success-bg-subtle);
+        border-color: var(--border-success-subdued);
         color: var(--success);
       }
       .status[data-risk='action-required'] {
@@ -90,78 +77,26 @@ const ICON: Record<RiskStatus, string | null> = {
         border-color: var(--border-warning-subdued);
         color: var(--warn);
       }
-      mat-icon.status__icon,
-      mat-icon.status__edit {
+      mat-icon.status__icon {
         font-size: 14px;
         width: 14px;
         height: 14px;
         line-height: 14px;
         flex: none;
       }
-      /* The edit glyph says "this changes"; it is quieter than the status. */
-      mat-icon.status__edit {
-        opacity: 0.7;
-        margin-left: 2px;
-      }
-      .status--button {
-        position: relative;
-        cursor: pointer;
-        transition:
-          background-color 120ms ease-out,
-          border-color 120ms ease-out;
-      }
-      /* Hover deepens the field's own tint rather than swapping to grey, so
-         the colour still says which status this is under the cursor. */
-      .status--button[data-risk='risk']:hover {
-        background: var(--danger-bg-strong);
-      }
-      .status--button[data-risk='no-risk']:hover {
-        background: var(--success-bg-subtle);
-      }
-      .status--button[data-risk='action-required']:hover {
-        background: color-mix(in oklch, var(--warn-bg) 88%, var(--warn));
-      }
-      /* 24px tall to look at, 40px to hit. */
-      .status--button::before {
-        content: '';
-        position: absolute;
-        inset: -8px -4px;
-      }
-      .status--button:hover mat-icon.status__edit {
-        opacity: 1;
-      }
-      .status--button:active {
-        transform: scale(0.97);
-      }
-      .status--button:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .status--button {
-          transition: none;
-        }
-        .status--button:active {
-          transform: none;
-        }
-      }
     `,
   ],
 })
 export class RiskStatusComponent {
   @Input({ required: true }) status!: RiskStatus;
-  @Input() interactive = false;
-  /** The field it belongs to, for the button's accessible name. */
-  @Input() fieldLabel = '';
   /** Overrides the word, e.g. "Risk" for a whole section, or a field name on a chip. */
   @Input() label: string | null = null;
   /**
-   * Accessible name for the label form, when the visible word is not the
-   * status - a chip that shows the field name. The status word then goes on
-   * the title, so a hover still gets it.
+   * Accessible name, when the visible word is not the status - a chip that
+   * shows the field name. The status word then goes on the title, so a hover
+   * still gets it.
    */
   @Input() name: string | null = null;
-  @Output() activate = new EventEmitter<void>();
 
   get icon(): string | null {
     return ICON[this.status];
