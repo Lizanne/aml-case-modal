@@ -44,6 +44,7 @@ import { PillComponent } from './ui-pill.component';
         @if (action.status) {
           <risk-status
             class="chip--assess"
+            size="md"
             [status]="action.status"
             [label]="action.shortLabel"
             [name]="action.label + ': ' + statusWord(action.status)"

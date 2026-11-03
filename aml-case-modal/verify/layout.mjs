@@ -1822,15 +1822,15 @@ for (const st of ['01', '03', '05', '10']) {
     ...(await page.evaluate(() =>
       [...document.querySelectorAll('ui-pill mat-icon')].map((e) => {
         const r = e.getBoundingClientRect();
-        return { glyph: e.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height) };
+        return { glyph: e.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), size: e.closest('ui-pill')?.dataset.size ?? 'md' };
       }),
     )),
   );
 }
 check('pills carry icons to check', pillIcons.length >= 3, String(pillIcons.length));
-check('every icon inside a pill is 16x16',
-  pillIcons.every((i) => i.w === 16 && i.h === 16),
-  [...new Set(pillIcons.map((i) => `${i.glyph}:${i.w}x${i.h}`))].join(' '));
+check('every icon inside a pill is its size\'s: 16x16 in an md pill, 12x12 in an sm one',
+  pillIcons.every((p) => (p.size === 'sm' ? p.w === 12 && p.h === 12 : p.w === 16 && p.h === 16)),
+  pillIcons.map((p) => `${p.glyph}:${p.w}x${p.h}@${p.size}`).join(' '));
 // ::ng-deep de-scopes to a bare element selector, so a rule meant for one
 // component silently resizes every icon in the app. Nothing may declare one.
 check('no global bare mat-icon rule exists', await page.evaluate(() => {

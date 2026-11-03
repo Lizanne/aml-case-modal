@@ -31,7 +31,7 @@ import { RiskStatusComponent } from './risk-status.component';
           <tr>
             <th scope="row">{{ row.section }}</th>
             <td class="srt__result">
-              <risk-status [status]="row.risk ? 'risk' : 'no-risk'" [label]="row.risk ? 'Risk' : 'No risk'" />
+              <risk-status [status]="row.risk ? 'risk' : 'no-risk'" />
             </td>
           </tr>
         }

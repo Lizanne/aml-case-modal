@@ -175,7 +175,7 @@ import { RiskStatusComponent } from './risk-status.component';
                     <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
                   </button>
                   @if (field.status !== 'informational') {
-                    <risk-status class="ra-row__status" [status]="field.status" />
+                    <risk-status class="ra-row__status" size="sm" [status]="field.status" />
                   }
                 </div>
                 <div class="ra-row__value">

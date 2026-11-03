@@ -202,7 +202,8 @@ check('required chips are a status region', await page.evaluate(() => {
 // Two kinds of chip: Contact and Finalize say pending / done; an assessment
 // chip is the field's risk status pill and says that status instead.
 check('each chip states its own status in its accessible name', await page.evaluate(() => {
-  const plain = [...document.querySelectorAll('required-chips ui-pill')];
+  // A status chip is a ui-pill too now; it is judged by the status rule, not the pending/done one.
+  const plain = [...document.querySelectorAll('required-chips ui-pill')].filter((c) => !c.closest('risk-status'));
   const assess = [...document.querySelectorAll('required-chips risk-status .status')];
   return (
     plain.length > 0 && assess.length > 0 &&

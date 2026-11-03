@@ -59,6 +59,7 @@ export type PillTone =
     '[attr.data-sev]': 'severity',
     '[attr.data-size]': 'size',
     '[attr.data-dot]': 'dot ? "" : null',
+    '[attr.data-rim]': 'dot || rim ? "" : null',
   },
   styles: [
     `
@@ -120,33 +121,33 @@ export type PillTone =
       }
 
       /**
-       * Rims, on a dotted pill only - which is to say the SLA column.
+       * Rims, on the pills that report a condition: the dotted SLA pill, and
+       * the risk statuses (which ask for the rim without the dot).
        *
-       * Scoped to [data-dot] rather than set on the tones, and that is not
-       * fussiness: warn and success are worn by the work chips, the severity
-       * dialog and the case header, none of which should grow an edge because
-       * the SLA column wanted one.
+       * Opt-in rather than set on the tones, and that is not fussiness: warn
+       * and success are worn by the work chips, the severity dialog and the
+       * case header, none of which should grow an edge because the SLA
+       * column wanted one.
        *
        * The solid pill has none. Its Figma node is a flat fill with no stroke,
        * and a rim on a saturated red would be a second edge fighting the first.
        */
-      :host([data-dot][data-tone='warn']) {
+      :host([data-rim][data-tone='warn']) {
         border-color: var(--border-warning-subdued);
       }
-      :host([data-dot][data-tone='success']) {
+      :host([data-rim][data-tone='success']) {
         border-color: var(--border-success-subdued);
       }
       /**
-       * Breached-but-not-yet-solid takes the deepest red in the family for its
-       * label AND its dot - the dot is currentColor, so one declaration moves
-       * both. It reads 9.16:1 on the tint, against 5.91 for the --danger it
-       * replaces.
+       * The rimmed red takes the deepest red in the family for its label, its
+       * icon and its dot - all currentColor, so one declaration moves them. It
+       * reads 9.16:1 on the tint, against 5.91 for the --danger it replaces.
        */
-      :host([data-dot][data-tone='danger']) {
+      :host([data-rim][data-tone='danger']) {
         border-color: var(--border-negative-subdued);
         color: var(--danger-deep);
       }
-      :host([data-dot][data-tone='danger-solid']) {
+      :host([data-rim][data-tone='danger-solid']) {
         border-color: transparent;
       }
 
@@ -256,6 +257,12 @@ export class PillComponent {
    * is changing while you look at it, and the dot is what says so.
    */
   @Input({ transform: booleanAttribute }) dot = false;
+  /**
+   * The subdued rim without the dot - the risk statuses. A status pill sits
+   * on the panel's white next to other pills; the rim is its edge, and on
+   * danger it brings the deeper ink with it. `dot` implies it.
+   */
+  @Input({ transform: booleanAttribute }) rim = false;
   /** When set, the severity language applies and `tone` is ignored. */
   @Input() severity: string | null = null;
   /** md unless asked otherwise, so every existing call site is unchanged. */

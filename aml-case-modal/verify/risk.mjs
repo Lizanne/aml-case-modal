@@ -128,11 +128,20 @@ check('Show all brings the whole panel back', (await page.locator('risk-assessme
   (await page.locator('risk-assessment .ra-sum__all').count()) === 0 &&
   /Showing all fields/.test(await text('risk-assessment .ra-live')));
 await go('01');
-check('the pill and the first value line are 4px apart', await page.evaluate(() => {
+check('the status is the sm pill: 20 tall, 12px word, 12px icon, centred in the head, 4px above the values', await page.evaluate(() => {
   const r = document.querySelector('risk-assessment [data-field="vpn-usage"]');
-  const pill = r.querySelector('risk-status .status').getBoundingClientRect().bottom;
+  const pill = r.querySelector('risk-status ui-pill'), icon = pill.querySelector('mat-icon');
+  const pr = pill.getBoundingClientRect(), hr = r.querySelector('.ra-row__head').getBoundingClientRect();
   const val = r.querySelector('.ra-row__value').getBoundingClientRect().top;
-  return Math.abs(val - pill - 4) < 0.6;
+  return pill.dataset.size === 'sm' && Math.abs(pr.height - 20) < 0.6 && getComputedStyle(pill).fontSize === '12px' &&
+    Math.abs(icon.getBoundingClientRect().width - 12) < 0.6 && Math.abs(pr.top - hr.top - 2) < 0.6 && Math.abs(val - hr.bottom - 4) < 0.6;
+}));
+check('in the chip bar the status is the md pill, the same size as the other chips: 24 tall, 14px word, 16px icon', await page.evaluate(() => {
+  const pills = [...document.querySelectorAll('required-chips ui-pill')];
+  const hs = pills.map((p) => Math.round(p.getBoundingClientRect().height));
+  const assess = pills.filter((p) => p.closest('risk-status'));
+  return hs.every((h) => h === 24) && assess.length === 2 && assess.every((p) => p.dataset.size === 'md' && getComputedStyle(p).fontSize === '14px' &&
+    Math.abs(p.querySelector('mat-icon').getBoundingClientRect().width - 16) < 0.6);
 }));
 await page.evaluate(() => { document.querySelector('.info__body').scrollTop = 0; });
 console.log('\nSection bands');
@@ -360,7 +369,7 @@ const rows = await fin.locator('section-risk-table tbody tr').evaluateAll((trs) 
   trs.map((tr) => `${tr.querySelector('th').textContent.trim()} ${tr.querySelector('.status__text').textContent.trim()}`),
 );
 check('it shows a table of sections, without Account information', rows.length === 6 && !rows.some((r) => /Account information/.test(r)), rows.join('|'));
-check('a section is Risk if any field in it is', rows.includes('Verification risks Risk') && rows.includes('Open source intelligence No risk'), rows.join('|'));
+check('a section is Risk flagged if any field in it is, in the same words as the rows', rows.includes('Verification risks Risk flagged') && rows.includes('Open source intelligence No risk'), rows.join('|'));
 await fin.locator('textarea').fill('Overall: enhanced monitoring.');
 await fin.locator('button[type="submit"]').click();
 await page.waitForTimeout(300);
