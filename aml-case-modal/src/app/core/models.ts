@@ -125,7 +125,7 @@ export type ActionTypeId =
  * presentation order only - they are completable in ANY order and Submit
  * checks set membership. The required ASSESSMENTS are derived from the Risk
  * assessment section (every field that is or was Action required), and
- * Finalize risk assessment closes the list.
+ * Finalise risk assessment closes the list.
  */
 export const REQUIRED_ACTIONS: readonly ActionTypeId[] = ['player-contact'] as const;
 
@@ -296,7 +296,7 @@ export interface OutcomeItem {
   finalized?: SectionRisk[];
 }
 
-/** One row of the finalize table. A section is a risk if any field in it is. */
+/** One row of the finalise table. A section is a risk if any field in it is. */
 export interface SectionRisk {
   section: string;
   risk: boolean;
@@ -461,7 +461,7 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
  */
 export const SHORT_ACTION_LABEL: Partial<Record<ActionTypeId, string>> = {
   'player-contact': 'Contact',
-  'finalize-risk-assessment': 'Finalize',
+  'finalize-risk-assessment': 'Finalise',
 };
 
 export function isOutcome(item: StreamItem): item is OutcomeItem {

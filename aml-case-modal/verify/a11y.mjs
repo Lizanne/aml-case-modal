@@ -199,7 +199,7 @@ check('required chips are a status region', await page.evaluate(() => {
 // The visible chip carries no state word - the icon and colour do that, and the
 // icon is aria-hidden. So the accessible name is the ONLY thing telling a
 // screen reader whether an action is done; it must name the state explicitly.
-// Two kinds of chip: Contact and Finalize say pending / done; an assessment
+// Two kinds of chip: Contact and Finalise say pending / done; an assessment
 // chip is the field's risk status pill and says that status instead.
 check('each chip states its own status in its accessible name', await page.evaluate(() => {
   // A status chip is a ui-pill too now; it is judged by the status rule, not the pending/done one.

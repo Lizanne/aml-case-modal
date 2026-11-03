@@ -36,7 +36,7 @@ export interface RiskFieldDef {
   id: string;
   section: string;
   label: string;
-  /** Account information. Shown, never assessed, never in the finalize table. */
+  /** Account information. Shown, never assessed, never in the finalise table. */
   informational?: boolean;
   /**
    * The system cannot judge these: their risk is always the agent's call, so

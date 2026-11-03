@@ -28,7 +28,7 @@ const TAB_LABEL: Record<InfoTab, string> = {
  * Left panel. Scrolls independently of the workflow stream.
  *
  * Rule 10: once resolved the tab set reduces to Risk assessment + Timeline,
- * and the Risk assessment is shown read-only, as it was finalized.
+ * and the Risk assessment is shown read-only, as it was finalised.
  */
 @Component({
   selector: 'player-info-panel',

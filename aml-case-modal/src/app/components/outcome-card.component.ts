@@ -17,7 +17,7 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
  * what a resync changed is on the Resync completed entry.
  *
  * An assessment card says the field's new status, and what it was before
- * when the agent changed it. A finalize card carries the section table.
+ * when the agent changed it. A finalise card carries the section table.
  */
 @Component({
   selector: 'outcome-card',
@@ -51,7 +51,7 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
       <p class="card__note">{{ outcome.note }}</p>
 
       @if (outcome.finalized; as rows) {
-        <section-risk-table class="card__table" [rows]="rows" caption="Risk by section, as finalized" />
+        <section-risk-table class="card__table" [rows]="rows" caption="Risk by section, as finalised" />
       }
 
       @if (outcome.attachments.length) {

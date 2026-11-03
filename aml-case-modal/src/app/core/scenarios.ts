@@ -133,7 +133,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: '01',
     label: '01 - Locked to you, nothing recorded',
-    hint: 'Required: assess open source searches and document requests, contact the player, then Finalize (disabled until both are assessed).',
+    hint: 'Required: assess open source searches and document requests, contact the player, then Finalise (disabled until both are assessed).',
     apply: (s) => {
       s.seed(lockedToMe(s));
     },
@@ -180,8 +180,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: '03',
-    label: '03 - Everything required done, risk assessment finalized',
-    hint: 'Both assessments, the player contact and Finalize are recorded, so rule 9 unlocks Submit decision.',
+    label: '03 - Everything required done, risk assessment finalised',
+    hint: 'Both assessments, the player contact and Finalise are recorded, so rule 9 unlocks Submit decision.',
     apply: (s) => {
       const stream = s.fixtureStream('required');
       s.seed({
@@ -233,7 +233,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: '07',
     label: '07 - Resolved',
-    hint: 'Rule 10: read-only, tabs reduced, no footer. The risk assessment shows as finalized.',
+    hint: 'Rule 10: read-only, tabs reduced, no footer. The risk assessment shows as finalised.',
     apply: (s) => {
       const stream = s.fixtureStream('all');
       s.seed({
@@ -318,7 +318,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: '14',
     label: '14 - Resync completed, two risks changed',
-    hint: 'Latest fraud scores and Deposit spike went back to Action required and joined the required list. Finalize is disabled until they are assessed.',
+    hint: 'Latest fraud scores and Deposit spike went back to Action required and joined the required list. Finalise is disabled until they are assessed.',
     apply: (s) => {
       const base = requiredButFinalize(s, true);
       const last = base[base.length - 1];
@@ -336,8 +336,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: '15',
-    label: '15 - Finalize risk assessment',
-    hint: 'Every field assessed, so Finalize is enabled: the section table, a note, no attachments.',
+    label: '15 - Finalise risk assessment',
+    hint: 'Every field assessed, so Finalise is enabled: the section table, a note, no attachments.',
     apply: (s) => {
       const stream = requiredButFinalize(s, false);
       s.seed({
@@ -346,7 +346,7 @@ export const SCENARIOS: Scenario[] = [
         stream,
         draft: draft({
           actionType: 'finalize-risk-assessment',
-          title: 'Finalize risk assessment',
+          title: 'Finalise risk assessment',
         }),
       });
     },

@@ -24,7 +24,7 @@ import { RiskStatusComponent } from './risk-status.component';
  * The status is a label; the action sits beside it. While the agent can
  * assess, a field still to assess carries an Assess button and an assessed
  * one a Change assessment icon button - both open the Assess risk form in the
- * workflow. Once the assessment is finalized, the case is resolved or the
+ * workflow. Once the assessment is finalised, the case is resolved or the
  * lock is someone else's, the buttons go and the statuses stay.
  *
  * Resync is always on screen, in the header. It asks first, then covers the
@@ -108,7 +108,7 @@ import { RiskStatusComponent } from './risk-status.component';
     @if (store.riskFinalization(); as done) {
       <p class="ra-final">
         <mat-icon fontSet="material-icons-outlined" aria-hidden="true">task_alt</mat-icon>
-        Finalized by {{ done.actor }} · {{ done.at | stamp }}
+        Finalised by {{ done.actor }} · {{ done.at | stamp }}
       </p>
     }
 

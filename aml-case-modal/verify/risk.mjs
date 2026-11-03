@@ -10,7 +10,7 @@ import { chromium } from 'playwright';
  *   - Resync is always visible, asks first, overlays the section, then
  *     applies the three rules and writes "Resync completed"
  *   - clicking a status opens the Assess risk form; saving updates the field
- *   - Finalize stays visible but disabled until no field is Action required,
+ *   - Finalise stays visible but disabled until no field is Action required,
  *     and the case cannot close until it is done
  */
 const BASE = process.env.BASE ?? 'http://localhost:4200';
@@ -234,17 +234,17 @@ check('Resync is visible and enabled', !(await resyncOff()));
 
 console.log('\nRequired list on a new case');
 const c1 = (await chips()).map((c) => c.label);
-check('assess both manual fields, contact the player, finalize',
+check('assess both manual fields, contact the player, finalise',
   c1.length === 4 &&
   c1.some((l) => l.startsWith('Assess risk - Open source searches')) &&
   c1.some((l) => l.startsWith('Assess risk - Document requests')) &&
   c1.some((l) => l.startsWith('Contact player')) &&
-  c1.some((l) => l.startsWith('Finalize risk assessment')), c1.join('|'));
-const finalizeBtn = page.locator('action-placeholder:has-text("Finalize risk assessment") button');
-check('Finalize is visible', (await finalizeBtn.count()) === 1);
-check('Finalize is disabled while fields are Action required', await finalizeBtn.isDisabled());
+  c1.some((l) => l.startsWith('Finalise risk assessment')), c1.join('|'));
+const finalizeBtn = page.locator('action-placeholder:has-text("Finalise risk assessment") button');
+check('Finalise is visible', (await finalizeBtn.count()) === 1);
+check('Finalise is disabled while fields are Action required', await finalizeBtn.isDisabled());
 check('it says which fields are left',
-  /Assess Document requests and Open source searches first/.test(await page.locator('action-placeholder:has-text("Finalize risk assessment")').innerText()));
+  /Assess Document requests and Open source searches first/.test(await page.locator('action-placeholder:has-text("Finalise risk assessment")').innerText()));
 check('Submit decision is disabled', await page.locator('workflow-panel footer button:has-text("Submit decision")').isDisabled());
 
 console.log('\nNo View snapshot');
@@ -351,19 +351,19 @@ check('the card says what it replaced', /Was No risk/.test(await page.locator('o
 console.log('\nFinalize, then close');
 await assess('deposit-spike', 'No', 'Spike matches a declared bonus payment.');
 await assess('open-source-searches', 'No', 'No adverse media.');
-check('Finalize still disabled with Document requests left', await finalizeBtn.isDisabled());
+check('Finalise still disabled with Document requests left', await finalizeBtn.isDisabled());
 await assess('document-requests', 'No', 'Documents in order.');
-check('Finalize is enabled once nothing is Action required', await finalizeBtn.isEnabled());
+check('Finalise is enabled once nothing is Action required', await finalizeBtn.isEnabled());
 await page.locator('action-placeholder:has-text("Contact player") button').click();
 await page.waitForTimeout(200);
 await page.locator('record-form textarea').fill('Spoke to the player.');
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(250);
-check('Submit decision still disabled before Finalize', await page.locator('workflow-panel footer button:has-text("Submit decision")').isDisabled());
+check('Submit decision still disabled before Finalise', await page.locator('workflow-panel footer button:has-text("Submit decision")').isDisabled());
 await finalizeBtn.click();
 await page.waitForTimeout(300);
 const fin = page.locator('record-form');
-check('Finalize has no attachments', (await fin.locator('.field__actions').count()) === 0 && (await fin.locator('fieldset.field--risk').count()) === 0);
+check('Finalise has no attachments', (await fin.locator('.field__actions').count()) === 0 && (await fin.locator('fieldset.field--risk').count()) === 0);
 // Icon ligatures stripped: the row is its section name and its status word.
 const rows = await fin.locator('section-risk-table tbody tr').evaluateAll((trs) =>
   trs.map((tr) => `${tr.querySelector('th').textContent.trim()} ${tr.querySelector('.status__text').textContent.trim()}`),
@@ -373,8 +373,8 @@ check('a section is Risk flagged if any field in it is, in the same words as the
 await fin.locator('textarea').fill('Overall: enhanced monitoring.');
 await fin.locator('button[type="submit"]').click();
 await page.waitForTimeout(300);
-check('the finalize card carries the table', (await page.locator('outcome-card:has-text("Risk assessment finalized") section-risk-table').count()) === 1);
-check('no assess actions once finalized', (await page.locator('risk-assessment .ra-act').count()) === 0);
+check('the finalise card carries the table', (await page.locator('outcome-card:has-text("Risk assessment finalised") section-risk-table').count()) === 1);
+check('no assess actions once finalised', (await page.locator('risk-assessment .ra-act').count()) === 0);
 check('Resync stays visible but disabled', (await page.locator('risk-assessment .ra-head__resync').count()) === 1 && await resyncOff());
 check('Submit decision is enabled', await page.locator('workflow-panel footer button:has-text("Submit decision")').isEnabled());
 

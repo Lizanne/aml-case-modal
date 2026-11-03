@@ -26,14 +26,14 @@ import { scrollWithin } from '../core/scroll';
  *   - a text note (required)
  *   - a keep-locked / unlock choice, preselected to keep (rule 5)
  *   - Assess risk only: a Risk answer, Yes or No
- *   - Finalize only: every field assessed (no Action required left)
+ *   - Finalise only: every field assessed (no Action required left)
  *
  * A new trigger no longer blocks Save, so the out-of-sync notice is gone.
  *
  * Three variants of one form, not three forms:
  *   - Record (contact, note): note and attachments
  *   - Assess risk - <field>: note, attachments, then Risk Yes/No beside them
- *   - Finalize risk assessment: the section table and a note, no attachments
+ *   - Finalise risk assessment: the section table and a note, no attachments
  */
 @Component({
   selector: 'record-form',
@@ -67,7 +67,7 @@ import { scrollWithin } from '../core/scroll';
         }
 
         @if (draft.actionType === 'finalize-risk-assessment') {
-          <!-- What is being finalized, before the note about it. Live: it is
+          <!-- What is being finalised, before the note about it. Live: it is
                the Risk assessment as it stands right now. -->
           <div class="field">
             <span class="field__label">Risk by section</span>
@@ -369,7 +369,7 @@ export class RecordFormComponent {
 
   saveLabel(draft: Draft): string {
     if (draft.actionType === 'assess-risk') return 'Save assessment';
-    if (draft.actionType === 'finalize-risk-assessment') return 'Finalize';
+    if (draft.actionType === 'finalize-risk-assessment') return 'Finalise';
     return 'Save outcome';
   }
 

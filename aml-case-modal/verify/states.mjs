@@ -23,7 +23,7 @@ const CHECKS = {
     'header shows the opening severity': (await p.locator('case-header ui-pill[data-sev]').innerText()).trim() === OPENING_SEVERITY,
     'lock button says Lock to me': (await p.locator('case-header button:has-text("Lock to me")').count()) === 1,
     'record buttons disabled': await p.locator('action-placeholder button').first().isDisabled(),
-    // Two assessments, the contact and Finalize.
+    // Two assessments, the contact and Finalise.
     'four placeholders': (await p.locator('action-placeholder').count()) === 4,
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
   }),
@@ -37,8 +37,8 @@ const CHECKS = {
     'four pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count()) === 4,
     'the assessment chips are Action required pills': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 2,
     'four placeholders': (await p.locator('action-placeholder').count()) === 4,
-    'Finalize visible but disabled':
-      await p.locator('action-placeholder:has-text("Finalize risk assessment") button').isDisabled(),
+    'Finalise visible but disabled':
+      await p.locator('action-placeholder:has-text("Finalise risk assessment") button').isDisabled(),
     'record enabled': await p.locator('action-placeholder button').first().isEnabled(),
     'submit disabled': await p.locator('.footer button:has-text("Submit decision")').isDisabled(),
     // A manual case opens with its creation event, and the empty line is about
@@ -78,13 +78,13 @@ const CHECKS = {
     'form is Player contact': (await p.locator('record-form .form__title').innerText()).toLowerCase().includes('player contact'),
     'no errors': (await p.locator('record-form .error').count()) === 0,
     'save enabled': await p.locator('record-form button:has-text("Save outcome")').isEnabled(),
-    // Both assessments and Finalize are still outstanding.
+    // Both assessments and Finalise are still outstanding.
     'the other placeholders still present': (await p.locator('action-placeholder').count()) === 3,
   }),
   '03': async (p) => ({
-    'every chip done, Finalize included': (await p.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count()) === 4,
+    'every chip done, Finalise included': (await p.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count()) === 4,
     'done assessment chips read No risk, not done': (await p.locator('required-chips risk-status [data-risk="no-risk"]').count()) === 2,
-    'the risk assessment shows as finalized': (await p.locator('risk-assessment .ra-final').count()) === 1,
+    'the risk assessment shows as finalised': (await p.locator('risk-assessment .ra-final').count()) === 1,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
     // Two event rows now: the case's own creation heads the stream, and the
     // severity change sits between the outcomes. Counted apart, because only
@@ -157,11 +157,11 @@ const CHECKS = {
     'no footer': (await p.locator('workflow-panel .footer').count()) === 0,
     'two tabs only': (await p.locator('player-info-panel .mat-mdc-tab').count()) === 2,
     'the first tab is Risk assessment': (await p.locator('player-info-panel .mat-mdc-tab').first().innerText()).trim() === 'Risk assessment',
-    'the risk assessment shows as finalized': (await p.locator('risk-assessment .ra-final').count()) === 1,
+    'the risk assessment shows as finalised': (await p.locator('risk-assessment .ra-final').count()) === 1,
     'no assess actions': (await p.locator('risk-assessment .ra-act').count()) === 0,
     'no Resync on a resolved case': (await p.locator('risk-assessment .ra-head__resync').count()) === 0,
     'decision card present': (await p.locator('outcome-card .card--decision').count()) === 1,
-    'finalize card with its table': (await p.locator('outcome-card section-risk-table').count()) === 1,
+    'finalise card with its table': (await p.locator('outcome-card section-risk-table').count()) === 1,
     'no View snapshot anywhere': (await p.locator('outcome-card button:has-text("snapshot")').count()) === 0,
   }),
   '08': async (p) => ({
@@ -195,7 +195,7 @@ const CHECKS = {
     })(),
     'chips use short labels': await (async () => {
       const labels = (await p.locator('required-chips ui-pill').allInnerTexts()).map((t) => t.replace(/^\S+\s*/, '').trim());
-      return labels.includes('Contact') && labels.includes('Finalize') && !labels.some((l) => l.startsWith('Assess risk'));
+      return labels.includes('Contact') && labels.includes('Finalise') && !labels.some((l) => l.startsWith('Assess risk'));
     })(),
     // The narrow footer no longer splits into two full-width halves - it is
     // the same right-aligned pair as every other footer.
@@ -232,14 +232,14 @@ const CHECKS = {
   '14': async (p) => ({
     'resync entry names the changed risks': /Risk associated with Latest fraud scores and Deposit spike changed - manual action needed\./.test(await p.locator('event-row:has-text("Resync completed")').innerText()),
     'both fields Action required': (await p.locator('risk-assessment [data-field="latest-fraud-scores"] .status, risk-assessment [data-field="deposit-spike"] .status').evaluateAll((els) => els.every((e) => e.getAttribute('data-risk') === 'action-required'))),
-    'two new assessment placeholders and Finalize': (await p.locator('action-placeholder').count()) === 3,
-    'Finalize disabled': await p.locator('action-placeholder:has-text("Finalize risk assessment") button').isDisabled(),
+    'two new assessment placeholders and Finalise': (await p.locator('action-placeholder').count()) === 3,
+    'Finalise disabled': await p.locator('action-placeholder:has-text("Finalise risk assessment") button').isDisabled(),
   }),
   '15': async (p) => ({
-    'finalize form open': (await p.locator('record-form .form__title').innerText()).trim() === 'Finalize risk assessment',
+    'finalise form open': (await p.locator('record-form .form__title').innerText()).trim() === 'Finalise risk assessment',
     'section table shown': (await p.locator('record-form section-risk-table tbody tr').count()) === 6,
     'no attachments': (await p.locator('record-form .field__actions').count()) === 0,
-    'button says Finalize': (await p.locator('record-form button[type="submit"]').innerText()).trim() === 'Finalize',
+    'button says Finalise': (await p.locator('record-form button[type="submit"]').innerText()).trim() === 'Finalise',
   }),
 };
 

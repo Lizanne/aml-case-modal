@@ -38,7 +38,7 @@ import { PillComponent } from './ui-pill.component';
         name as the word and the status on the accessible name and title.
         A done assessment therefore reads No risk or Risk flagged here, never
         a generic tick, and the two panels say the same thing about one field.
-        Contact player and Finalize keep the pending / done pill.
+        Contact player and Finalise keep the pending / done pill.
       -->
       @for (action of store.requiredActions(); track action.key) {
         @if (action.status) {

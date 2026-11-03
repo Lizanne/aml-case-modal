@@ -34,7 +34,7 @@ const ICON: Record<RiskStatus, string | null> = {
  * button vocabulary.
  *
  * Sizes are the pill's: sm (20 tall, 12px word, 12px icon) in the Risk
- * assessment rows, the outcome card, the placeholder and the finalize table,
+ * assessment rows, the outcome card, the placeholder and the finalise table,
  * where the status sits among 12px meta text; md (24 tall, 14px word, 16px
  * icon) in the required-actions chip bar, where it stands next to the other
  * chips and must be the same size as them.
@@ -91,7 +91,7 @@ export class RiskStatusComponent {
   @Input() size: PillSize = 'sm';
   /**
    * Overrides the word - a field name on a required-actions chip. Never a
-   * synonym for the status: the finalize table once said "Risk" where the
+   * synonym for the status: the finalise table once said "Risk" where the
    * rows said "Risk flagged", and one status with two words is two statuses.
    */
   @Input() label: string | null = null;

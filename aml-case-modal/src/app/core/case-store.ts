@@ -75,7 +75,7 @@ export interface RequiredActionState {
    */
   status: RiskStatus | null;
   /**
-   * Whether it can be started yet. False only for Finalize risk assessment
+   * Whether it can be started yet. False only for Finalise risk assessment
    * while any field is still Action required: it stays in view, disabled.
    */
   available: boolean;
@@ -145,7 +145,7 @@ export function deriveRiskFields(generation: number, stream: StreamItem[]): Risk
   return RISK_FIELDS.map((def) => state.get(def.id)!);
 }
 
-/** The finalize table: every assessed section, risk if any field in it is. */
+/** The finalise table: every assessed section, risk if any field in it is. */
 export function sectionRisksOf(fields: RiskFieldState[]): SectionRisk[] {
   return RISK_SECTIONS.filter((section) =>
     fields.some((f) => f.def.section === section && f.status !== 'informational'),
@@ -537,10 +537,10 @@ export class CaseStore {
     this.riskFields().filter((f) => f.status === 'action-required'),
   );
 
-  /** Finalize is enabled once every non-informational field is Risk or No risk. */
+  /** Finalise is enabled once every non-informational field is Risk or No risk. */
   readonly canFinalize = computed(() => this.actionRequiredFields().length === 0);
 
-  /** The finalize outcome, once there is one. */
+  /** The finalise outcome, once there is one. */
   readonly riskFinalization = computed(
     () => this.outcomes().find((o) => o.actionType === 'finalize-risk-assessment') ?? null,
   );
@@ -551,7 +551,7 @@ export class CaseStore {
 
   /**
    * Whether a risk status can be clicked to assess it. Needs the lock, and
-   * stops once the assessment is finalized or while it is being regenerated.
+   * stops once the assessment is finalised or while it is being regenerated.
    */
   readonly canAssessRisk = computed(
     () => this.canRecord() && !this.isRiskFinalized() && !this.resyncing(),
@@ -566,7 +566,7 @@ export class CaseStore {
   readonly resyncBlockReason = computed<string | null>(() => {
     if (this.canResync()) return null;
     if (this.isResolved()) return 'This case is resolved.';
-    if (this.isRiskFinalized()) return 'The risk assessment is finalized.';
+    if (this.isRiskFinalized()) return 'The risk assessment is finalised.';
     if (this.resyncing()) return 'Resyncing.';
     if (this.lockState() === 'locked-to-other') return 'Another agent holds the lock.';
     return 'Lock the case to resync.';
@@ -577,7 +577,7 @@ export class CaseStore {
    *
    * Three kinds, in this order: every required assessment (manual fields,
    * plus any field a resync sent back to Action required), the other required
-   * actions, then Finalize risk assessment last - it can only be done once
+   * actions, then Finalise risk assessment last - it can only be done once
    * every assessment is.
    */
   readonly requiredActions = computed<RequiredActionState[]>(() => {
@@ -608,15 +608,15 @@ export class CaseStore {
         available: true,
       };
     });
-    const finalization = this.riskFinalization();
+    const finalisation = this.riskFinalization();
     const finalize: RequiredActionState = {
       key: 'finalize',
       actionType: 'finalize-risk-assessment',
       fieldId: null,
-      label: 'Finalize risk assessment',
-      shortLabel: SHORT_ACTION_LABEL['finalize-risk-assessment'] ?? 'Finalize',
-      done: !!finalization,
-      recordedAt: finalization?.at ?? null,
+      label: 'Finalise risk assessment',
+      shortLabel: SHORT_ACTION_LABEL['finalize-risk-assessment'] ?? 'Finalise',
+      done: !!finalisation,
+      recordedAt: finalisation?.at ?? null,
       status: null,
       available: this.canFinalize(),
     };
@@ -728,7 +728,7 @@ export class CaseStore {
 
   /**
    * Rule 5. A draft may only be saved with a note and a lock choice. An
-   * assessment also needs its Risk answer; Finalize needs every field assessed.
+   * assessment also needs its Risk answer; Finalise needs every field assessed.
    */
   readonly draftValid = computed(() => {
     const d = this.draft();
@@ -797,7 +797,7 @@ export class CaseStore {
 
   labelFor(id: ActionTypeId): string {
     if (id === 'decision') return 'Decision - case resolved';
-    if (id === 'finalize-risk-assessment') return 'Finalize risk assessment';
+    if (id === 'finalize-risk-assessment') return 'Finalise risk assessment';
     if (id === 'assess-risk') return 'Assess risk';
     return this.actionTypes().find((t) => t.id === id)?.label ?? id;
   }
@@ -810,7 +810,7 @@ export class CaseStore {
       case 'assess-risk':
         return 'Assess risk';
       case 'finalize-risk-assessment':
-        return 'Risk assessment finalized';
+        return 'Risk assessment finalised';
       case 'note':
         return 'Note';
       case 'decision':
@@ -889,7 +889,7 @@ export class CaseStore {
       actionType === 'assess-risk' && field
         ? `Assess risk - ${field.def.label}`
         : actionType === 'finalize-risk-assessment'
-          ? 'Finalize risk assessment'
+          ? 'Finalise risk assessment'
           : this.outcomeTitleFor(actionType);
 
     /**
@@ -1038,11 +1038,11 @@ export class CaseStore {
       kind: 'outcome',
       id: nextId('out'),
       actionType: d.actionType,
-      title: d.actionType === 'finalize-risk-assessment' ? 'Risk assessment finalized' : d.title,
+      title: d.actionType === 'finalize-risk-assessment' ? 'Risk assessment finalised' : d.title,
       actor: this.me().name,
       at,
       note: d.note.trim(),
-      // Finalize carries no attachments, by definition.
+      // Finalise carries no attachments, by definition.
       attachments: d.actionType === 'finalize-risk-assessment' ? [] : d.attachments, // frozen from here (rule 6)
       ...(field && d.risk
         ? {
@@ -1064,7 +1064,7 @@ export class CaseStore {
         this.me().name,
       );
     } else if (d.actionType === 'finalize-risk-assessment') {
-      this.pushTimeline(at, 'Risk assessment finalized', this.me().name);
+      this.pushTimeline(at, 'Risk assessment finalised', this.me().name);
     } else {
       this.pushTimeline(at, `Outcome recorded: ${d.title}`, this.me().name);
     }
@@ -1073,7 +1073,7 @@ export class CaseStore {
     //
     // Only the work the TABLE knows about is written back. Assessing open
     // source searches is the table's "Open source searches" work item, so it
-    // completes that. The other assessments and Finalize are modal-only and
+    // completes that. The other assessments and Finalise are modal-only and
     // leave the table exactly as it was.
     const work =
       field?.def.id === 'open-source-searches'
@@ -1149,7 +1149,7 @@ export class CaseStore {
     this.openDialog.set(null);
     this.draft.set(null);
     this.addMenuOpen.set(false);
-    // Rule 10: the left panel shows the risk assessment as it was finalized.
+    // Rule 10: the left panel shows the risk assessment as it was finalised.
     this.infoTab.set('risk');
     return true;
   }
@@ -1401,9 +1401,9 @@ export class CaseStore {
 
     if (upTo === 'first') return this.withCreation(items.slice(0, 1));
     // The fixture predates the Risk assessment, so its history has no
-    // Document requests assessment and no finalize. Both are written in here,
+    // Document requests assessment and no finalise. Both are written in here,
     // after the last required action and before the decision - a resolved
-    // case must have a finalized assessment behind it.
+    // case must have a finalised assessment behind it.
     const decisionAt = items.findIndex((i) => isOutcome(i) && i.actionType === 'decision');
     const before = decisionAt === -1 ? items : items.slice(0, decisionAt);
     const decision = decisionAt === -1 ? null : items[decisionAt];
@@ -1413,7 +1413,7 @@ export class CaseStore {
   }
 
   /**
-   * @internal dev-only - the Document requests assessment and the finalize
+   * @internal dev-only - the Document requests assessment and the finalise
    * that the fixture's history is missing, timed just after its last item.
    */
   private closingAssessments(items: StreamItem[], decision: StreamItem | null): OutcomeItem[] {
@@ -1440,7 +1440,7 @@ export class CaseStore {
       kind: 'outcome',
       id: 'fx-finalize',
       actionType: 'finalize-risk-assessment',
-      title: 'Risk assessment finalized',
+      title: 'Risk assessment finalised',
       actor,
       at: new Date(base + 2 * gap).toISOString(),
       note: 'Linked accounts, VPN use and the deposit pattern carry risk. Identity and documents are clear. Overall: enhanced monitoring.',

@@ -317,7 +317,7 @@ export class WorkflowPanelComponent implements AfterViewInit, OnDestroy {
 
   /**
    * Why Submit is disabled - shown as a tooltip where the sentence does not fit.
-   * Only a finalized risk assessment lets a case close, so it is always named
+   * Only a finalised risk assessment lets a case close, so it is always named
    * when it is outstanding.
    */
   readonly gateTooltip = computed(() => {
@@ -331,13 +331,13 @@ export class WorkflowPanelComponent implements AfterViewInit, OnDestroy {
       steps.push('record the player contact');
     }
     if (outstanding.some((r) => r.actionType === 'finalize-risk-assessment')) {
-      steps.push('finalize the risk assessment');
+      steps.push('finalise the risk assessment');
     }
     const sentence = joinLabels(steps);
     return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)} to submit a decision.`;
   });
 
-  /** Why Finalize is still disabled: the fields that are left, by name. */
+  /** Why Finalise is still disabled: the fields that are left, by name. */
   readonly finalizeReason = computed(() => {
     const left = this.store.actionRequiredFields().map((f) => f.def.label);
     if (!left.length) return null;

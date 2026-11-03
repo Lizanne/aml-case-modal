@@ -18,7 +18,7 @@ export const STATES = [
   ['01', 'Locked empty'],
   ['02', 'Assess risk with attachment errors'],
   ['02b', 'Recording clean reverse order'],
-  ['03', 'Everything required done, finalized'],
+  ['03', 'Everything required done, finalised'],
   ['04', 'Overriding a risk'],
   ['05', 'Adjust severity dialog'],
   ['06', 'Submit decision dialog'],
@@ -30,7 +30,7 @@ export const STATES = [
   ['12', 'Resync confirm'],
   ['13', 'Resyncing'],
   ['14', 'Resync completed with risk changes'],
-  ['15', 'Finalize risk assessment'],
+  ['15', 'Finalise risk assessment'],
 ];
 
 rmSync(OUT, { recursive: true, force: true });

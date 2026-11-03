@@ -23,7 +23,7 @@ import { DialogShellComponent } from './dialog-shell.component';
       <p class="lead">Some actions might need to be recorded again.</p>
       <p class="detail">
         Every value is regenerated. Where a field's risk changes, it goes back to Action required
-        and has to be assessed again before the risk assessment can be finalized.
+        and has to be assessed again before the risk assessment can be finalised.
       </p>
 
       <ng-container dialogActions>

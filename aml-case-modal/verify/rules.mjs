@@ -97,8 +97,8 @@ check('save is enabled once the note has content, with no further choice needed'
   await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
-// Four required now: both assessments, the contact and Finalize.
-// Assessment chips are the field's risk status pill; Contact and Finalize keep
+// Four required now: both assessments, the contact and Finalise.
+// Assessment chips are the field's risk status pill; Contact and Finalise keep
 // the pending / done pill. "Done" for an assessment is No risk or Risk flagged.
 const chipsPending = () => page.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count();
 const chipsDone = () => page.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count();
@@ -202,7 +202,7 @@ check('no resync warning on the form', (await page.locator('record-form .warn-no
 await page.locator('record-form button:has-text("Save assessment")').click();
 await page.waitForTimeout(250);
 
-console.log('\nRules 4, 13, 14 and 9 - assess the rest, finalize, then submit');
+console.log('\nRules 4, 13, 14 and 9 - assess the rest, finalise, then submit');
 for (let i = 0; i < 6 && (await page.locator('action-placeholder[data-key^="assess:"] button').count()); i++) {
   await page.locator('action-placeholder[data-key^="assess:"] button').first().click();
   await page.waitForTimeout(200);
@@ -212,11 +212,11 @@ for (let i = 0; i < 6 && (await page.locator('action-placeholder[data-key^="asse
   await page.locator('record-form button:has-text("Save assessment")').click();
   await page.waitForTimeout(250);
 }
-check('submit still disabled before Finalize', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
-await page.locator('action-placeholder:has-text("Finalize risk assessment") button').click();
+check('submit still disabled before Finalise', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
+await page.locator('action-placeholder:has-text("Finalise risk assessment") button').click();
 await page.waitForTimeout(200);
 await fillForm({ note: 'Overall: enhanced monitoring.' });
-await page.locator('record-form button:has-text("Finalize")').click();
+await page.locator('record-form button:has-text("Finalise")').click();
 await page.waitForTimeout(250);
 check('every chip done', (await chipsPending()) === 0);
 check('no placeholders left', (await page.locator('action-placeholder').count()) === 0);
@@ -237,7 +237,7 @@ check('no footer', (await page.locator('workflow-panel .footer').count()) === 0)
 check('no add action', (await page.locator('add-action-menu').count()) === 0);
 check('no lock control', (await page.locator('case-header button:has-text("Lock")').count()) === 0);
 check('tabs reduced to two', (await page.locator('player-info-panel .mat-mdc-tab').count()) === 2);
-check('the risk assessment is shown as finalized', (await page.locator('risk-assessment .ra-final').count()) === 1);
+check('the risk assessment is shown as finalised', (await page.locator('risk-assessment .ra-final').count()) === 1);
 check('no assess actions', (await page.locator('risk-assessment .ra-act').count()) === 0);
 check('no View snapshot on any card', (await page.locator('outcome-card button:has-text("snapshot")').count()) === 0);
 

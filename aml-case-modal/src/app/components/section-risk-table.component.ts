@@ -4,7 +4,7 @@ import { SectionRisk } from '../core/models';
 import { RiskStatusComponent } from './risk-status.component';
 
 /**
- * The finalize table: one row per assessed section, Risk or No risk.
+ * The finalise table: one row per assessed section, Risk or No risk.
  *
  * A section is a risk if any field in it is. Account information is not in
  * it - those fields are informational and carry no risk to report.
