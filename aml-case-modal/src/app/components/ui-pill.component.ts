@@ -121,34 +121,12 @@ export type PillTone =
       }
 
       /**
-       * Rims, on the pills that report a condition: the dotted SLA pill, and
-       * the risk statuses (which ask for the rim without the dot).
-       *
-       * Opt-in rather than set on the tones, and that is not fussiness: warn
-       * and success are worn by the work chips, the severity dialog and the
-       * case header, none of which should grow an edge because the SLA
-       * column wanted one.
-       *
-       * The solid pill has none. Its Figma node is a flat fill with no stroke,
-       * and a rim on a saturated red would be a second edge fighting the first.
-       */
-      :host([data-rim][data-tone='warn']) {
-        border-color: var(--border-warning-subdued);
-      }
-      :host([data-rim][data-tone='success']) {
-        border-color: var(--border-success-subdued);
-      }
-      /**
-       * The rimmed red takes the deepest red in the family for its label, its
-       * icon and its dot - all currentColor, so one declaration moves them. It
-       * reads 9.16:1 on the tint, against 5.91 for the --danger it replaces.
+       * No pill draws a border colour - 11 Nov 2026. The base keeps a
+       * transparent 1px border so every pill keeps its size. The rim input
+       * still gives the red its deepest ink (9.16:1 on the tint).
        */
       :host([data-rim][data-tone='danger']) {
-        border-color: var(--border-negative-subdued);
         color: var(--danger-deep);
-      }
-      :host([data-rim][data-tone='danger-solid']) {
-        border-color: transparent;
       }
 
       /* The small step. Size carries no colour and colour carries no size, so
@@ -210,13 +188,10 @@ export type PillTone =
       :host([data-tone='outline']) {
         background: var(--panel);
         color: var(--foreground-secondary);
-        border-color: var(--line);
       }
       :host([data-tone='dashed']) {
         background: transparent;
         color: var(--foreground-secondary);
-        border-style: dashed;
-        border-color: var(--line-strong);
       }
 
       /* ---- severity is its own language and always wins over tone ---- */
