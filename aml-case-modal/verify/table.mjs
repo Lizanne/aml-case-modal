@@ -122,10 +122,11 @@ try {
   check('the dot does not change the pill height or its 4px gap',
     dot.heights.join() === '24' && dot.gap === '4px', JSON.stringify(dot));
   const t = dot.byTone;
-  check('the tinted pills take their own subdued rim',
-    t.warn?.border === 'rgb(253, 230, 138)' &&
-    t.success?.border === 'rgb(187, 247, 208)' &&
-    t.danger?.border === 'rgb(254, 202, 202)',
+  // 11 Nov 2026: no ui-pill draws a border colour.
+  check('the tinted pills draw no border colour',
+    t.warn?.border === 'rgba(0, 0, 0, 0)' &&
+    t.success?.border === 'rgba(0, 0, 0, 0)' &&
+    t.danger?.border === 'rgba(0, 0, 0, 0)',
     JSON.stringify({ warn: t.warn?.border, success: t.success?.border, danger: t.danger?.border }));
   // A rim on a saturated red would be a second edge fighting the first, and
   // the Figma node is a flat fill with no stroke.

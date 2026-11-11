@@ -215,7 +215,7 @@ const CHECKS = {
     '20 triggers total': (await p.locator('trigger-strip .trigger').count()) === 20,
     // Rule 11, revised: no amber, no NEW marker, no banner, nothing blocked.
     'no new marker': (await p.locator('trigger-strip .trigger--new').count()) === 0,
-    'the arrival is a workflow entry with a warning icon': (await p.locator('event-row:has-text("New trigger added - System - Threshold") mat-icon.row__icon--warn').count()) === 1,
+    'the arrival is a workflow entry with a warning icon': (await p.locator('event-row:has-text("New trigger added - Threshold") mat-icon.row__icon--warn').count()) === 1,
     'no resync banner': (await p.locator('workflow-panel .resync').count()) === 0,
     'recording not blocked': await p.locator('action-placeholder:has-text("Contact player") button').isEnabled(),
     'Resync visible and enabled': (await p.locator('risk-assessment .ra-head__resync').getAttribute('aria-disabled')) === null,

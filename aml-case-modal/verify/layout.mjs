@@ -424,19 +424,24 @@ for (const state of ['10', '01']) {
   await page.waitForTimeout(600);
   const r = await page.evaluate(() => {
     const product = [...document.querySelectorAll('button')].filter(
-      (b) => /Resync/i.test(b.textContent) && !b.closest('dev-state-switcher'),
+      (b) => /Resync/i.test(b.textContent) && !b.closest('dev-state-switcher') && !b.closest('event-row'),
     );
+    // The arrival's own "Resync" text link is the one sanctioned second way
+    // in: on the newest pending trigger's row, nowhere else.
+    const links = [...document.querySelectorAll('event-row .row__link')];
     return {
       count: product.length,
       inHeader: product.filter((b) => b.closest('risk-assessment .ra-head')).length,
       enabled: product.filter((b) => !b.disabled).length,
       notice: !!document.querySelector('workflow-panel .resync'),
+      strayLinks: links.filter((l) => !/New trigger added/.test(l.closest('event-row').textContent)).length,
     };
   });
   check(`${state}: no out-of-sync notice`, !r.notice);
   check(`${state}: exactly one product Resync, in the Risk assessment header`,
     r.count === 1 && r.inHeader === 1, `${r.count}/${r.inHeader}`);
   check(`${state}: live for the lock owner`, r.enabled === 1);
+  check(`${state}: any Resync link sits on a trigger arrival`, r.strayLinks === 0);
 }
 
 console.log('\nThe info tab header is 48px, tabs included');

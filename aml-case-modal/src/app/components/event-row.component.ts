@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, Input, afterNextRender, effect, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { StampPipe } from '../core/format';
-import { resyncSummary } from '../core/case-store';
+import { CaseStore, resyncSummary } from '../core/case-store';
+import { scrollWithin } from '../core/scroll';
 import { CaseCreatedEvent, EventItem, SeverityChangeEvent } from '../core/models';
 import { PillComponent } from './ui-pill.component';
 
@@ -34,7 +35,20 @@ import { PillComponent } from './ui-pill.component';
     '[class.event-row--created]': "event.type === 'case-created'",
   },
   template: `
+    <!--
+      The gutter: every event kind has a glyph, in one 16px column, so every
+      event title starts on the same edge and the detail sits under its
+      title. Cards are the agent's work; iconed lines are what happened to
+      the case. The words carry the meaning; the glyphs are hidden from
+      assistive tech.
+    -->
     <div class="row">
+      <mat-icon
+        class="row__icon"
+        [class.row__icon--warn]="glyphWarn"
+        fontSet="material-icons-outlined"
+        aria-hidden="true"
+      >{{ glyph }}</mat-icon>
       <!--
         Line one is fixed-width parts only. Nothing here shrinks and nothing
         ellipsises, so the author and time cannot be pushed out or clipped by a
@@ -45,13 +59,6 @@ import { PillComponent } from './ui-pill.component';
         <!-- One label slot for both kinds. The direction arrow is gone: the
              label already says escalation or de-escalation, and the pills say
              which way. -->
-        @if (event.type === 'trigger-added') {
-          <mat-icon
-            class="row__icon row__icon--warn"
-            fontSet="material-icons-outlined"
-            aria-hidden="true"
-          >warning_amber</mat-icon>
-        }
         <span class="row__label">{{ headLabel }}</span>
 
         <!--
@@ -70,7 +77,18 @@ import { PillComponent } from './ui-pill.component';
 
       <!-- Line two either way: the severity reason, or the creation
            motivation. Same clamp, same hover title. -->
-      <p class="row__reason" [title]="lineTwo">{{ lineTwo }}</p>
+      <p class="row__reason" [title]="lineTwo">
+        {{ lineTwo }}
+        <!-- The arrival's next step, in the Assess / Change vocabulary. Only
+             on the newest trigger, only while its values are still pending
+             and a resync can run - a link on every old trigger would offer an
+             action already done. -->
+        @if (showResync()) {
+          <span class="row__sep" aria-hidden="true">·</span>
+          <button type="button" class="row__link" (click)="store.requestResync()">Resync</button>
+          to update the risk assessment
+        }
+      </p>
     </div>
   `,
   styles: [
@@ -90,15 +108,17 @@ import { PillComponent } from './ui-pill.component';
        * an event with neither stays the lighter of the two.
        */
       .row {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        column-gap: 8px;
+        row-gap: 4px;
         min-width: 0;
-        gap: 4px;
-        /* No vertical padding on either event kind. These are unboxed
-           annotations, and the stream's own 12px gap is what separates them
-           from the cards either side; the row's own padding was additive on
-           top of it and read as drift rather than rhythm. */
-        padding: 0 16px;
+        /* 4px above and below: events are separate moments, and flush they
+           ran together into one paragraph. The stream's 12px gap still does
+           most of the separating. Chosen over a tinted-disc marker (too heavy;
+           brought back the amber) and an inline compact row (titles stopped
+           being scannable), 11 Nov 2026. */
+        padding: 4px 16px;
         border-radius: 12px;
         background: none;
         border: 0;
@@ -116,6 +136,14 @@ import { PillComponent } from './ui-pill.component';
        * the edge is the failure this rule exists to prevent. Wrapping drops
        * them to their own line intact instead.
        */
+      .row__icon {
+        grid-row: 1;
+        align-self: center;
+      }
+      .row__head,
+      .row__reason {
+        grid-column: 2;
+      }
       .row__head {
         display: flex;
         flex-wrap: wrap;
@@ -132,18 +160,41 @@ import { PillComponent } from './ui-pill.component';
         width: 16px;
         height: 16px;
       }
-      /* PROTOTYPE.md: "Severity escalation shows an up arrow in the warn
-         colour." Only escalation - the spec names that direction alone, and
-         warn on a de-escalation would be saying the wrong thing. The rest of
-         the row stays secondary ink so the event still reads as an annotation.
-         3.92:1 against the stream background, clear of the 3:1 non-text bar. */
-      .row__icon--escalation {
-        color: var(--warn);
-      }
-      /* The new-trigger icon. Icon only: the row stays an unboxed annotation,
-         and the word "New trigger added" carries the meaning beside it. */
+      /* Warn ink on the warnings only - a new trigger, and an escalation
+         (PROTOTYPE.md: "Severity escalation shows an up arrow in the warn
+         colour"). A de-escalation's down arrow stays secondary: warn there
+         would say the wrong thing. 3.92:1 on the stream, past the 3:1 bar. */
       .row__icon--warn {
         color: var(--warn);
+      }
+      .row__sep {
+        margin: 0 4px;
+      }
+      .row__link {
+        position: relative;
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-weight: 600;
+        color: var(--link);
+        cursor: pointer;
+        border-radius: 2px;
+      }
+      /* 20px to look at, 40px to hit. */
+      .row__link::before {
+        content: '';
+        position: absolute;
+        inset: -10px -4px;
+      }
+      .row__link:hover {
+        color: var(--link-hover);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .row__link:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
       /* 16px, matching the direction arrow. They are a pair on the same line
          and were a step apart at 14 and 16. */
@@ -211,6 +262,29 @@ import { PillComponent } from './ui-pill.component';
 export class EventRowComponent {
   @Input({ required: true }) event!: EventItem;
 
+  readonly store = inject(CaseStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly injector = inject(Injector);
+
+  /**
+   * A system arrival - a new trigger - lands at its place in time, which in
+   * any case with recorded work is below the fold. Nothing the agent did put
+   * it there, so nothing would bring it into view: the stream scrolls to it,
+   * within the workflow panel only. Not while a form is open - the agent's
+   * draft does not move under them; the live region still says it arrived.
+   */
+  constructor() {
+    effect(
+      () => {
+        if (!this.event || this.store.revealEventId() !== this.event.id) return;
+        this.store.revealEventId.set(null);
+        if (this.store.draft()) return;
+        afterNextRender(() => void scrollWithin(this.host.nativeElement, { block: 'nearest' }), { injector: this.injector });
+      },
+      { allowSignalWrites: true },
+    );
+  }
+
   /**
    * Narrowed accessors rather than casts at the template's call sites: the
    * union is discriminated on `type`, and @if binding the narrowed value is
@@ -224,13 +298,43 @@ export class EventRowComponent {
     return this.event.type === 'case-created' ? this.event : null;
   }
 
+  /** The gutter glyph: one per event kind. */
+  get glyph(): string {
+    switch (this.event.type) {
+      case 'case-created':
+        return 'description';
+      case 'trigger-added':
+        return 'warning_amber';
+      case 'resync-completed':
+        return 'sync';
+      default:
+        return this.event.direction === 'escalation' ? 'arrow_upward' : 'arrow_downward';
+    }
+  }
+
+  /** Warn ink for the warnings only: a new trigger, an escalation. */
+  get glyphWarn(): boolean {
+    return this.event.type === 'trigger-added' || (this.event.type === 'severity-change' && this.event.direction === 'escalation');
+  }
+
+  /** The Resync link: the newest trigger, values pending, a resync possible. */
+  showResync(): boolean {
+    if (this.event.type !== 'trigger-added' || !this.store.pendingRegeneration() || !this.store.canResync()) return false;
+    const triggers = this.store.stream().filter((i) => i.kind === 'event' && i.type === 'trigger-added');
+    return triggers.length > 0 && triggers[triggers.length - 1].id === this.event.id;
+  }
+
   /** Line one. Every kind gets a label; only a severity change gets pills. */
   get headLabel(): string {
     switch (this.event.type) {
       case 'case-created':
         return `Manual case created - ${this.event.reason}`;
       case 'trigger-added':
-        return `New trigger added - ${this.event.name}`;
+        // The brief's wording: "New trigger added - <type>". A trigger's
+        // name is "<source> - <type>", and the source is already the actor
+        // on the right ("System · <stamp>"); saying it twice made a chain
+        // of dashes that read as one long name.
+        return `New trigger added - ${this.event.name.split(' - ').pop()}`;
       case 'resync-completed':
         return 'Resync completed';
       default:

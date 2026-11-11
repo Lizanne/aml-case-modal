@@ -426,6 +426,11 @@ export class CaseStore {
   readonly resyncing = signal(false);
   /** What the last resync found, for the screen-reader announcement. */
   readonly lastResyncSummary = signal('');
+  /**
+   * The event row a system arrival asked to be brought into view, once.
+   * The row clears it when it has scrolled itself in.
+   */
+  readonly revealEventId = signal<string | null>(null);
   private resyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly triggers = signal<Trigger[]>([]);
@@ -1180,9 +1185,12 @@ export class CaseStore {
 
     this.triggers.update((list) => [trigger, ...list]);
     this.pendingRegeneration.set(true);
+    const eventId = nextId('ev');
+    this.revealEventId.set(eventId);
+    this.lastResyncSummary.set(`New trigger: ${trigger.name}`);
     this.pushEvent({
       kind: 'event',
-      id: nextId('ev'),
+      id: eventId,
       type: 'trigger-added',
       name: trigger.name,
       detail: trigger.detail,

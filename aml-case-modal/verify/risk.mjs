@@ -144,6 +144,32 @@ check('in the chip bar the status is the md pill, the same size as the other chi
     Math.abs(p.querySelector('mat-icon').getBoundingClientRect().width - 16) < 0.6);
 }));
 await page.evaluate(() => { document.querySelector('.info__body').scrollTop = 0; });
+console.log('\nA new trigger is seen where it lands');
+await go('03');
+await page.locator('dev-state-switcher button:has-text("New trigger")').click(); await page.waitForTimeout(900);
+check('in a long workflow, the arrival is scrolled into view - the stream only', await page.evaluate(() => {
+  const ev = [...document.querySelectorAll('event-row')].filter((e) => /New trigger added/.test(e.textContent)).pop();
+  let box = ev.parentElement; while (box && !(['auto','scroll'].includes(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) box = box.parentElement;
+  const r = ev.getBoundingClientRect(), v = box.getBoundingClientRect();
+  return r.top >= v.top - 1 && r.bottom <= v.bottom + 1 && (document.querySelector('.modal')?.scrollTop ?? 0) === 0;
+}));
+check('and it is announced', /New trigger: /.test(await page.locator('risk-assessment .ra-live').textContent()));
+await go('01');
+await page.locator('dev-state-switcher button:has-text("New trigger")').click(); await page.waitForTimeout(700);
+check('every event has a gutter glyph, and every event title and detail start on one edge', await page.evaluate(() => {
+  const L = (el) => { const r = document.createRange(); r.selectNodeContents(el); return Math.round(r.getClientRects()[0].left); };
+  const rows = [...document.querySelectorAll('workflow-panel event-row')];
+  const xs = new Set(rows.flatMap((e) => [L(e.querySelector('.row__label')), L(e.querySelector('.row__reason'))]));
+  return rows.length >= 2 && rows.every((e) => e.querySelector('mat-icon.row__icon')?.textContent.trim()) && xs.size === 1;
+}));
+check('the newest pending trigger offers Resync; older triggers do not', await page.evaluate(() => {
+  const t = [...document.querySelectorAll('event-row')].filter((e) => /New trigger added/.test(e.textContent));
+  return t.length >= 1 && !!t[t.length - 1].querySelector('.row__link') && t.slice(0, -1).every((e) => !e.querySelector('.row__link'));
+}));
+await page.locator('event-row .row__link').click(); await page.waitForTimeout(300);
+check('and it opens the resync confirm', (await page.locator('resync-dialog').locator('button:has-text("Resync")').count()) > 0);
+await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+await go('01');
 console.log('\nSection bands');
 check('a section title is a full-bleed band on the page tint, with a rule on top', await page.evaluate(() => {
   const band = document.querySelectorAll('risk-assessment .ra-sec__title')[1];
@@ -178,12 +204,12 @@ check('the band is sticky: scrolled into a section, its title holds the top', aw
   body.scrollTop = 0;
   return Math.abs(band.top - top) < 1;
 }));
-check('the three statuses wear the ui-pill tones: tint, subdued rim, ink', await page.evaluate(() => {
+check('the three statuses wear the ui-pill tones: tint and ink, no border colour', await page.evaluate(() => {
   const cs = (s) => getComputedStyle(document.querySelector(`risk-assessment risk-status [data-risk="${s}"]`));
   const is = (s, bg, rim, ink) => { const c = cs(s); return c.backgroundColor === bg && c.borderTopColor === rim && c.color === ink; };
-  return is('risk', 'rgb(254, 242, 242)', 'rgb(254, 202, 202)', 'rgb(127, 29, 29)') &&
-    is('no-risk', 'rgb(240, 253, 244)', 'rgb(187, 247, 208)', 'rgb(20, 83, 45)') &&
-    is('action-required', 'rgb(254, 243, 199)', 'rgb(253, 230, 138)', 'rgb(120, 53, 15)');
+  return is('risk', 'rgb(254, 242, 242)', 'rgba(0, 0, 0, 0)', 'rgb(127, 29, 29)') &&
+    is('no-risk', 'rgb(240, 253, 244)', 'rgba(0, 0, 0, 0)', 'rgb(20, 83, 45)') &&
+    is('action-required', 'rgb(254, 243, 199)', 'rgba(0, 0, 0, 0)', 'rgb(120, 53, 15)');
 }));
 check('Employment & occupation is No risk', (await statusOf('employment-occupation')) === 'no-risk');
 check('Linked accounts is Risk flagged', (await statusOf('linked-accounts')) === 'risk');
@@ -256,7 +282,7 @@ await go('01');
 await page.locator('button:has-text("New trigger")').click();
 await page.waitForTimeout(300);
 const entry = page.locator('event-row:has-text("New trigger added")');
-check('a workflow entry: New trigger added - type', (await entry.count()) === 1 && /New trigger added - System - Threshold/.test(await entry.innerText()));
+check('a workflow entry: New trigger added - type', (await entry.count()) === 1 && /New trigger added - Threshold/.test(await entry.innerText()) && !/System - Threshold/.test(await entry.locator('.row__label').innerText()));
 check('it carries a warning icon', (await entry.locator('mat-icon.row__icon--warn').innerText()).trim() === 'warning_amber');
 check('no amber New badge in the trigger strip', (await amberRows()) === 0);
 check('no out-of-sync banner', (await page.locator('workflow-panel .resync').count()) === 0 && !/out of sync/i.test(await page.locator('aml-case-modal').innerText()));
