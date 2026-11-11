@@ -160,12 +160,12 @@ check('its label stays on the 20px gutter, in primary ink', await page.evaluate(
   const want = getComputedStyle(probe).color; probe.remove();
   return Math.round(label.getBoundingClientRect().left - body.left) === 20 && ink === want;
 }));
-check('24px of clear space above a band, against a 21px row rhythm', await page.evaluate(() => {
+check('16px of clear space above a band', await page.evaluate(() => {
   const secs = [...document.querySelectorAll('risk-assessment .ra-sec')];
   const prevRows = secs[1].querySelectorAll('.ra-row');
   const lastRow = prevRows[prevRows.length - 1].getBoundingClientRect();
   const band = secs[2].querySelector('.ra-sec__title').getBoundingClientRect();
-  return Math.round(band.top - lastRow.bottom) === 24;
+  return Math.round(band.top - lastRow.bottom) === 16;
 }));
 check('the band is sticky: scrolled into a section, its title holds the top', await page.evaluate(() => {
   const body = document.querySelector('.info__body');

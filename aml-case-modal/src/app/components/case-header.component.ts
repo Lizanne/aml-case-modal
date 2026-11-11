@@ -120,7 +120,9 @@ import { PillComponent } from './ui-pill.component';
                 [attr.title]="lockTitle()"
                 [attr.aria-label]="'Lock status: ' + lockLine()"
               >
-                <mat-icon class="head__lock-icon" aria-hidden="true">{{ lockIcon() }}</mat-icon>
+                <!-- Outlined, like the padlock on the widget chip and in the severity
+                     dialog: one meaning, one glyph. -->
+                <mat-icon class="head__lock-icon" fontSet="material-icons-outlined" aria-hidden="true">{{ lockIcon() }}</mat-icon>
                 <span class="head__lock-text">{{ lockLine() }}</span>
               </span>
 

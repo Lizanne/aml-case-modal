@@ -369,14 +369,14 @@ import { RiskStatusComponent } from './risk-status.component';
        * section in the same ink as the values, and the list read as one run.
        *
        * The title is a BAND now: --page fill to the panel edges, a hairline
-       * on top, 24 (spacing-6) of clear space above it, and primary ink so
+       * on top, 16 (spacing-4) of clear space above it, and primary ink so
        * it outranks the row labels it introduces. It is also sticky inside
        * its section, so the current section's name stays at the top of the
        * scroll area until the next band pushes it off. The fill is what lets
        * it cover rows passing beneath.
        */
       .ra-sec {
-        padding-top: var(--lds-core-spacing-6);
+        padding-top: var(--lds-core-spacing-4);
       }
       .ra-sec__title {
         position: sticky;

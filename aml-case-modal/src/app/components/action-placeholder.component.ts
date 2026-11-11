@@ -49,7 +49,14 @@ import { RiskStatusComponent } from './risk-status.component';
         [attr.aria-label]="buttonName"
         (click)="record.emit(actionType)"
       >
-        <mat-icon>{{ actionType === 'finalize-risk-assessment' ? 'task_alt' : 'edit_note' }}</mat-icon>
+        <!-- The glyph carries the verb: Assess sets a status (fact_check),
+             Record writes a note (edit_note), Finalise locks the assessment
+             (task_alt). Two verbs under one glyph would be decoration. -->
+        @if (actionType === 'assess-risk') {
+          <mat-icon fontSet="material-icons-outlined">{{ icon }}</mat-icon>
+        } @else {
+          <mat-icon>{{ icon }}</mat-icon>
+        }
         {{ buttonLabel }}
       </button>
     </div>
@@ -128,6 +135,11 @@ export class ActionPlaceholderComponent {
       default:
         return this.available ? null : this.unavailableReason;
     }
+  }
+
+  get icon(): string {
+    if (this.actionType === 'finalize-risk-assessment') return 'task_alt';
+    return this.actionType === 'assess-risk' ? 'fact_check' : 'edit_note';
   }
 
   get buttonLabel(): string {
