@@ -121,7 +121,8 @@ export type PillTone =
       }
 
       /**
-       * No pill draws a border colour - 11 Nov 2026. The base keeps a
+       * No tinted pill draws a border colour - 11 Nov 2026; only the
+       * pending (outline) tone keeps one, below. The base keeps a
        * transparent 1px border so every pill keeps its size. The rim input
        * still gives the red its deepest ink (9.16:1 on the tint).
        */
@@ -185,9 +186,12 @@ export type PillTone =
         background: var(--danger);
         color: #fff;
       }
+      /* The one pill with an edge: a pending chip has no tint, so on the
+         white bar the --line border is the only thing giving it a shape. */
       :host([data-tone='outline']) {
         background: var(--panel);
         color: var(--foreground-secondary);
+        border-color: var(--line);
       }
       :host([data-tone='dashed']) {
         background: transparent;
