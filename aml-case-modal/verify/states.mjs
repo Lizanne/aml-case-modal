@@ -64,6 +64,11 @@ const CHECKS = {
     'lock choice has no default': (await p.locator('record-form fieldset.field--lock .mat-mdc-radio-checked').count()) === 0,
     'it is the Open source searches assessment': (await p.locator('record-form .form__title').innerText()).trim() === 'Assess risk - Open source searches',
     'Risk has no answer yet': (await p.locator('record-form fieldset.field--risk input:checked').count()) === 0,
+    // Preview (13 Nov 2026): the options are plain, no status ink on either,
+    // and no pill until one is chosen.
+    'the answers are plain radios, no status ink': await p.evaluate(() =>
+      [...document.querySelectorAll('record-form fieldset.field--risk .mdc-label')].every((l) => getComputedStyle(l).color === getComputedStyle(document.querySelector('record-form fieldset.field--lock .mdc-label')).color)),
+    'no preview pill before a choice': (await p.locator('record-form .field__legend risk-status').count()) === 0,
     'save waits for the Risk answer': await p.locator('record-form button:has-text("Save assessment")').isDisabled(),
     // Answering and choosing the lock is all it takes: the file errors still do not block it.
     'save enabled despite the file errors once answered': await (async () => {

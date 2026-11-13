@@ -72,9 +72,12 @@ async function assess(id, answer, note) {
     .locator(`record-form fieldset.field--risk mat-radio-button:has-text("${answer === 'Yes' ? 'Risk flagged' : 'No risk'}") input`)
     .check({ force: true });
   await keepLock();
+  previewSeen.push(await page.locator('record-form .field__legend risk-status [data-risk]').getAttribute('data-risk').catch(() => null));
   await page.locator('record-form button[type="submit"]').click();
   await page.waitForTimeout(250);
 }
+// What the Your assessment legend previewed for each answer, in order.
+const previewSeen = [];
 
 console.log('\nThe section');
 await go('01');
@@ -381,6 +384,8 @@ const card = page.locator('outcome-card:has-text("Latest fraud scores")');
 check('recorded in the workflow, titled by the field with its status', (await card.count()) === 1 &&
   /^Latest fraud scores/.test((await card.locator('.card__title').innerText()).trim()) &&
   (await card.locator('.card__title risk-status [data-risk="risk"]').count()) === 1 && !/Was Action required/.test(await card.innerText()));
+
+check('once chosen, the answer is previewed as its status pill beside the legend', previewSeen.length > 0 && previewSeen.every((r) => r === 'risk' || r === 'no-risk'), previewSeen.join(','));
 
 console.log('\nOverride a system risk');
 await assess('employment-occupation', 'Yes', 'Occupation updated by the player to a cash-intensive role.');

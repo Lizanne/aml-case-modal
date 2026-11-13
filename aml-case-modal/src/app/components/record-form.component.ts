@@ -15,6 +15,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { CandidateFile, CaseStore } from '../core/case-store';
 import { ATTACHMENT_MAX_MB, AttachmentKind, Draft } from '../core/models';
 import { AttachmentListComponent } from './attachment-list.component';
+import { RiskStatusComponent } from './risk-status.component';
 import { SectionRiskTableComponent } from './section-risk-table.component';
 import { scrollWithin } from '../core/scroll';
 
@@ -43,6 +44,7 @@ import { scrollWithin } from '../core/scroll';
     MatIconModule,
     MatRadioModule,
     AttachmentListComponent,
+    RiskStatusComponent,
     SectionRiskTableComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -132,25 +134,30 @@ import { scrollWithin } from '../core/scroll';
         <!--
           Assess risk only. The agent's call on the field, after the evidence.
 
-          Radios, labelled with the outcomes - the same words the field's row,
-          its chip and its card will show, in the same inks: the red and green
-          the status pills wear, so the answer looks like the status it sets.
-          Radios and not pills: a status pill is a label everywhere else in
-          this product, and an input that looks like a label is one shape with
-          two meanings. Prefilled with the field's current status when it has
-          one; empty, so the agent must choose, when it is Action required.
+          Plain radios, the same as the lock choice below: colour on an input
+          steers a compliance judgement. Once chosen, the status it will set
+          shows as its pill beside the legend - the product's own word for the
+          result, in colour only after the agent has decided (prototyped
+          13 Nov 2026; Coloured and Selected ink rejected). The pill is
+          aria-hidden: the checked radio already says it. Prefilled with the
+          field's current status when it has one; empty when Action required.
         -->
         @if (draft.actionType === 'assess-risk') {
           <fieldset class="field field--risk">
-            <legend class="field__label">Your assessment</legend>
+            <legend class="field__label field__legend">
+              Your assessment
+              @if (draft.risk) {
+                <risk-status class="field__preview" size="sm" [status]="draft.risk" aria-hidden="true" />
+              }
+            </legend>
             <mat-radio-group
               class="choice"
               aria-label="Your assessment"
               [value]="draft.risk"
               (change)="store.patchDraft({ risk: $any($event).value })"
             >
-              <mat-radio-button value="risk" class="choice--risk">Risk flagged</mat-radio-button>
-              <mat-radio-button value="no-risk" class="choice--no-risk">No risk</mat-radio-button>
+              <mat-radio-button value="risk">Risk flagged</mat-radio-button>
+              <mat-radio-button value="no-risk">No risk</mat-radio-button>
             </mat-radio-group>
             @if (draft.attempted && !draft.risk) {
               <span class="field__error" role="alert">Choose whether this field is a risk.</span>
@@ -299,31 +306,15 @@ import { scrollWithin } from '../core/scroll';
         flex-direction: column;
         gap: 2px;
       }
-      /* The two answers in the inks their status pills use - the same
-         tokens, so the choice previews the label it will become. */
-      .choice--risk {
-        --mdc-radio-selected-icon-color: var(--danger-deep);
-        --mdc-radio-selected-hover-icon-color: var(--danger-deep);
-        --mdc-radio-selected-focus-icon-color: var(--danger-deep);
-        --mdc-radio-selected-pressed-icon-color: var(--danger-deep);
-        --mat-radio-label-text-color: var(--danger-deep);
-      }
-      .choice--no-risk {
-        --mdc-radio-selected-icon-color: var(--success);
-        --mdc-radio-selected-hover-icon-color: var(--success);
-        --mdc-radio-selected-focus-icon-color: var(--success);
-        --mdc-radio-selected-pressed-icon-color: var(--success);
-        --mat-radio-label-text-color: var(--success);
-      }
-      .choice--risk ::ng-deep .mdc-label,
-      .choice--no-risk ::ng-deep .mdc-label {
-        font-weight: 600;
-      }
-      .choice--risk ::ng-deep .mdc-label {
-        color: var(--danger-deep);
-      }
-      .choice--no-risk ::ng-deep .mdc-label {
-        color: var(--success);
+      /* The legend row holds the preview pill on the right; 20px reserved so
+         the pill appearing never shifts the radios below. */
+      .field__legend {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        min-height: 20px;
       }
       /* Two equal columns, each a .field; the grid's own 16 gap between. */
       .form__cols {
