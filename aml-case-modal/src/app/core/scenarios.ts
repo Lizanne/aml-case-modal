@@ -101,7 +101,8 @@ function draft(partial: Partial<Draft> & Pick<Draft, 'actionType' | 'title'>): D
     note: '',
     attachments: [],
     errors: [],
-    lockAfter: 'keep',
+    // No default, as in the product; a frame that shows a completed form sets it.
+    lockAfter: null,
     attempted: false,
     fromPlaceholder: true,
     ...partial,

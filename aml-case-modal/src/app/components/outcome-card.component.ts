@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { OutcomeItem } from '../core/models';
-import { RISK_STATUS_LABEL } from '../core/risk-assessment';
 import { AttachmentListComponent } from './attachment-list.component';
 import { RiskStatusComponent } from './risk-status.component';
 import { SectionRiskTableComponent } from './section-risk-table.component';
@@ -16,8 +15,8 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
  * current values only: what an assessment decided is on its own card, and
  * what a resync changed is on the Resync completed entry.
  *
- * An assessment card says the field's new status, and what it was before
- * when the agent changed it. A finalise card carries the section table.
+ * An assessment card is titled by its field and wears the status it set.
+ * A finalise card carries the section table.
  */
 @Component({
   selector: 'outcome-card',
@@ -34,19 +33,18 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
       [class.card--decision]="outcome.actionType === 'decision'"
       [class.card--narrow]="store.layoutNarrow()"
     >
+      <!-- An assessment card is titled by its field, with the status it set
+           right beside the title - no "Assess risk - " prefix and no second
+           line (feedback 12 Nov 2026). The aria-label keeps the full title. -->
       <div class="card__head">
-        <h3 class="card__title">{{ outcome.title }}</h3>
+        <h3 class="card__title">
+          {{ title }}
+          @if (outcome.assessment; as a) {
+            <risk-status class="card__status" size="sm" [status]="a.risk" />
+          }
+        </h3>
         <p class="card__meta">{{ outcome.actor }} · {{ outcome.at | stamp }}</p>
       </div>
-
-      @if (outcome.assessment; as a) {
-        <p class="card__assessment">
-          <risk-status [status]="a.risk" />
-          @if (changedFrom(); as was) {
-            <span class="card__was">Was {{ was }}</span>
-          }
-        </p>
-      }
 
       <p class="card__note">{{ outcome.note }}</p>
 
@@ -76,8 +74,6 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
         background: var(--panel);
         padding: 16px;
       }
-      /* An assessment's result, under its title: the status, then what it
-         replaced when the agent changed it. */
       .card:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
@@ -85,17 +81,11 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
       .card:focus:not(:focus-visible) {
         outline: none;
       }
-      .card__assessment {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px;
-        margin: 8px 0 0;
-      }
-      .card__was {
-        font-size: 12px;
-        line-height: 16px;
-        color: var(--foreground-secondary);
+      /* The status beside the title, on the title's baseline row. */
+      .card__status {
+        display: inline-flex;
+        vertical-align: middle;
+        margin-left: 8px;
       }
       .card__table {
         margin-top: 12px;
@@ -193,10 +183,8 @@ export class OutcomeCardComponent {
 
   @Input({ required: true }) outcome!: OutcomeItem;
 
-  /** What the field said before, when the agent's answer changed it. */
-  changedFrom(): string | null {
-    const a = this.outcome.assessment;
-    if (!a || a.previous === a.risk || a.previous === 'informational') return null;
-    return RISK_STATUS_LABEL[a.previous];
+  /** The field's name for an assessment; the outcome's title otherwise. */
+  get title(): string {
+    return this.outcome.assessment?.fieldLabel ?? this.outcome.title;
   }
 }

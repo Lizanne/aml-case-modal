@@ -9,8 +9,9 @@ import { RiskStatusComponent } from './risk-status.component';
  * A section is a risk if any field in it is. Account information is not in
  * it - those fields are informational and carry no risk to report.
  *
- * A real table, because it is one: two columns, a header row, and a row
- * header per section, so a screen reader reads "Payment methods, Risk".
+ * A real table, because it is one: two columns, a header row (read out, not
+ * shown) and a row header per section, so a screen reader reads
+ * "Payment methods, Risk".
  */
 @Component({
   selector: 'section-risk-table',
@@ -20,7 +21,9 @@ import { RiskStatusComponent } from './risk-status.component';
   template: `
     <table class="srt">
       <caption class="srt__caption">{{ caption }}</caption>
-      <thead>
+      <!-- Read out, not shown (feedback 12 Nov 2026): two columns of plain
+           words and pills need no heading to be read. -->
+      <thead class="srt__head">
         <tr>
           <th scope="col">Section</th>
           <th scope="col" class="srt__result">Result</th>
@@ -70,14 +73,17 @@ import { RiskStatusComponent } from './risk-status.component';
       tbody tr:last-child td {
         border-bottom: 0;
       }
-      thead th {
+      .srt__head {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      tbody tr:first-child th,
+      tbody tr:first-child td {
         padding-top: 0;
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--foreground-secondary);
       }
       tbody th {
         font-weight: 400;

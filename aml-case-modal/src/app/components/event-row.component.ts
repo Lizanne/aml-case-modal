@@ -46,6 +46,7 @@ import { PillComponent } from './ui-pill.component';
       <mat-icon
         class="row__icon"
         [class.row__icon--warn]="glyphWarn"
+        [class.row__icon--ink]="glyphInk"
         fontSet="material-icons-outlined"
         aria-hidden="true"
       >{{ glyph }}</mat-icon>
@@ -166,6 +167,12 @@ import { PillComponent } from './ui-pill.component';
          would say the wrong thing. 3.92:1 on the stream, past the 3:1 bar. */
       .row__icon--warn {
         color: var(--warn);
+      }
+      /* Case created and Resync completed take their title's ink: they are
+         facts about the case, and a secondary glyph read as faded beside a
+         primary title. The warning glyphs keep their amber. */
+      .row__icon--ink {
+        color: var(--foreground-primary);
       }
       .row__sep {
         margin: 0 4px;
@@ -313,6 +320,10 @@ export class EventRowComponent {
   }
 
   /** Warn ink for the warnings only: a new trigger, an escalation. */
+  get glyphInk(): boolean {
+    return this.event.type === 'case-created' || this.event.type === 'resync-completed';
+  }
+
   get glyphWarn(): boolean {
     return this.event.type === 'trigger-added' || (this.event.type === 'severity-change' && this.event.direction === 'escalation');
   }

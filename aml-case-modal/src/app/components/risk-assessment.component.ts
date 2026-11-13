@@ -79,8 +79,9 @@ import { RiskStatusComponent } from './risk-status.component';
       What needs doing, where the eye lands. The count is a toggle: pressed,
       the panel shows only the fields still to assess - all of them at once,
       under their own section bands, however far apart they sit in the full
-      list - and "Show all" brings the rest back. The counts after it mirror
-      the chip bar, which is the same list.
+      list - and "Show all" brings the rest back. After it, the sections by
+      result, in the pills' inks (feedback 12 Nov 2026): "Nothing to assess"
+      is gone, because the chip bar already says so.
     -->
     <p class="ra-sum">
       @if (counts().todo > 0 || filtered()) {
@@ -92,13 +93,11 @@ import { RiskStatusComponent } from './risk-status.component';
         >
           {{ counts().todo }} to assess
         </button>
-      } @else {
-        <span class="ra-sum__part">Nothing to assess</span>
+        <span class="ra-sum__dot" aria-hidden="true">·</span>
       }
+      <span class="ra-sum__part ra-sum__part--risk">{{ counts().sectionsRisk }} {{ counts().sectionsRisk === 1 ? 'section' : 'sections' }} risk</span>
       <span class="ra-sum__dot" aria-hidden="true">·</span>
-      <span class="ra-sum__part">{{ counts().risk }} flagged</span>
-      <span class="ra-sum__dot" aria-hidden="true">·</span>
-      <span class="ra-sum__part">{{ counts().noRisk }} no risk</span>
+      <span class="ra-sum__part ra-sum__part--no-risk">{{ counts().sectionsNoRisk }} no risk</span>
       @if (filtered()) {
         <span class="ra-sum__dot" aria-hidden="true">·</span>
         <button type="button" class="ra-sum__all" (click)="toggleToAssess()">Show all</button>
@@ -141,8 +140,12 @@ import { RiskStatusComponent } from './risk-status.component';
               </button>
             </h3>
           } @else {
+            <!-- The section's own result on its band (feedback 12 Nov 2026):
+                 Action required while any field is, Risk flagged if any field
+                 is, No risk otherwise - the same rule the finalise table uses. -->
             <h3 class="ra-sec__title" [id]="sectionId(group.section)">
               <span class="ra-sec__label">{{ group.section }}</span>
+              <risk-status class="ra-sec__status" size="sm" [status]="sectionStatus(group)" />
             </h3>
           }
           @if (!isInformational(group) || store.accountInfoExpanded()) {
@@ -162,67 +165,69 @@ import { RiskStatusComponent } from './risk-status.component';
                 [attr.aria-current]="isOpen(field.def.id) ? 'true' : null"
                 [attr.data-field]="field.def.id"
               >
-                <div class="ra-row__head">
-                  <span class="ra-row__label">{{ field.def.label }}</span>
-                  <button
-                    type="button"
-                    class="ra-info"
-                    [attr.aria-label]="'About ' + field.def.label"
-                    [matTooltip]="tooltip(field.def)"
-                    matTooltipClass="ra-tooltip"
-                    matTooltipPosition="above"
-                  >
-                    <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
-                  </button>
-                  @if (field.status !== 'informational') {
-                    <risk-status class="ra-row__status" size="sm" [status]="field.status" />
-                  }
-                </div>
-                <div class="ra-row__value">
-                  @for (line of field.value; track $index) {
-                    <span class="ra-row__line">{{ line }}</span>
-                  }
+                <div class="ra-row__main">
+                  <div class="ra-row__head">
+                    <span class="ra-row__label">{{ field.def.label }}</span>
+                    <button
+                      type="button"
+                      class="ra-info"
+                      [attr.aria-label]="'About ' + field.def.label"
+                      [matTooltip]="tooltip(field.def)"
+                      matTooltipClass="ra-tooltip"
+                      matTooltipPosition="above"
+                    >
+                      <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
+                    </button>
+                  </div>
+                  <div class="ra-row__value">
+                    @for (line of field.value; track $index) {
+                      <span class="ra-row__line">{{ line }}</span>
+                    }
+                  </div>
                 </div>
                 <!--
-                  Who set the status, and the action on it. The pill holds the
-                  right edge of line 1 alone, so the statuses read as one
-                  column; the verb lives here, with the assessment it changes,
-                  as a text link - no icon next to the pill. The line is shown
-                  whether or not the agent can act, so taking or releasing the
-                  lock never changes a row's height.
+                  The status column: the pill, and under it how it was set and
+                  the action on it - Auto for the system's call, Manual for an
+                  agent's, and the verb as a text link. On the right so the
+                  provenance plainly belongs to the status, and on the value's
+                  row so it costs no height (feedback 12 Nov 2026). Shown
+                  whether or not the agent can act, so the lock never changes
+                  a row's height.
                 -->
                 @if (field.status !== 'informational') {
-                  <p class="ra-row__meta">
-                    <span>{{ provenance(field) }}</span>
-                    <!-- The open row: the word takes the action's place, so the
-                         link that is missing is explained where it would be,
-                         and line 1 never reflows. -->
-                    @if (isOpen(field.def.id)) {
-                      <span class="ra-row__sep" aria-hidden="true">·</span>
-                      <span class="ra-row__assessing">Assessing</span>
-                    } @else if (store.canAssessRisk()) {
-                      <span class="ra-row__sep" aria-hidden="true">·</span>
-                      @if (field.status === 'action-required') {
-                        <button
-                          type="button"
-                          class="ra-act ra-act--assess"
-                          [attr.aria-label]="'Assess ' + field.def.label"
-                          (click)="store.assessRisk(field.def.id)"
-                        >
-                          Assess
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          class="ra-act ra-act--change"
-                          [attr.aria-label]="'Change assessment of ' + field.def.label"
-                          (click)="store.assessRisk(field.def.id)"
-                        >
-                          Change
-                        </button>
+                  <div class="ra-row__side">
+                    <risk-status class="ra-row__status" size="sm" [status]="field.status" />
+                    <p class="ra-row__meta">
+                      @if (provenance(field); as how) {
+                        <span>{{ how }}</span>
                       }
-                    }
-                  </p>
+                      @if (isOpen(field.def.id)) {
+                        @if (provenance(field)) { <span class="ra-row__sep" aria-hidden="true">·</span> }
+                        <span class="ra-row__assessing">Assessing</span>
+                      } @else if (store.canAssessRisk()) {
+                        @if (provenance(field)) { <span class="ra-row__sep" aria-hidden="true">·</span> }
+                        @if (field.status === 'action-required') {
+                          <button
+                            type="button"
+                            class="ra-act ra-act--assess"
+                            [attr.aria-label]="'Assess risk - ' + field.def.label"
+                            (click)="store.assessRisk(field.def.id)"
+                          >
+                            Assess risk
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="ra-act ra-act--change"
+                            [attr.aria-label]="'Change assessment of ' + field.def.label"
+                            (click)="store.assessRisk(field.def.id)"
+                          >
+                            Change
+                          </button>
+                        }
+                      }
+                    </p>
+                  </div>
                 }
               </li>
             }
@@ -310,6 +315,15 @@ import { RiskStatusComponent } from './risk-status.component';
         line-height: 16px;
         color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
+      }
+      /* The section counts in the inks their pills wear. */
+      .ra-sum__part--risk {
+        color: var(--danger-deep);
+        font-weight: 600;
+      }
+      .ra-sum__part--no-risk {
+        color: var(--success);
+        font-weight: 600;
       }
       .ra-sum__filter,
       .ra-sum__all {
@@ -444,8 +458,28 @@ import { RiskStatusComponent } from './risk-status.component';
       }
       /* Rows, not cards: a rule between them, nothing around them. */
       .ra-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
         padding: 10px 0;
         border-bottom: 1px solid var(--line);
+      }
+      .ra-row__main {
+        flex: 1;
+        min-width: 0;
+      }
+      /* The status column: pill on the head's row, provenance and action
+         right-aligned beneath it. */
+      /* The pill sits 2px down in the head's 24px, so 6px under it puts the
+         meta line on the first value line's row: both start 28px into the
+         row and share its 20px line box. */
+      .ra-row__side {
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--lds-core-spacing-1-5);
+        padding-top: var(--lds-core-spacing-0-5);
       }
       .ra-row:last-child {
         border-bottom: 0;
@@ -482,10 +516,15 @@ import { RiskStatusComponent } from './risk-status.component';
         font-weight: 600;
         color: var(--foreground-primary);
       }
-      /* The status holds the right edge; the label gives way first. */
-      .ra-row__status {
-        margin-left: auto;
-        padding-left: 8px;
+      .ra-sec__title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .ra-sec__status {
+        text-transform: none;
+        letter-spacing: normal;
       }
       /**
        * The row's action: a text link on the provenance line, in the summary
@@ -504,10 +543,13 @@ import { RiskStatusComponent } from './risk-status.component';
         cursor: pointer;
         border-radius: 2px;
       }
+      /* 20px tall, 36 to hit - the most that collides with nothing: 4 up
+         stops 2px short of the pill (a press there must not read as Change),
+         12 down stops 1px short of the next row's info button. */
       .ra-act::before {
         content: '';
         position: absolute;
-        inset: -12px -4px;
+        inset: -4px -4px -12px;
       }
       .ra-act:hover {
         color: var(--link-hover);
@@ -569,11 +611,17 @@ import { RiskStatusComponent } from './risk-status.component';
         overflow-wrap: anywhere;
       }
       .ra-row__meta {
-        margin: 4px 0 0;
+        margin: 0;
         font-size: 12px;
-        line-height: 16px;
+        /* The value line's box, so the two lines' text shares a centre. */
+        line-height: 20px;
+        text-align: right;
+        white-space: nowrap;
         color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
+      }
+      .ra-row__meta:empty {
+        display: none;
       }
       /**
        * The overlay covers the section, not the tab bar or the header: the
@@ -625,7 +673,6 @@ import { RiskStatusComponent } from './risk-status.component';
 export class RiskAssessmentComponent {
   readonly store = inject(CaseStore);
   readonly tooltip = riskTooltip;
-  private readonly stampPipe = new StampPipe();
 
   @ViewChild('resyncTip') private resyncTip?: MatTooltip;
   private tipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -633,12 +680,27 @@ export class RiskAssessmentComponent {
   /** What the panel adds up to. The chip bar shows the same "to assess" count. */
   readonly counts = computed(() => {
     const fields = this.store.riskFields();
+    const sections = this.store.riskSections().filter((g) => !this.isInformational(g));
+    const status = (g: { fields: { status: string }[] }) => this.sectionStatus(g);
     return {
       todo: fields.filter((f) => f.status === 'action-required').length,
       risk: fields.filter((f) => f.status === 'risk').length,
       noRisk: fields.filter((f) => f.status === 'no-risk').length,
+      sectionsRisk: sections.filter((g) => status(g) === 'risk').length,
+      sectionsNoRisk: sections.filter((g) => status(g) === 'no-risk').length,
     };
   });
+
+  /**
+   * A section's result, the finalise table's rule with the pending case
+   * added: Action required while any field is, Risk flagged if any field
+   * is, No risk otherwise.
+   */
+  sectionStatus(group: { fields: { status: string }[] }): 'action-required' | 'risk' | 'no-risk' {
+    if (group.fields.some((f) => f.status === 'action-required')) return 'action-required';
+    if (group.fields.some((f) => f.status === 'risk')) return 'risk';
+    return 'no-risk';
+  }
 
   isInformational(group: { fields: { status: string }[] }): boolean {
     return group.fields.every((f) => f.status === 'informational');
@@ -700,10 +762,14 @@ export class RiskAssessmentComponent {
     return group.fields.filter((f) => only.has(f.def.id) || f.status === 'action-required');
   }
 
-  /** Who set the status: the agent who assessed it, the system, or nobody yet. */
-  provenance(field: { status: string; assessedBy?: string | null; assessedAt?: string | null }): string {
-    if (field.assessedBy) return `Assessed by ${field.assessedBy} · ${this.stampPipe.transform(field.assessedAt ?? '')}`;
-    return field.status === 'action-required' ? 'Not assessed yet' : 'From the system';
+  /**
+   * How the status was set: Manual by an agent, Auto by the system. Who and
+   * when live on the outcome card in the workflow. Nothing yet while the
+   * field is Action required - the link beside it says what to do.
+   */
+  provenance(field: { status: string; assessedBy?: string | null }): string {
+    if (field.assessedBy) return 'Manual';
+    return field.status === 'action-required' ? '' : 'Auto';
   }
 
   /** Whether this field's assessment form is the one open in the workflow. */

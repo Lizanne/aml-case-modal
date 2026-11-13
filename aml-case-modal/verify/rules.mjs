@@ -80,20 +80,20 @@ check('submit disabled with nothing recorded', await page.locator('.footer butto
 // Contact player first - rule 4 says order does not matter.
 await page.locator('action-placeholder:has-text("Contact player") button').click();
 await page.waitForTimeout(200);
-// Rule 5 now ships a DEFAULT rather than an empty choice: the lock question
-// is preselected to "keep", so it can no longer be the thing blocking Save.
-// What still gates Save is the note, and that is what these assert.
-check('rule 5: the lock choice is preselected, exactly one option',
-  (await page.locator('record-form .mat-mdc-radio-checked').count()) === 1);
-check('rule 5: and the preselected option is Keep the case locked to me',
-  (await page.locator('record-form .mat-mdc-radio-checked').innerText()).includes('Keep the case locked'));
+// Rule 5: no default. The lock question ships empty again (feedback 12 Nov
+// 2026 reversed the preselected Keep), so it and the note both gate Save.
+check('rule 5: the lock choice has no default',
+  (await page.locator('record-form .mat-mdc-radio-checked').count()) === 0);
 check('save is blocked while the note is empty',
   await page.locator('record-form button:has-text("Save outcome")').isDisabled());
 await fillForm({ note: '   ' });
 check('and a whitespace-only note does not count as content',
   await page.locator('record-form button:has-text("Save outcome")').isDisabled());
 await fillForm({ note: 'Called the player on their verified number.' });
-check('save is enabled once the note has content, with no further choice needed',
+check('rule 5: a note alone does not unblock Save - the lock choice is still owed',
+  await page.locator('record-form button:has-text("Save outcome")').isDisabled());
+await fillForm({ note: 'Called the player on their verified number.', lockChoice: 'Keep the case locked' });
+check('save is enabled once the note and the lock choice are in',
   await page.locator('record-form button:has-text("Save outcome")').isEnabled());
 await page.locator('record-form button:has-text("Save outcome")').click();
 await page.waitForTimeout(250);
@@ -206,7 +206,7 @@ console.log('\nRules 4, 13, 14 and 9 - assess the rest, finalise, then submit');
 for (let i = 0; i < 6 && (await page.locator('action-placeholder[data-key^="assess:"] button').count()); i++) {
   await page.locator('action-placeholder[data-key^="assess:"] button').first().click();
   await page.waitForTimeout(200);
-  await fillForm({ note: 'Reviewed.' });
+  await fillForm({ note: 'Reviewed.', lockChoice: 'Keep the case locked' });
   await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
   await page.waitForTimeout(100);
   await page.locator('record-form button:has-text("Save assessment")').click();
@@ -215,8 +215,8 @@ for (let i = 0; i < 6 && (await page.locator('action-placeholder[data-key^="asse
 check('submit still disabled before Finalise', await page.locator('.footer button:has-text("Submit decision")').isDisabled());
 await page.locator('action-placeholder:has-text("Finalise risk assessment") button').click();
 await page.waitForTimeout(200);
-await fillForm({ note: 'Overall: enhanced monitoring.' });
-await page.locator('record-form button:has-text("Finalise")').click();
+await fillForm({ note: 'Overall: enhanced monitoring.', lockChoice: 'Keep the case locked' });
+await page.locator('record-form button[type="submit"]:has-text("Record")').click();
 await page.waitForTimeout(250);
 check('every chip done', (await chipsPending()) === 0);
 check('no placeholders left', (await page.locator('action-placeholder').count()) === 0);

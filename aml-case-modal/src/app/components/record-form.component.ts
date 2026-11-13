@@ -24,7 +24,7 @@ import { scrollWithin } from '../core/scroll';
  *
  * What gates Save:
  *   - a text note (required)
- *   - a keep-locked / unlock choice, preselected to keep (rule 5)
+ *   - a keep-locked / unlock choice, with no default (rule 5)
  *   - Assess risk only: a Risk answer, Yes or No
  *   - Finalise only: every field assessed (no Action required left)
  *
@@ -32,7 +32,7 @@ import { scrollWithin } from '../core/scroll';
  *
  * Three variants of one form, not three forms:
  *   - Record (contact, note): note and attachments
- *   - Assess risk - <field>: note, attachments, then Risk Yes/No beside them
+ *   - Assess risk - <field>: note, then attachments and the answer side by side
  *   - Finalise risk assessment: the section table and a note, no attachments
  */
 @Component({
@@ -94,6 +94,11 @@ import { scrollWithin } from '../core/scroll';
         </label>
 
         @if (draft.actionType !== 'finalize-risk-assessment') {
+        <!-- Attachments and, for an assessment, the agent's call side by
+             side: the form had a column of empty space on the right and a
+             long scroll on the left (feedback 12 Nov 2026). One column
+             again when the panel is narrow. -->
+        <div class="form__cols" [class.form__cols--stack]="store.layoutNarrow()">
         <div class="field">
           <span class="field__label">
             Attachments <span class="field__optional">(optional)</span>
@@ -123,20 +128,17 @@ import { scrollWithin } from '../core/scroll';
             />
           </div>
         </div>
-        }
 
         <!--
           Assess risk only. The agent's call on the field, after the evidence.
 
           Radios, labelled with the outcomes - the same words the field's row,
-          its chip and its card will show - so nothing has to be translated
-          from a Yes or a No. Radios and not pills: a status pill is a label
-          everywhere else in this product (or, on the Risk assessment row, the
-          way in to this form), and an input that looks like a label is one
-          shape with two meanings. The lock choice beneath is a radio group
-          too, so the form has one input vocabulary. Prefilled with the
-          field's current status when it has one; empty, so the agent must
-          choose, when it is Action required.
+          its chip and its card will show, in the same inks: the red and green
+          the status pills wear, so the answer looks like the status it sets.
+          Radios and not pills: a status pill is a label everywhere else in
+          this product, and an input that looks like a label is one shape with
+          two meanings. Prefilled with the field's current status when it has
+          one; empty, so the agent must choose, when it is Action required.
         -->
         @if (draft.actionType === 'assess-risk') {
           <fieldset class="field field--risk">
@@ -147,19 +149,20 @@ import { scrollWithin } from '../core/scroll';
               [value]="draft.risk"
               (change)="store.patchDraft({ risk: $any($event).value })"
             >
-              <mat-radio-button value="risk">Risk flagged</mat-radio-button>
-              <mat-radio-button value="no-risk">No risk</mat-radio-button>
+              <mat-radio-button value="risk" class="choice--risk">Risk flagged</mat-radio-button>
+              <mat-radio-button value="no-risk" class="choice--no-risk">No risk</mat-radio-button>
             </mat-radio-group>
             @if (draft.attempted && !draft.risk) {
               <span class="field__error" role="alert">Choose whether this field is a risk.</span>
             }
           </fieldset>
         }
+        </div>
+        }
 
-        <!-- Rule 5, revised: the choice now ships PRESELECTED to keep, because
-             keeping the lock is the common case and an empty required question
-             is one more thing to fill in. Neither option is styled as
-             recommended; the default is carried by selection alone. -->
+        <!-- Rule 5: no default. The agent chooses what happens to the lock
+             every time (feedback 12 Nov 2026 reversed the preselected Keep);
+             Save stays blocked until they have. -->
         <fieldset class="field field--lock">
           <legend class="field__label">After saving</legend>
           <mat-radio-group
@@ -296,6 +299,42 @@ import { scrollWithin } from '../core/scroll';
         flex-direction: column;
         gap: 2px;
       }
+      /* The two answers in the inks their status pills use - the same
+         tokens, so the choice previews the label it will become. */
+      .choice--risk {
+        --mdc-radio-selected-icon-color: var(--danger-deep);
+        --mdc-radio-selected-hover-icon-color: var(--danger-deep);
+        --mdc-radio-selected-focus-icon-color: var(--danger-deep);
+        --mdc-radio-selected-pressed-icon-color: var(--danger-deep);
+        --mat-radio-label-text-color: var(--danger-deep);
+      }
+      .choice--no-risk {
+        --mdc-radio-selected-icon-color: var(--success);
+        --mdc-radio-selected-hover-icon-color: var(--success);
+        --mdc-radio-selected-focus-icon-color: var(--success);
+        --mdc-radio-selected-pressed-icon-color: var(--success);
+        --mat-radio-label-text-color: var(--success);
+      }
+      .choice--risk ::ng-deep .mdc-label,
+      .choice--no-risk ::ng-deep .mdc-label {
+        font-weight: 600;
+      }
+      .choice--risk ::ng-deep .mdc-label {
+        color: var(--danger-deep);
+      }
+      .choice--no-risk ::ng-deep .mdc-label {
+        color: var(--success);
+      }
+      /* Two equal columns, each a .field; the grid's own 16 gap between. */
+      .form__cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px 24px;
+        align-items: start;
+      }
+      .form__cols--stack {
+        grid-template-columns: minmax(0, 1fr);
+      }
       /* No rule above the footer: the separation is carried by space alone.
          .form is a 16 grid, so 16 more here makes the 32 that reads as a
          break without drawing one. */
@@ -369,7 +408,9 @@ export class RecordFormComponent {
 
   saveLabel(draft: Draft): string {
     if (draft.actionType === 'assess-risk') return 'Save assessment';
-    if (draft.actionType === 'finalize-risk-assessment') return 'Finalise';
+    // Record, not Finalise: the button that opened this form says Record,
+    // and "Finalise" read as finalising the case (feedback 12 Nov 2026).
+    if (draft.actionType === 'finalize-risk-assessment') return 'Record';
     return 'Save outcome';
   }
 

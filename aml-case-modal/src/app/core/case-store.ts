@@ -927,9 +927,9 @@ export class CaseStore {
       note: '',
       attachments: [],
       errors: [],
-      // Preselected: the common case is keeping the lock, and an explicit
-      // default is one less thing to fill in. Supersedes rule 5's "no default".
-      lockAfter: 'keep',
+      // Rule 5: no default. The agent says what happens to the lock every
+      // time (the preselected Keep was reversed by feedback, 12 Nov 2026).
+      lockAfter: null,
       attempted: false,
       fromPlaceholder,
     });

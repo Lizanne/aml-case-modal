@@ -1431,8 +1431,8 @@ try {
       const wf = document.querySelector('workflow-panel');
       const s = ng.getComponent(wf).store;
       const out = { canRecord: s.canRecord(), lock: s.lockState() };
-      if (contactTodo) { s.startRecord('player-contact'); s.patchDraft({ note: 'Verifier: contact logged' }); out.contact = s.saveDraft(); }
-      s.startRecord('note'); s.patchDraft({ note: 'Verifier: a note' }); out.note = s.saveDraft();
+      if (contactTodo) { s.startRecord('player-contact'); s.patchDraft({ note: 'Verifier: contact logged', lockAfter: 'keep' }); out.contact = s.saveDraft(); }
+      s.startRecord('note'); s.patchDraft({ note: 'Verifier: a note', lockAfter: 'keep' }); out.note = s.saveDraft();
       ng.applyChanges(ng.getComponent(wf));
       return out;
     }, target.contactTodo);

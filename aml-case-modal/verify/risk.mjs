@@ -59,6 +59,11 @@ const amberRows = () =>
     ).length,
   );
 
+// No lock default any more (feedback 12 Nov 2026): every save picks one.
+const keepLock = async (root = page.locator('record-form')) => {
+  await root.locator('fieldset.field--lock mat-radio-button:has-text("Keep the case locked") input').check({ force: true });
+  await page.waitForTimeout(80);
+};
 async function assess(id, answer, note) {
   await act(id);
   await page.waitForTimeout(400);
@@ -66,7 +71,7 @@ async function assess(id, answer, note) {
   await page
     .locator(`record-form fieldset.field--risk mat-radio-button:has-text("${answer === 'Yes' ? 'Risk flagged' : 'No risk'}") input`)
     .check({ force: true });
-  await page.waitForTimeout(100);
+  await keepLock();
   await page.locator('record-form button[type="submit"]').click();
   await page.waitForTimeout(250);
 }
@@ -94,13 +99,14 @@ check('it opens on click, rows return', (await accToggle.getAttribute('aria-expa
 check('Account information shows no status', (await page.locator('risk-assessment .ra-sec').first().locator('risk-status').count()) === 0);
 await accToggle.click(); await page.waitForTimeout(200);
 const sum = await text('risk-assessment .ra-sum');
-check('the summary counts the panel', /2 to assess\s*·\s*10 flagged\s*·\s*6 no risk/.test(sum), sum);
+// The summary is sections now, in the pills' inks: "4 sections risk · 0 no risk" (feedback 12 Nov 2026).
+check('the summary counts the sections', /2 to assess\s*·\s*4 sections risk\s*·\s*0 no risk/.test(sum), sum);
 const headBefore = await page.evaluate(() => document.querySelector('.head__main').getBoundingClientRect().top);
 await page.locator('risk-assessment .ra-sum__filter').click(); await page.waitForTimeout(300);
 check('"2 to assess" shows only the fields to assess - both, on one screen, under their own bands', await page.evaluate(() => {
   const rows = [...document.querySelectorAll('risk-assessment .ra-row')];
   const body = document.querySelector('.info__body').getBoundingClientRect();
-  const bands = [...document.querySelectorAll('risk-assessment .ra-sec__title')].map((b) => b.textContent.trim());
+  const bands = [...document.querySelectorAll('risk-assessment .ra-sec__title')].map((b) => (b.querySelector('.ra-sec__label') ?? b).textContent.trim());
   return rows.map((r) => r.dataset.field).join() === 'document-requests,open-source-searches' &&
     rows.every((r) => r.querySelector('risk-status [data-risk="action-required"]') && r.getBoundingClientRect().top >= body.top && r.getBoundingClientRect().bottom <= body.bottom) &&
     bands.join('|') === 'Verification risks|Open source intelligence';
@@ -140,7 +146,8 @@ check('in the chip bar the status is the md pill, the same size as the other chi
   const pills = [...document.querySelectorAll('required-chips ui-pill')];
   const hs = pills.map((p) => Math.round(p.getBoundingClientRect().height));
   const assess = pills.filter((p) => p.closest('risk-status'));
-  return hs.every((h) => h === 24) && assess.length === 2 && assess.every((p) => p.dataset.size === 'md' && getComputedStyle(p).fontSize === '14px' &&
+  // All four pending chips are status pills now (feedback 12 Nov 2026).
+  return hs.every((h) => h === 24) && assess.length === 4 && assess.every((p) => p.dataset.size === 'md' && getComputedStyle(p).fontSize === '14px' &&
     Math.abs(p.querySelector('mat-icon').getBoundingClientRect().width - 16) < 0.6);
 }));
 await page.evaluate(() => { document.querySelector('.info__body').scrollTop = 0; });
@@ -238,19 +245,21 @@ check('the open row says Assessing on its bottom line, and its label line is unc
 check('the open row has no action - its form is already up', (await field('employment-occupation').locator('.ra-act').count()) === 0 &&
   (await field('employment-occupation').locator('.ra-row__meta').count()) === 1);
 await page.locator('record-form button:has-text("Cancel")').click(); await page.waitForTimeout(300);
-check('every status row says who set it', await page.evaluate(() => {
+// Provenance is Auto / Manual on the status column now, and a field still
+// to assess shows only its link (feedback 12 Nov 2026).
+check('every status row says how it was set, on the status column', await page.evaluate(() => {
   const meta = (id) => document.querySelector(`risk-assessment [data-field="${id}"] .ra-row__meta`)?.textContent.replace(/\s+/g, ' ').trim();
-  return /^Not assessed yet\s*·\s*Assess$/.test(meta('document-requests')) && /^From the system\s*·\s*Change$/.test(meta('verification-result'));
+  return /^Assess risk$/.test(meta('document-requests')) && /^Auto\s*·\s*Change$/.test(meta('verification-result'));
 }));
-check('the pill alone holds the right edge of line 1', await page.evaluate(() => {
+check('the pill holds the right edge of the row, the provenance right-aligned beneath it', await page.evaluate(() => {
   const r = document.querySelector('risk-assessment [data-field="verification-result"]');
-  const pill = r.querySelector('risk-status').getBoundingClientRect().right, head = r.querySelector('.ra-row__head').getBoundingClientRect().right;
-  return Math.abs(pill - head) < 1 && !r.querySelector('.ra-row__head .ra-act');
+  const pill = r.querySelector('risk-status').getBoundingClientRect(), row = r.getBoundingClientRect(), meta = r.querySelector('.ra-row__meta').getBoundingClientRect();
+  return Math.abs(pill.right - row.right) < 1 && Math.abs(meta.right - row.right) < 1 && meta.top >= pill.bottom && !r.querySelector('.ra-row__head .ra-act');
 }));
 check('a status is never a button, only a label', (await page.locator('risk-assessment risk-status button').count()) === 0);
 check('an assessed field carries a Change assessment icon button', (await field('employment-occupation').locator('.ra-act--change[aria-label="Change assessment of Employment & occupation"]').count()) === 1);
-check('a field to assess carries an Assess button, named for its field', (await field('document-requests').locator('.ra-act--assess').getAttribute('aria-label')) === 'Assess Document requests' &&
-  (await field('document-requests').locator('.ra-act--assess').innerText()).trim() === 'Assess');
+check('a field to assess carries an Assess risk link, named for its field', (await field('document-requests').locator('.ra-act--assess').getAttribute('aria-label')) === 'Assess risk - Document requests' &&
+  (await field('document-requests').locator('.ra-act--assess').innerText()).trim() === 'Assess risk');
 check('informational fields have no action', (await page.locator('risk-assessment .ra-row').filter({ hasNot: page.locator('risk-status') }).locator('.ra-act').count()) === 0);
 check('the action does not make the row taller', await page.evaluate(() => {
   const head = (id) => document.querySelector(`risk-assessment [data-field="${id}"] .ra-row__head`).getBoundingClientRect().height;
@@ -362,17 +371,23 @@ await form.locator('textarea').fill('Score of 112 traced to a shared device flag
 check('Save is disabled until a Risk answer is chosen', await form.locator('button[type="submit"]').isDisabled());
 await form.locator('fieldset.field--risk mat-radio-button:has-text("Risk flagged") input').check({ force: true });
 await page.waitForTimeout(100);
+await keepLock(form);
 await form.locator('button[type="submit"]').click();
 await page.waitForTimeout(300);
 check('the field now says Risk flagged', (await statusOf('latest-fraud-scores')) === 'risk');
-check('and who assessed it', /Assessed by/.test(await field('latest-fraud-scores').innerText()));
-const card = page.locator('outcome-card:has-text("Assess risk - Latest fraud scores")');
-check('recorded in the workflow, with what it was', (await card.count()) === 1 && /Risk flagged/.test(await card.innerText()) && /Was Action required/.test(await card.innerText()));
+check('and that an agent set it', /Manual/.test(await field('latest-fraud-scores').locator('.ra-row__meta').innerText()));
+// The card is titled by its field, the status beside the title, no "Was ..." (feedback 12 Nov 2026).
+const card = page.locator('outcome-card:has-text("Latest fraud scores")');
+check('recorded in the workflow, titled by the field with its status', (await card.count()) === 1 &&
+  /^Latest fraud scores/.test((await card.locator('.card__title').innerText()).trim()) &&
+  (await card.locator('.card__title risk-status [data-risk="risk"]').count()) === 1 && !/Was Action required/.test(await card.innerText()));
 
 console.log('\nOverride a system risk');
 await assess('employment-occupation', 'Yes', 'Occupation updated by the player to a cash-intensive role.');
 check('No risk overridden to Risk flagged', (await statusOf('employment-occupation')) === 'risk');
-check('the card says what it replaced', /Was No risk/.test(await page.locator('outcome-card:has-text("Employment & occupation")').innerText()));
+// The card no longer says what it replaced (feedback 12 Nov 2026); the new status sits beside the title.
+check('the card wears the new status beside its title', (await page.locator('outcome-card:has-text("Employment & occupation") .card__title risk-status [data-risk="risk"]').count()) === 1 &&
+  !/Was No risk/.test(await page.locator('outcome-card:has-text("Employment & occupation")').innerText()));
 
 console.log('\nFinalize, then close');
 await assess('deposit-spike', 'No', 'Spike matches a declared bonus payment.');
@@ -383,6 +398,7 @@ check('Finalise is enabled once nothing is Action required', await finalizeBtn.i
 await page.locator('action-placeholder:has-text("Contact player") button').click();
 await page.waitForTimeout(200);
 await page.locator('record-form textarea').fill('Spoke to the player.');
+await keepLock();
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(250);
 check('Submit decision still disabled before Finalise', await page.locator('workflow-panel footer button:has-text("Submit decision")').isDisabled());
@@ -397,6 +413,7 @@ const rows = await fin.locator('section-risk-table tbody tr').evaluateAll((trs) 
 check('it shows a table of sections, without Account information', rows.length === 6 && !rows.some((r) => /Account information/.test(r)), rows.join('|'));
 check('a section is Risk flagged if any field in it is, in the same words as the rows', rows.includes('Verification risks Risk flagged') && rows.includes('Open source intelligence No risk'), rows.join('|'));
 await fin.locator('textarea').fill('Overall: enhanced monitoring.');
+await keepLock(fin);
 await fin.locator('button[type="submit"]').click();
 await page.waitForTimeout(300);
 check('the finalise card carries the table', (await page.locator('outcome-card:has-text("Risk assessment finalised") section-risk-table').count()) === 1);
@@ -458,6 +475,8 @@ await go('01');
 await act('employment-occupation');
 await page.waitForTimeout(400);
 await page.locator('record-form textarea').fill('Checked.');
+await keepLock();
+await page.locator('record-form textarea').focus();
 await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
 await page.waitForTimeout(400);
 check('after saving, focus is back on the status it came from',
@@ -470,6 +489,7 @@ check('after cancelling, the same', await activeIs('risk-assessment [data-field=
 await page.locator('action-placeholder[data-key="player-contact"] button').click();
 await page.waitForTimeout(300);
 await page.locator('record-form textarea').fill('Called.');
+await keepLock();
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(400);
 check('saved from a placeholder: focus on the new card', await activeIs('outcome-card .card'));
@@ -511,13 +531,17 @@ check('but it explains itself: the reason shows as its tooltip', /Lock the case 
 
 console.log('\nHit areas and labels');
 await go('01');
-check('info and action hit areas are at least 40px tall', await page.evaluate(() => {
-  const h = (sel) => {
+// The action sits under the pill now (12 Nov 2026), so it takes the largest
+// reach that overlaps nothing - 36 - rather than 40 that would cover the pill.
+check('info hit area is 40px, the action\'s 36px and clear of the pill above it', await page.evaluate(() => {
+  const box = (sel) => {
     const el = document.querySelector(sel);
-    const before = getComputedStyle(el, '::before');
-    return el.getBoundingClientRect().height - parseFloat(before.top) - parseFloat(before.bottom);
+    const before = getComputedStyle(el, '::before'), r = el.getBoundingClientRect();
+    return { top: r.top + parseFloat(before.top), bottom: r.bottom - parseFloat(before.bottom) };
   };
-  return h('risk-assessment .ra-info') >= 40 && h('risk-assessment .ra-act') >= 40;
+  const info = box('risk-assessment .ra-info'), act = box('risk-assessment .ra-act');
+  const pill = document.querySelector('risk-assessment .ra-act').closest('.ra-row').querySelector('risk-status ui-pill').getBoundingClientRect();
+  return info.bottom - info.top >= 40 && act.bottom - act.top >= 36 && act.top >= pill.bottom;
 }));
 const chipText = await page.locator('required-chips risk-status .status__text').allInnerTexts();
 check('assessment chips show the field alone', chipText.some((t) => /Open source searches$/.test(t.trim())) && !chipText.some((t) => /Assess risk -/.test(t)), chipText.join('|'));
@@ -535,6 +559,7 @@ await act('document-requests');
 await page.waitForTimeout(400);
 await page.locator('record-form textarea').fill('In order.');
 await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("Risk flagged") input').check({ force: true });
+await keepLock();
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(400);
 check('a Risk flagged assessment is a red chip, not a green tick', await page.evaluate(() => {
@@ -543,8 +568,8 @@ check('a Risk flagged assessment is a red chip, not a green tick', await page.ev
   return docs?.getAttribute('data-risk') === 'risk' && /: Risk flagged$/.test(docs.getAttribute('aria-label'));
 }));
 // Document requests was just assessed above, so its placeholder is gone; read the other one.
-check('and each Assess button names its field',
-  (await page.locator('action-placeholder[data-key="assess:open-source-searches"] button').getAttribute('aria-label')) === 'Assess Open source searches');
+check('and each Assess risk button names its field',
+  (await page.locator('action-placeholder[data-key="assess:open-source-searches"] button').getAttribute('aria-label')) === 'Assess risk Open source searches');
 
 console.log('\nThe open assessment is marked on its row');
 await go('01');
@@ -574,6 +599,7 @@ check('opened from a placeholder, the row is marked too',
   (await field('document-requests').getAttribute('aria-current')) === 'true');
 await page.locator('record-form textarea').fill('In order.');
 await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
+await keepLock();
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(400);
 check('save clears it', (await page.locator('risk-assessment .ra-row--open').count()) === 0);

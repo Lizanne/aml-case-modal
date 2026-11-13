@@ -205,9 +205,11 @@ check('each chip states its own status in its accessible name', await page.evalu
   // A status chip is a ui-pill too now; it is judged by the status rule, not the pending/done one.
   const plain = [...document.querySelectorAll('required-chips ui-pill')].filter((c) => !c.closest('risk-status'));
   const assess = [...document.querySelectorAll('required-chips risk-status .status')];
+  // Pending is an Action required pill for every item now (feedback 12 Nov
+  // 2026); the plain green pill is only ever a done Contact or Finalise.
   return (
-    plain.length > 0 && assess.length > 0 &&
-    plain.every((c) => /: (pending|done)$/.test(c.getAttribute('aria-label') || '')) &&
+    assess.length > 0 &&
+    plain.every((c) => /: done$/.test(c.getAttribute('aria-label') || '')) &&
     plain.every((c) => !/pending|done/i.test(c.textContent)) &&
     assess.every((c) => /: (Action required|No risk|Risk flagged)$/.test(c.getAttribute('aria-label') || ''))
   );

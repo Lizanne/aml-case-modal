@@ -1804,8 +1804,10 @@ check('size carries no gap: every pill uses a 4px icon-to-text gap',
 check('every pill shares one radius',
   [...new Set(P.map((r) => r.radius))].join(',') === '999px',
   [...new Set(P.map((r) => r.radius))].join(','));
+// Six since 12 Nov 2026: the outline pending chip is gone - pending is the
+// amber Action required pill everywhere.
 check('colours were preserved, not flattened',
-  new Set(P.map((r) => r.bg + r.fg)).size >= 7,
+  new Set(P.map((r) => r.bg + r.fg)).size >= 6,
   String(new Set(P.map((r) => r.bg + r.fg)).size) + ' distinct');
 check('no pill is interactive', P.every((r) => !r.role && !r.tabindex));
 // Nothing should still be styling a pill outside the component.

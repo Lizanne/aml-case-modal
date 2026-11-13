@@ -30,12 +30,12 @@ import { RiskStatusComponent } from './risk-status.component';
     <div class="slot" [class.slot--narrow]="store.layoutNarrow()">
       <div class="slot__text">
         <p class="slot__title">
-          <span>{{ label }}{{ pendingSuffix }}</span>
-          <!-- The field's status, the same pill its row shows: an assessment
-               slot says Action required in the panel's own words. -->
-          @if (status) {
-            <risk-status [status]="status" />
-          }
+          <span>{{ label }}</span>
+          <!-- Every slot is a required action, so every slot wears the Action
+               required pill - an assessment's is the same pill its row shows.
+               Feedback 12 Nov 2026: one chip for all of them, no
+               "- not recorded" suffix. -->
+          <risk-status [status]="status ?? 'action-required'" />
         </p>
         @if (blockReason(); as reason) {
           <p class="slot__reason">{{ reason }}</p>
@@ -143,21 +143,17 @@ export class ActionPlaceholderComponent {
   }
 
   get buttonLabel(): string {
-    if (this.actionType === 'assess-risk') return 'Assess';
-    if (this.actionType === 'finalize-risk-assessment') return 'Finalise';
+    // "Assess risk" in full, and Record - not Finalise - for the risk
+    // assessment, so nobody reads it as finalising the case (feedback 12 Nov 2026).
+    if (this.actionType === 'assess-risk') return 'Assess risk';
     return 'Record';
   }
 
   /**
-   * Several placeholders can say "Assess", so each button's accessible name
-   * carries what it assesses. Finalise's label already says it in full.
+   * Several placeholders say "Assess risk" or "Record", so each button's
+   * accessible name carries what it acts on.
    */
-  get buttonName(): string | null {
-    return this.actionType === 'finalize-risk-assessment' ? null : `${this.buttonLabel} ${this.label}`;
-  }
-
-  /** "Contact player - not recorded". An assessment's pill says its state; Finalise needs none. */
-  get pendingSuffix(): string {
-    return this.actionType === 'player-contact' || this.actionType === 'note' ? ' - not recorded' : '';
+  get buttonName(): string {
+    return `${this.buttonLabel} ${this.label}`;
   }
 }

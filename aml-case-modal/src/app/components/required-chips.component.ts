@@ -7,8 +7,8 @@ import { RiskStatusComponent } from './risk-status.component';
 import { PillComponent } from './ui-pill.component';
 
 /**
- * Rule 4. One chip per mandatory action, pending or done - stated by icon
- * and colour, never by a word. Pinned to the top of
+ * Rule 4. One chip per mandatory action: Action required while pending, the
+ * field's status or a green tick once done. Pinned to the top of
  * the workflow panel - it never scrolls with the stream.
  *
  * Rule 10: hidden entirely once the case is resolved.
@@ -49,14 +49,19 @@ import { PillComponent } from './ui-pill.component';
             [label]="action.shortLabel"
             [name]="action.label + ': ' + statusWord(action.status)"
           />
+        } @else if (!action.done) {
+          <!-- Pending is Action required here too (feedback 12 Nov 2026):
+               every item in this bar is required, so every pending one wears
+               the same amber pill the assessments and the placeholders do. -->
+          <risk-status
+            size="md"
+            status="action-required"
+            [label]="store.layoutNarrow() ? action.shortLabel : action.label"
+            [name]="action.label + ': Action required'"
+          />
         } @else {
-        <ui-pill
-          [tone]="action.done ? 'success' : 'outline'"
-          [attr.aria-label]="action.label + ': ' + (action.done ? 'done' : 'pending')"
-        >
-          <mat-icon class="chip__icon" aria-hidden="true">{{
-            action.done ? 'check_circle' : 'radio_button_unchecked'
-          }}</mat-icon>
+        <ui-pill tone="success" [attr.aria-label]="action.label + ': done'">
+          <mat-icon class="chip__icon" aria-hidden="true">check_circle</mat-icon>
           <!-- An assessment shows its field alone: "Assess risk - " on every
                chip took a second and third row of height for no information.
                The aria-label keeps the full name. -->

@@ -35,7 +35,7 @@ const CHECKS = {
   }),
   '01': async (p) => ({
     'four pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count()) === 4,
-    'the assessment chips are Action required pills': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 2,
+    'every pending chip is an Action required pill': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 4,
     'four placeholders': (await p.locator('action-placeholder').count()) === 4,
     'Finalise visible but disabled':
       await p.locator('action-placeholder:has-text("Finalise risk assessment") button').isDisabled(),
@@ -60,16 +60,15 @@ const CHECKS = {
     // support. What this frame proves is unchanged - the seeded errors do not
     // take the valid file down with them.
     'valid files kept': (await p.locator('record-form .file').count()) === 1,
-    // The lock question now ships preselected, so it is no longer what holds
-    // Save back. This frame seeds a note, so the form is complete and Save is
-    // live; what the frame still proves is that the errors do not block it.
-    'lock choice preselected': (await p.locator('record-form .mat-mdc-radio-checked').count()) === 1,
+    // No lock default (feedback 12 Nov 2026): the agent chooses every time.
+    'lock choice has no default': (await p.locator('record-form fieldset.field--lock .mat-mdc-radio-checked').count()) === 0,
     'it is the Open source searches assessment': (await p.locator('record-form .form__title').innerText()).trim() === 'Assess risk - Open source searches',
     'Risk has no answer yet': (await p.locator('record-form fieldset.field--risk input:checked').count()) === 0,
     'save waits for the Risk answer': await p.locator('record-form button:has-text("Save assessment")').isDisabled(),
-    // Answering is all it takes: the file errors still do not block it.
+    // Answering and choosing the lock is all it takes: the file errors still do not block it.
     'save enabled despite the file errors once answered': await (async () => {
       await p.locator('record-form fieldset.field--risk mat-radio-button:has-text("No risk") input').check({ force: true });
+      await p.locator('record-form fieldset.field--lock mat-radio-button:has-text("Keep the case locked") input').check({ force: true });
       await p.waitForTimeout(100);
       return p.locator('record-form button:has-text("Save assessment")').isEnabled();
     })(),
@@ -239,7 +238,7 @@ const CHECKS = {
     'finalise form open': (await p.locator('record-form .form__title').innerText()).trim() === 'Finalise risk assessment',
     'section table shown': (await p.locator('record-form section-risk-table tbody tr').count()) === 6,
     'no attachments': (await p.locator('record-form .field__actions').count()) === 0,
-    'button says Finalise': (await p.locator('record-form button[type="submit"]').innerText()).trim() === 'Finalise',
+    'button says Record, not Finalise': (await p.locator('record-form button[type="submit"]').innerText()).trim() === 'Record',
   }),
 };
 
