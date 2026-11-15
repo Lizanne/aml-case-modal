@@ -31,6 +31,7 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
       tabindex="-1"
       [attr.aria-label]="outcome.title"
       [class.card--decision]="outcome.actionType === 'decision'"
+      [class.card--superseded]="!!supersededBy()"
       [class.card--narrow]="store.layoutNarrow()"
     >
       <!-- An assessment card is titled by its field, with the status it set
@@ -45,6 +46,10 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
         </h3>
         <p class="card__meta">{{ outcome.actor }} · {{ outcome.at | stamp }}</p>
       </div>
+      <!-- A finalisation a later reopen superseded: kept, greyed, and says so. -->
+      @if (supersededBy(); as by) {
+        <p class="card__superseded">Superseded · reopened by {{ by.actor }} · {{ by.at | stamp }}</p>
+      }
 
       <p class="card__note">{{ outcome.note }}</p>
 
@@ -109,6 +114,26 @@ import { SectionRiskTableComponent } from './section-risk-table.component';
            for one colour is just somewhere for them to diverge again. */
         border-color: var(--foreground-success);
         border-width: 2px;
+      }
+      /* Superseded: the record stays readable, but nothing in it is current -
+         the page tint, secondary title ink and grey pills say so, and the
+         line under the title says why. */
+      .card--superseded {
+        background: var(--page);
+        border-style: dashed;
+      }
+      .card--superseded .card__title {
+        color: var(--foreground-secondary);
+      }
+      .card--superseded .card__table {
+        filter: grayscale(1);
+      }
+      .card__superseded {
+        margin: 4px 0 0;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--foreground-secondary);
       }
       .card__head {
         display: flex;
@@ -182,6 +207,11 @@ export class OutcomeCardComponent {
   readonly store = inject(CaseStore);
 
   @Input({ required: true }) outcome!: OutcomeItem;
+
+  /** The reopen that superseded this finalisation, if one did. */
+  supersededBy() {
+    return this.store.supersededBy(this.outcome.id);
+  }
 
   /** The field's name for an assessment; the outcome's title otherwise. */
   get title(): string {

@@ -95,7 +95,15 @@ import { scrollWithin } from '../core/scroll';
           }
         </label>
 
-        @if (draft.actionType !== 'finalize-risk-assessment') {
+        @if (draft.actionType === 'reopen-risk-assessment') {
+          <!-- What reopening does, before the reason for it. -->
+          <p class="form__lead">
+            The current finalisation stays on record, greyed. Every field can be changed again,
+            and Finalise risk assessment becomes required before a decision can be submitted.
+          </p>
+        }
+
+        @if (draft.actionType !== 'finalize-risk-assessment' && draft.actionType !== 'reopen-risk-assessment') {
         <!-- Attachments and, for an assessment, the agent's call side by
              side: the form had a column of empty space on the right and a
              long scroll on the left (feedback 12 Nov 2026). One column
@@ -218,6 +226,12 @@ import { scrollWithin } from '../core/scroll';
         line-height: 24px;
         font-weight: 600;
         color: var(--foreground-primary);
+      }
+      .form__lead {
+        margin: 0;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--foreground-secondary);
       }
       .field {
         display: grid;
@@ -383,7 +397,11 @@ export class RecordFormComponent {
   }
 
   heading(draft: Draft): string {
-    if (draft.actionType === 'assess-risk' || draft.actionType === 'finalize-risk-assessment') {
+    if (
+      draft.actionType === 'assess-risk' ||
+      draft.actionType === 'finalize-risk-assessment' ||
+      draft.actionType === 'reopen-risk-assessment'
+    ) {
       return draft.title;
     }
     return `Record ${draft.title.toLowerCase()}`;
@@ -394,6 +412,7 @@ export class RecordFormComponent {
     if (draft.actionType === 'finalize-risk-assessment') {
       return 'Summarise the overall risk and what it rests on.';
     }
+    if (draft.actionType === 'reopen-risk-assessment') return 'Why is the risk assessment being reopened?';
     return 'What did you do, and what did you find?';
   }
 
@@ -402,6 +421,7 @@ export class RecordFormComponent {
     // Record, not Finalise: the button that opened this form says Record,
     // and "Finalise" read as finalising the case (feedback 12 Nov 2026).
     if (draft.actionType === 'finalize-risk-assessment') return 'Record';
+    if (draft.actionType === 'reopen-risk-assessment') return 'Reopen';
     return 'Save outcome';
   }
 

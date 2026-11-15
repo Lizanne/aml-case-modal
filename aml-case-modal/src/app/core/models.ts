@@ -116,6 +116,7 @@ export const NOT_LOCKED_HINT = 'Not locked. Lock the case to record outcomes.';
 export type ActionTypeId =
   | 'assess-risk'
   | 'finalize-risk-assessment'
+  | 'reopen-risk-assessment'
   | 'player-contact'
   | 'note'
   | 'decision';

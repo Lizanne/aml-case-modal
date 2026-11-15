@@ -230,10 +230,11 @@ await page.waitForTimeout(400);
 // Asserting one value for both said "the band lost its green" when what had
 // actually happened is that it moved to its own token.
 const BAND_SUCCESS = await tokenRgb('--foreground-success');
+// Recede: the done chip's green is its tick glyph now, not its text.
 check('green survives on the done chip and the lock band',
   await page.evaluate(
     ({ chipGreen, bandGreen }) => {
-      const chip = getComputedStyle(document.querySelector('required-chips ui-pill')).color;
+      const chip = getComputedStyle(document.querySelector('required-chips ui-pill.chip--done mat-icon')).color;
       const band = getComputedStyle(document.querySelector('case-header .head__lock-text')).color;
       return chip === chipGreen && band === bandGreen;
     },

@@ -100,8 +100,8 @@ await page.waitForTimeout(250);
 // Four required now: both assessments, the contact and Finalise.
 // Assessment chips are the field's risk status pill; Contact and Finalise keep
 // the pending / done pill. "Done" for an assessment is No risk or Risk flagged.
-const chipsPending = () => page.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count();
-const chipsDone = () => page.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count();
+const chipsPending = () => page.locator('required-chips risk-status [data-risk="action-required"]').count();
+const chipsDone = () => page.locator('required-chips ui-pill.chip--done').count();
 check('one chip done, three still pending', (await chipsDone()) === 1 && (await chipsPending()) === 3);
 check('rule 6: saved card has no edit control',
   (await page.locator('outcome-card button:has-text("Edit")').count()) === 0);

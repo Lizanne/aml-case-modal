@@ -106,9 +106,16 @@ export class AddActionMenuComponent implements AfterViewInit {
     this.viewReady.set(true);
   }
 
-  /** The three menu items. `decision` is never here - it has its own footer button. */
+  /**
+   * The menu items. `decision` is never here - it has its own footer button.
+   * Reopen risk assessment joins only while a finalisation stands and the
+   * agent can record (the lock, an unresolved case).
+   */
   extraTypes() {
-    return this.store.actionTypes().filter((t) => t.id !== 'decision');
+    const base = this.store.actionTypes().filter((t) => t.id !== 'decision');
+    return this.store.canReopen()
+      ? [...base, { id: 'reopen-risk-assessment' as ActionTypeId, label: 'Reopen risk assessment', hint: 'Make the finalised assessment editable again' }]
+      : base;
   }
 
   start(id: ActionTypeId): void {

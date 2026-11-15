@@ -7,8 +7,8 @@ import { RiskStatusComponent } from './risk-status.component';
 import { PillComponent } from './ui-pill.component';
 
 /**
- * Rule 4. One chip per mandatory action: Action required while pending, the
- * field's status or a green tick once done. Pinned to the top of
+ * Rule 4. One chip per mandatory action: Action required while pending, a
+ * quiet neutral chip with its result glyph once done. Pinned to the top of
  * the workflow panel - it never scrolls with the stream.
  *
  * Rule 10: hidden entirely once the case is resolved.
@@ -33,40 +33,36 @@ import { PillComponent } from './ui-pill.component';
         <span class="chip-bar__label">Required</span>
       }
       <!--
-        An assessment's chip IS its risk status - the same pill, same fill,
-        same icon as the field's row in the Risk assessment - with the field
-        name as the word and the status on the accessible name and title.
-        A done assessment therefore reads No risk or Risk flagged here, never
-        a generic tick, and the two panels say the same thing about one field.
-        Contact player and Finalise keep the pending / done pill.
+        Recede (prototyped 13 Nov 2026): to do is the amber Action required
+        pill, for every item. Done steps back - the neutral pill, with the
+        result as its glyph: a red flag for Risk flagged, a green tick for No
+        risk or a recorded action. The bar then answers "what's left" at a
+        glance, and a finished risky field no longer reads as an open problem.
+        The full red / green result stays on the field's row, band and card.
       -->
       @for (action of store.requiredActions(); track action.key) {
-        @if (action.status) {
-          <risk-status
-            class="chip--assess"
-            size="md"
-            [status]="action.status"
-            [label]="action.shortLabel"
-            [name]="action.label + ': ' + statusWord(action.status)"
-          />
-        } @else if (!action.done) {
-          <!-- Pending is Action required here too (feedback 12 Nov 2026):
-               every item in this bar is required, so every pending one wears
-               the same amber pill the assessments and the placeholders do. -->
+        @if (!action.done) {
           <risk-status
             size="md"
             status="action-required"
-            [label]="store.layoutNarrow() ? action.shortLabel : action.label"
+            [label]="store.layoutNarrow() || action.status ? action.shortLabel : action.label"
             [name]="action.label + ': Action required'"
           />
         } @else {
-        <ui-pill tone="success" [attr.aria-label]="action.label + ': done'">
-          <mat-icon class="chip__icon" aria-hidden="true">check_circle</mat-icon>
-          <!-- An assessment shows its field alone: "Assess risk - " on every
-               chip took a second and third row of height for no information.
-               The aria-label keeps the full name. -->
-          {{ store.layoutNarrow() ? action.shortLabel : action.label }}
-        </ui-pill>
+          <ui-pill
+            tone="neutral"
+            class="chip--done"
+            [attr.data-result]="action.status === 'risk' ? 'risk' : action.status === 'no-risk' ? 'no-risk' : 'done'"
+            [attr.aria-label]="action.label + ': ' + doneWord(action.status)"
+          >
+            <mat-icon
+              class="chip__icon"
+              [class.chip__icon--risk]="action.status === 'risk'"
+              [class.chip__icon--ok]="action.status !== 'risk'"
+              aria-hidden="true"
+            >{{ action.status === 'risk' ? 'flag' : 'check_circle' }}</mat-icon>
+            {{ store.layoutNarrow() || action.status ? action.shortLabel : action.label }}
+          </ui-pill>
         }
       }
     </div>
@@ -110,12 +106,26 @@ import { PillComponent } from './ui-pill.component';
         color: var(--foreground-secondary);
         margin-right: 4px;
       }
-      /* Success green is the only "you can act here" / completed signal. */
+      /* Done steps back: secondary ink on the neutral pill (6.86:1 on
+         --background-tertiary), so only the amber to-do chips stand out. */
+      .chip-bar ui-pill.chip--done {
+        color: var(--foreground-secondary);
+      }
+      /* The result, as the done chip's only colour: the status inks. */
+      mat-icon.chip__icon--risk {
+        color: var(--danger-deep);
+      }
+      mat-icon.chip__icon--ok {
+        color: var(--success);
+      }
     `,
   ],
 })
 export class RequiredChipsComponent {
   readonly store = inject(CaseStore);
-  readonly statusWord = (s: keyof typeof RISK_STATUS_LABEL) => RISK_STATUS_LABEL[s];
+  /** The done chip's spoken state: its result for an assessment, "done" otherwise. */
+  doneWord(status: string | null): string {
+    return status === 'risk' || status === 'no-risk' ? `done, ${RISK_STATUS_LABEL[status]}` : 'done';
+  }
 }
 

@@ -534,6 +534,48 @@ await page.waitForTimeout(300);
 check('pressing it opens nothing', (await page.locator('resync-dialog').count()) === 0);
 check('but it explains itself: the reason shows as its tooltip', /Lock the case to resync\./.test(await page.locator('.mat-mdc-tooltip').innerText().catch(() => '')));
 
+console.log('\nReopen risk assessment');
+await go('03');
+const menuItems = async () => {
+  await page.locator('workflow-panel .stream__add button').click(); await page.waitForTimeout(300);
+  const items = await page.locator('.mat-mdc-menu-panel button.mat-mdc-menu-item').allInnerTexts();
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  return items;
+};
+check('offered in Add action while a finalisation stands', (await menuItems()).some((t) => /Reopen risk assessment/.test(t)));
+await page.locator('workflow-panel .stream__add button').click(); await page.waitForTimeout(300);
+await page.locator('.mat-mdc-menu-panel button:has-text("Reopen risk assessment")').click(); await page.waitForTimeout(400);
+check('its form asks why, with no attachments, and saves with Reopen',
+  (await page.locator('record-form .form__title').innerText()).trim() === 'Reopen risk assessment' &&
+  (await page.locator('record-form .field__actions').count()) === 0 &&
+  (await page.locator('record-form button[type="submit"]').innerText()).trim() === 'Reopen');
+await page.locator('record-form textarea').fill('Linked accounts was assessed on stale data.');
+check('the reason and the lock choice gate it', await page.locator('record-form button[type="submit"]').isDisabled());
+await keepLock();
+await page.locator('record-form button[type="submit"]').click(); await page.waitForTimeout(500);
+check('the finalisation stays, greyed, and says what superseded it', await page.evaluate(() => {
+  const card = [...document.querySelectorAll('outcome-card .card')].find((c) => /Risk assessment finalised/.test(c.querySelector('.card__title')?.textContent ?? ''));
+  return !!card && card.classList.contains('card--superseded') && /^Superseded · reopened by /.test(card.querySelector('.card__superseded')?.textContent.trim() ?? '');
+}));
+check('a Risk assessment reopened card is added', (await page.locator('outcome-card .card__title:has-text("Risk assessment reopened")').count()) === 1);
+check('Finalise is required again, and Submit decision waits for it',
+  (await page.locator('required-chips risk-status [data-risk="action-required"]').count()) === 1 &&
+  (await page.locator('action-placeholder:has-text("Finalise risk assessment") button').isEnabled()) &&
+  (await page.locator('workflow-panel .footer button:has-text("Submit decision")').isDisabled()));
+check('every field can be changed again, and Resync is back', (await page.locator('risk-assessment .ra-act--change').count()) > 0 &&
+  (await page.locator('risk-assessment .ra-head__resync').getAttribute('aria-disabled')) !== 'true' &&
+  (await page.locator('risk-assessment .ra-final').count()) === 0);
+check('no Reopen while nothing is finalised', !(await menuItems()).some((t) => /Reopen risk assessment/.test(t)));
+await page.locator('action-placeholder:has-text("Finalise risk assessment") button').click(); await page.waitForTimeout(400);
+await page.locator('record-form textarea').fill('Re-checked: unchanged.'); await keepLock();
+await page.locator('record-form button[type="submit"]').click(); await page.waitForTimeout(500);
+check('re-finalising stands as the current finalisation; the first stays superseded',
+  (await page.locator('risk-assessment .ra-final').count()) === 1 &&
+  (await page.locator('outcome-card .card--superseded').count()) === 1 &&
+  (await page.locator('workflow-panel .footer button:has-text("Submit decision")').isEnabled()));
+await go('00a');
+check('no Reopen without the lock', await page.locator('workflow-panel .stream__add button').isDisabled());
+
 console.log('\nHit areas and labels');
 await go('01');
 // The action sits under the pill now (12 Nov 2026), so it takes the largest
@@ -567,10 +609,13 @@ await page.locator('record-form fieldset.field--risk mat-radio-button:has-text("
 await keepLock();
 await page.locator('record-form button[type="submit"]').click();
 await page.waitForTimeout(400);
-check('a Risk flagged assessment is a red chip, not a green tick', await page.evaluate(() => {
-  const chips = [...document.querySelectorAll('required-chips risk-status .status')];
-  const docs = chips.find((c) => /Document requests/.test(c.getAttribute('aria-label') ?? ''));
-  return docs?.getAttribute('data-risk') === 'risk' && /: Risk flagged$/.test(docs.getAttribute('aria-label'));
+// Recede (13 Nov 2026): a done chip is the quiet neutral pill; a risk shows
+// as its red flag glyph, not as a red chip.
+check('a done Risk flagged assessment recedes: neutral chip, red flag, named with its result', await page.evaluate(() => {
+  const docs = [...document.querySelectorAll('required-chips ui-pill.chip--done')].find((c) => /Document requests/.test(c.getAttribute('aria-label') ?? ''));
+  const icon = docs?.querySelector('mat-icon');
+  return docs?.getAttribute('data-tone') === 'neutral' && docs.getAttribute('data-result') === 'risk' &&
+    icon?.textContent.trim() === 'flag' && /: done, Risk flagged$/.test(docs.getAttribute('aria-label'));
 }));
 // Document requests was just assessed above, so its placeholder is gone; read the other one.
 check('and each Assess risk button names its field',

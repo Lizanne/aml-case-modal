@@ -545,10 +545,35 @@ export class CaseStore {
   /** Finalise is enabled once every non-informational field is Risk or No risk. */
   readonly canFinalize = computed(() => this.actionRequiredFields().length === 0);
 
-  /** The finalise outcome, once there is one. */
-  readonly riskFinalization = computed(
-    () => this.outcomes().find((o) => o.actionType === 'finalize-risk-assessment') ?? null,
-  );
+  /**
+   * The finalisation that stands: the latest finalise outcome with no reopen
+   * after it. A reopen supersedes the one before it - kept in the stream,
+   * greyed - and Finalise becomes required again.
+   */
+  readonly riskFinalization = computed(() => {
+    let current: OutcomeItem | null = null;
+    for (const o of this.outcomes()) {
+      if (o.actionType === 'finalize-risk-assessment') current = o;
+      else if (o.actionType === 'reopen-risk-assessment') current = null;
+    }
+    return current;
+  });
+
+  /** For a superseded finalisation, the reopen that superseded it. */
+  supersededBy(outcomeId: string): OutcomeItem | null {
+    const list = this.outcomes();
+    const i = list.findIndex((o) => o.id === outcomeId);
+    if (i < 0 || list[i].actionType !== 'finalize-risk-assessment') return null;
+    return list.slice(i + 1).find((o) => o.actionType === 'reopen-risk-assessment') ?? null;
+  }
+
+  /**
+   * Reopen: the lock holder only, on an unresolved case, and only while a
+   * finalisation stands. No approval step - the lock already makes it one
+   * agent's call, the reason note and the kept finalisation make it
+   * auditable, and Submit decision is gated again until it is re-finalised.
+   */
+  readonly canReopen = computed(() => this.canRecord() && !!this.riskFinalization());
 
   readonly isRiskFinalized = computed(() => !!this.riskFinalization());
 
@@ -740,6 +765,7 @@ export class CaseStore {
     if (!d) return false;
     if (d.actionType === 'assess-risk' && !d.risk) return false;
     if (d.actionType === 'finalize-risk-assessment' && !this.canFinalize()) return false;
+    if (d.actionType === 'reopen-risk-assessment' && !this.canReopen()) return false;
     return d.note.trim().length > 0 && d.lockAfter !== null && this.canRecord();
   });
 
@@ -803,6 +829,7 @@ export class CaseStore {
   labelFor(id: ActionTypeId): string {
     if (id === 'decision') return 'Decision - case resolved';
     if (id === 'finalize-risk-assessment') return 'Finalise risk assessment';
+    if (id === 'reopen-risk-assessment') return 'Reopen risk assessment';
     if (id === 'assess-risk') return 'Assess risk';
     return this.actionTypes().find((t) => t.id === id)?.label ?? id;
   }
@@ -816,6 +843,8 @@ export class CaseStore {
         return 'Assess risk';
       case 'finalize-risk-assessment':
         return 'Risk assessment finalised';
+      case 'reopen-risk-assessment':
+        return 'Risk assessment reopened';
       case 'note':
         return 'Note';
       case 'decision':
@@ -888,6 +917,7 @@ export class CaseStore {
     if (this.isResolved() || this.lockState() !== 'locked-to-me') return false;
     if (actionType === 'assess-risk' && !this.canAssessRisk()) return false;
     if (actionType === 'finalize-risk-assessment' && !this.canFinalize()) return false;
+    if (actionType === 'reopen-risk-assessment' && !this.canReopen()) return false;
     this.addMenuOpen.set(false);
     const field = riskFieldId ? this.riskFields().find((f) => f.def.id === riskFieldId) : null;
     const title =
@@ -895,7 +925,9 @@ export class CaseStore {
         ? `Assess risk - ${field.def.label}`
         : actionType === 'finalize-risk-assessment'
           ? 'Finalise risk assessment'
-          : this.outcomeTitleFor(actionType);
+          : actionType === 'reopen-risk-assessment'
+            ? 'Reopen risk assessment'
+            : this.outcomeTitleFor(actionType);
 
     /**
      * Never replace a draft with something in it.
@@ -1043,12 +1075,19 @@ export class CaseStore {
       kind: 'outcome',
       id: nextId('out'),
       actionType: d.actionType,
-      title: d.actionType === 'finalize-risk-assessment' ? 'Risk assessment finalised' : d.title,
+      title:
+        d.actionType === 'finalize-risk-assessment' || d.actionType === 'reopen-risk-assessment'
+          ? this.outcomeTitleFor(d.actionType)
+          : d.title,
       actor: this.me().name,
       at,
       note: d.note.trim(),
       // Finalise carries no attachments, by definition.
-      attachments: d.actionType === 'finalize-risk-assessment' ? [] : d.attachments, // frozen from here (rule 6)
+      // Reopen is a reason, not evidence: no attachments either.
+      attachments:
+        d.actionType === 'finalize-risk-assessment' || d.actionType === 'reopen-risk-assessment'
+          ? []
+          : d.attachments, // frozen from here (rule 6)
       ...(field && d.risk
         ? {
             assessment: {
@@ -1070,6 +1109,8 @@ export class CaseStore {
       );
     } else if (d.actionType === 'finalize-risk-assessment') {
       this.pushTimeline(at, 'Risk assessment finalised', this.me().name);
+    } else if (d.actionType === 'reopen-risk-assessment') {
+      this.pushTimeline(at, 'Risk assessment reopened', this.me().name);
     } else {
       this.pushTimeline(at, `Outcome recorded: ${d.title}`, this.me().name);
     }

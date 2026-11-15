@@ -34,7 +34,7 @@ const CHECKS = {
     'header offers Force unlock': (await p.locator('case-header button:has-text("Force unlock")').count()) === 1,
   }),
   '01': async (p) => ({
-    'four pending chips': (await p.locator('required-chips ui-pill[data-tone="outline"], required-chips risk-status [data-risk="action-required"]').count()) === 4,
+    'four pending chips': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 4,
     'every pending chip is an Action required pill': (await p.locator('required-chips risk-status [data-risk="action-required"]').count()) === 4,
     'four placeholders': (await p.locator('action-placeholder').count()) === 4,
     'Finalise visible but disabled':
@@ -86,8 +86,8 @@ const CHECKS = {
     'the other placeholders still present': (await p.locator('action-placeholder').count()) === 3,
   }),
   '03': async (p) => ({
-    'every chip done, Finalise included': (await p.locator('required-chips ui-pill[data-tone="success"], required-chips risk-status [data-risk="risk"], required-chips risk-status [data-risk="no-risk"]').count()) === 4,
-    'done assessment chips read No risk, not done': (await p.locator('required-chips risk-status [data-risk="no-risk"]').count()) === 2,
+    'every chip done, Finalise included': (await p.locator('required-chips ui-pill.chip--done').count()) === 4,
+    'done assessment chips carry their result, No risk': (await p.locator('required-chips ui-pill.chip--done[data-result="no-risk"]').count()) === 2,
     'the risk assessment shows as finalised': (await p.locator('risk-assessment .ra-final').count()) === 1,
     'no placeholders': (await p.locator('action-placeholder').count()) === 0,
     // Two event rows now: the case's own creation heads the stream, and the
@@ -171,7 +171,12 @@ const CHECKS = {
   '08': async (p) => ({
     'menu panel open': (await p.locator('.mat-mdc-menu-panel').count()) === 1,
     // Contact player and Add a note. Assessing is done from a field's status.
-    'two items': (await p.locator('.mat-mdc-menu-panel button.mat-mdc-menu-item').count()) === 2,
+    // Plus Reopen risk assessment, but only while a finalisation stands.
+    'Contact player, Add a note, and Reopen only when finalised': await (async () => {
+      const items = await p.locator('.mat-mdc-menu-panel button.mat-mdc-menu-item').allInnerTexts();
+      const finalised = (await p.locator('risk-assessment .ra-final').count()) === 1;
+      return items.length === (finalised ? 3 : 2) && /Contact player/.test(items[0]) && /Add a note/.test(items[1]) && (!finalised || /Reopen risk assessment/.test(items[2]));
+    })(),
   }),
   '09': async (p) => ({
     // "Dual modal" means two modals sharing the width - the companion SG-alert
