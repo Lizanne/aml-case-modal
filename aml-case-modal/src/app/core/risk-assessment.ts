@@ -140,7 +140,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     section: 'Verification risks',
     label: 'Latest fraud scores',
     definition: 'Fraud scores returned by SEON over the last year.',
-    riskIf: 'Any SEON score is above 30.',
+    riskIf: 'The highest SEON score is above 30.',
   },
   {
     id: 'verification-result',
@@ -305,9 +305,10 @@ export const GENERATION_0: Readonly<Record<string, RiskReading>> = {
     null,
   ),
   'employment-occupation': r(['Employed · Bar staff'], 'no-risk'),
-  // The spec's mock shows 21 and 44 as Low risk, but its rule is "any score
-  // above 30". The second score is 24 here so the row and its tooltip agree.
-  // Raised with the stakeholders on 18 Nov 2026.
+  // The status follows the highest score (decided 18 Nov 2026). The spec's
+  // mock had 21 and 44 marked Low risk; 44 would be a risk under its own
+  // rule, so the second score is 24 here and the row agrees with its tooltip.
+  // Generation 1 brings 112, which is what flips the field to a risk.
   'latest-fraud-scores': r(['21 · 01 May 2026, 13:00', '24 · 04 May 2026, 13:00'], 'no-risk'),
   'verification-result': r(['Pass (2+2)'], 'no-risk'),
   'document-requests': r(

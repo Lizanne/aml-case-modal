@@ -235,7 +235,7 @@ await page.locator('risk-assessment [data-field="employment-occupation"] .ra-act
 await page.keyboard.press('Tab');
 await page.waitForTimeout(700);
 const tip = await page.locator('.ra-tooltip').innerText().catch(() => '');
-check('the tooltip says what it is and when it is a risk', /SEON/.test(tip) && /Risk if: Any SEON score is above 30/.test(tip), tip);
+check('the tooltip says what it is and when it is a risk', /SEON/.test(tip) && /Risk if: The highest SEON score is above 30/.test(tip), tip);
 await act('employment-occupation'); await page.waitForTimeout(300);
 check('opening a form scrolls nothing above the panels', await page.evaluate(() => {
   const modal = document.querySelector('.modal');
