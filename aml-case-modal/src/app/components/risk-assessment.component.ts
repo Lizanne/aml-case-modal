@@ -183,6 +183,24 @@ import { RiskStatusComponent } from './risk-status.component';
                     @for (line of field.value; track $index) {
                       <span class="ra-row__line">{{ line }}</span>
                     }
+                    <!--
+                      The way to the full detail, as the last value line: a
+                      text link in the row action's vocabulary, naming the
+                      sidebar section it opens. A new tab, so the case and
+                      its lock stay put; the glyph says so.
+                    -->
+                    @if (field.def.link; as link) {
+                      <a
+                        class="ra-link"
+                        [href]="link.href"
+                        target="_blank"
+                        rel="noopener"
+                        [attr.aria-label]="'Open ' + link.label + ' in a new tab'"
+                      >
+                        {{ link.label }}
+                        <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                      </a>
+                    }
                   </div>
                 </div>
                 <!--
@@ -335,6 +353,7 @@ import { RiskStatusComponent } from './risk-status.component';
         color: var(--link);
         cursor: pointer;
         border-radius: 2px;
+        transition: color 150ms ease-out;
       }
       .ra-sum__filter:hover,
       .ra-sum__all:hover {
@@ -542,6 +561,7 @@ import { RiskStatusComponent } from './risk-status.component';
         color: var(--link);
         cursor: pointer;
         border-radius: 2px;
+        transition: color 150ms ease-out;
       }
       /* 20px tall, 36 to hit - the most that collides with nothing: 4 up
          stops 2px short of the pill (a press there must not read as Change),
@@ -562,6 +582,47 @@ import { RiskStatusComponent } from './risk-status.component';
       }
       .ra-row__sep {
         margin: 0 6px;
+      }
+      /**
+       * The section link under the value lines. Same ink and weight as the
+       * row action, so there is one kind of link in a row. 20px tall to look
+       * at, 40 to hit: 8 up stays inside the value column's own line gap, 12
+       * down lands in the row padding and stops short of the next row.
+       */
+      .ra-link {
+        position: relative;
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-weight: 600;
+        color: var(--link);
+        text-decoration: none;
+        border-radius: 2px;
+        transition: color 150ms ease-out;
+      }
+      .ra-link::before {
+        content: '';
+        position: absolute;
+        inset: -8px -4px -12px;
+      }
+      /* 16px, the row's one glyph size (info button, pill glyphs). A Material
+         glyph keeps ~2px of air inside its box, so the ink is ~13px: on the
+         cap height of the 14px label. 12 would read as a superscript. */
+      .ra-link mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+      .ra-link:hover {
+        color: var(--link-hover);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .ra-link:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
       .ra-info {
         position: relative;
@@ -604,6 +665,10 @@ import { RiskStatusComponent } from './risk-status.component';
         /* spacing-1 under the head: the pill fills the head's 24px, so this
            is the whole gap between the pill and the first value line. */
         margin-top: var(--lds-core-spacing-1);
+        /* spacing-1 between lines, as the Figma row has: it is what tells a
+           second item from a wrapped first one, and it gives the section link
+           the same breath as the lines above it. */
+        gap: var(--lds-core-spacing-1);
         font-size: 14px;
         line-height: 20px;
         color: var(--foreground-secondary);

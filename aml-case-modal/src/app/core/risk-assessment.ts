@@ -47,6 +47,13 @@ export interface RiskFieldDef {
   definition: string;
   /** When it counts as a risk. Second half of the tooltip. */
   riskIf: string | null;
+  /**
+   * Where the full detail lives. The row shows what the risk rule needs and
+   * no more; this opens the player section with everything, in a new tab so
+   * the case (and its lock) stay where they are. The label names the
+   * destination as the sidebar does.
+   */
+  link?: { label: string; href: string };
 }
 
 /** One generation's reading of a field. */
@@ -117,6 +124,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     definition:
       'Changes to full name, address, phone, email or date of birth since registration.',
     riskIf: null,
+    link: { label: 'Player details', href: '/players/208023002531575/details' },
   },
 
   // ---- Verification risks
@@ -132,7 +140,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     section: 'Verification risks',
     label: 'Latest fraud scores',
     definition: 'Fraud scores returned by SEON over the last year.',
-    riskIf: 'Any SEON score is above 100.',
+    riskIf: 'Any SEON score is above 30.',
   },
   {
     id: 'verification-result',
@@ -149,13 +157,16 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     manual: true,
     definition: 'Every document request assigned to the player.',
     riskIf: 'Set by the agent. Always needs a manual assessment.',
+    link: { label: 'Documents', href: '/players/208023002531575/documents' },
   },
   {
     id: 'linked-accounts',
     section: 'Verification risks',
     label: 'Linked accounts',
-    definition: 'Every account linked to this player.',
-    riskIf: 'At least one linked account exists.',
+    definition: 'Every account linked to this player, counted by the type of link.',
+    riskIf:
+      'At least one linked account of type PAR or Similar details, or at least two of type Duplicate.',
+    link: { label: 'Duplicate links', href: '/players/208023002531575/duplicate-links' },
   },
 
   // ---- Login & geography
@@ -212,7 +223,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     section: 'Deposit & transaction behaviour',
     label: 'Withdrawing without betting',
     definition:
-      'Withdrawals that mirror recent deposits without matching gaming turnover. Last 30 days.',
+      'Withdrawals that mirror recent deposits with no stakes placed between them. Last 30 days.',
     riskIf: 'At least one occurrence.',
   },
   {
@@ -236,14 +247,14 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     section: 'Product & gameplay analysis',
     label: 'Roulette max stake',
     definition: 'The highest roulette stake placed in the last 30 days.',
-    riskIf: 'Any single stake of £250 or more.',
+    riskIf: 'Any single stake of £250.',
   },
   {
     id: 'roulette-no-financial-risk',
     section: 'Product & gameplay analysis',
     label: 'Roulette no financial risk stakes',
     definition:
-      'Hedged roulette play, such as red and black together, where winnings are within £1 of the stake across rounds. Last 30 days.',
+      'Hedged roulette play, such as red and black together or high table coverage, where the winnings equal the stake: turnover is churned without losing money. Last 30 days.',
     riskIf: 'At least 5 occurrences.',
   },
   {
@@ -251,9 +262,8 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     section: 'Product & gameplay analysis',
     label: 'Product mix shift (30d)',
     definition:
-      'Share of stakes by product (slots, roulette, other) over the prior 30 days against the last 30 days.',
-    riskIf:
-      'Prior slots 70% or more and recent roulette 50% or more. Or roulette up 40 points or more while slots fell 30 points or more.',
+      'Share of stakes by product over the prior 30 days against the last 30 days. Slots, roulette and other (instants, other table games, scratchcards, lottos).',
+    riskIf: 'Any product group changes by 25 points or more.',
   },
 
   // ---- Open source intelligence
@@ -295,14 +305,20 @@ export const GENERATION_0: Readonly<Record<string, RiskReading>> = {
     null,
   ),
   'employment-occupation': r(['Employed · Bar staff'], 'no-risk'),
-  'latest-fraud-scores': r(['21 · 01 May 2026, 13:00', '44 · 04 May 2026, 13:00'], 'no-risk'),
+  // The spec's mock shows 21 and 44 as Low risk, but its rule is "any score
+  // above 30". The second score is 24 here so the row and its tooltip agree.
+  // Raised with the stakeholders on 18 Nov 2026.
+  'latest-fraud-scores': r(['21 · 01 May 2026, 13:00', '24 · 04 May 2026, 13:00'], 'no-risk'),
   'verification-result': r(['Pass (2+2)'], 'no-risk'),
   'document-requests': r(
     ['#10482 · Affordability · Approved', '#11953 · Proof of address · Waiting for review'],
     null,
   ),
   'linked-accounts': r(
-    ['2 linked accounts', 'PID 90214 · Active · John Doe', 'PID 90455 · Suspended · Jane Doe'],
+    // Counts by link type - the shape of the risk rule. Each link carries too
+    // much (PID, status, name, direct/transient, dates) to list here; the
+    // Duplicate links section has it all, one click away.
+    ['2 linked accounts', '1 PAR · 1 Similar details · 0 Duplicate'],
     'risk',
   ),
   'vpn-usage': r(['Yes · last detected 14 Nov 2025, 13 Nov 2025, 13 Nov 2025'], 'risk'),
@@ -360,7 +376,7 @@ export const GENERATION_1: Readonly<Record<string, RiskReading>> = {
     null,
   ),
   'latest-fraud-scores': r(
-    ['21 · 01 May 2026, 13:00', '44 · 04 May 2026, 13:00', '112 · 05 May 2026, 08:40'],
+    ['21 · 01 May 2026, 13:00', '24 · 04 May 2026, 13:00', '112 · 05 May 2026, 08:40'],
     'risk',
   ),
   'vpn-usage': r(['Yes · last detected 05 May 2026, 14 Nov 2025, 13 Nov 2025'], 'risk'),

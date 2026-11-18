@@ -235,7 +235,7 @@ await page.locator('risk-assessment [data-field="employment-occupation"] .ra-act
 await page.keyboard.press('Tab');
 await page.waitForTimeout(700);
 const tip = await page.locator('.ra-tooltip').innerText().catch(() => '');
-check('the tooltip says what it is and when it is a risk', /SEON/.test(tip) && /Risk if: Any SEON score is above 100/.test(tip), tip);
+check('the tooltip says what it is and when it is a risk', /SEON/.test(tip) && /Risk if: Any SEON score is above 30/.test(tip), tip);
 await act('employment-occupation'); await page.waitForTimeout(300);
 check('opening a form scrolls nothing above the panels', await page.evaluate(() => {
   const modal = document.querySelector('.modal');
@@ -264,6 +264,21 @@ check('an assessed field carries a Change assessment icon button', (await field(
 check('a field to assess carries an Assess risk link, named for its field', (await field('document-requests').locator('.ra-act--assess').getAttribute('aria-label')) === 'Assess risk - Document requests' &&
   (await field('document-requests').locator('.ra-act--assess').innerText()).trim() === 'Assess risk');
 check('informational fields have no action', (await page.locator('risk-assessment .ra-row').filter({ hasNot: page.locator('risk-status') }).locator('.ra-act').count()) === 0);
+if ((await page.locator('risk-assessment .ra-toggle').getAttribute('aria-expanded')) !== 'true') {
+  await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(300);
+}
+check('three fields link to their player section, in a new tab, named for it', await page.evaluate(() => {
+  const want = { 'document-requests': 'Documents', 'linked-accounts': 'Duplicate links', 'personal-detail-changes': 'Player details' };
+  const links = [...document.querySelectorAll('risk-assessment .ra-link')];
+  return links.length === 3 && links.every((a) => {
+    const id = a.closest('.ra-row').dataset.field;
+    // The glyph's ligature text is in textContent; the label is the first text node.
+    const label = [...a.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim())?.textContent.trim();
+    return want[id] && label === want[id] && a.target === '_blank' && /noopener/.test(a.rel) &&
+      a.getAttribute('aria-label') === `Open ${want[id]} in a new tab` && a.closest('.ra-row__value');
+  });
+}));
+check('Linked accounts shows the counts the rule needs, not every link', (await field('linked-accounts').locator('.ra-row__line').allInnerTexts()).join('|') === '2 linked accounts|1 PAR · 1 Similar details · 0 Duplicate');
 check('the action does not make the row taller', await page.evaluate(() => {
   const head = (id) => document.querySelector(`risk-assessment [data-field="${id}"] .ra-row__head`).getBoundingClientRect().height;
   return head('document-requests') <= 24.5 && head('employment-occupation') <= 24.5;
