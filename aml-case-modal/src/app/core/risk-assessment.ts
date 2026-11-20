@@ -124,7 +124,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     definition:
       'Changes to full name, address, phone, email or date of birth since registration.',
     riskIf: null,
-    link: { label: 'Player details', href: '/players/208023002531575/details' },
+    link: { label: 'Changes', href: '/players/208023002531575/details' },
   },
 
   // ---- Verification risks
@@ -166,7 +166,7 @@ export const RISK_FIELDS: readonly RiskFieldDef[] = [
     definition: 'Every account linked to this player, counted by the type of link.',
     riskIf:
       'At least one linked account of type PAR or Similar details, or at least two of type Duplicate.',
-    link: { label: 'Duplicate links', href: '/players/208023002531575/duplicate-links' },
+    link: { label: 'Linked accounts', href: '/players/208023002531575/duplicate-links' },
   },
 
   // ---- Login & geography

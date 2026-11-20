@@ -267,16 +267,22 @@ check('informational fields have no action', (await page.locator('risk-assessmen
 if ((await page.locator('risk-assessment .ra-toggle').getAttribute('aria-expanded')) !== 'true') {
   await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(300);
 }
-check('three fields link to their player section, in a new tab, named for it', await page.evaluate(() => {
-  const want = { 'document-requests': 'Documents', 'linked-accounts': 'Duplicate links', 'personal-detail-changes': 'Player details' };
+check('three fields link to their player list, in the same tab, a bare word with no glyph', await page.evaluate(() => {
+  const want = { 'document-requests': 'Documents', 'linked-accounts': 'Linked accounts', 'personal-detail-changes': 'Changes' };
   const links = [...document.querySelectorAll('risk-assessment .ra-link')];
   return links.length === 3 && links.every((a) => {
     const id = a.closest('.ra-row').dataset.field;
-    // The glyph's ligature text is in textContent; the label is the first text node.
-    const label = [...a.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim())?.textContent.trim();
-    return want[id] && label === want[id] && a.target === '_blank' && /noopener/.test(a.rel) &&
-      a.getAttribute('aria-label') === `Open ${want[id]} in a new tab` && a.closest('.ra-row__value');
+    return want[id] && a.textContent.trim() === want[id] && !a.target && !a.querySelector('mat-icon') &&
+      !a.hasAttribute('aria-label') && a.closest('.ra-row__value');
   });
+}));
+check('a section band sits on --background-tertiary, its title at the field label\'s size', await page.evaluate(() => {
+  const band = document.querySelectorAll('risk-assessment .ra-sec__title')[1];
+  const probe = document.createElement('span'); probe.style.background = 'var(--background-tertiary)'; document.body.appendChild(probe);
+  const want = getComputedStyle(probe).backgroundColor; probe.remove();
+  const size = (sel) => getComputedStyle(document.querySelector(sel)).fontSize;
+  return getComputedStyle(band).backgroundColor === want && size('risk-assessment .ra-sec__label') === size('risk-assessment .ra-row__label') &&
+    size('risk-assessment .ra-toggle') === size('risk-assessment .ra-row__label');
 }));
 check('Linked accounts shows the counts the rule needs, not every link', (await field('linked-accounts').locator('.ra-row__line').allInnerTexts()).join('|') === '2 linked accounts|1 PAR · 1 Similar details · 0 Duplicate');
 check('the action does not make the row taller', await page.evaluate(() => {

@@ -185,21 +185,14 @@ import { RiskStatusComponent } from './risk-status.component';
                     }
                     <!--
                       The way to the full detail, as the last value line: a
-                      text link in the row action's vocabulary, naming the
-                      sidebar section it opens. A new tab, so the case and
-                      its lock stay put; the glyph says so.
+                      text link in the row action's vocabulary. It opens the
+                      player's list on the page behind the modal - same tab,
+                      so no new-tab glyph, and no glyph at all: the row's
+                      other links (Change, Assess risk) are bare words too.
+                      The prototype has no such page, so the press stops here.
                     -->
                     @if (field.def.link; as link) {
-                      <a
-                        class="ra-link"
-                        [href]="link.href"
-                        target="_blank"
-                        rel="noopener"
-                        [attr.aria-label]="'Open ' + link.label + ' in a new tab'"
-                      >
-                        {{ link.label }}
-                        <mat-icon aria-hidden="true">open_in_new</mat-icon>
-                      </a>
+                      <a class="ra-link" [href]="link.href" (click)="$event.preventDefault()">{{ link.label }}</a>
                     }
                   </div>
                 </div>
@@ -420,10 +413,15 @@ import { RiskStatusComponent } from './risk-status.component';
         z-index: 1;
         margin: 0 calc(-1 * var(--ra-gutter));
         padding: var(--lds-core-spacing-2) var(--ra-gutter);
-        background: var(--page);
+        /* --background-tertiary, a step down from --page: the band has to
+           read as a band against the white rows, and --page barely did. */
+        background: var(--background-tertiary);
         border-top: var(--lds-core-spacing-px) solid var(--line);
-        font-size: 12px;
-        line-height: 16px;
+        /* The field label's size (14/20), not a step under it: a heading
+           smaller than what it introduces did not stand out. Caps, tracking
+           and the band are what rank it above the labels. */
+        font-size: 14px;
+        line-height: 20px;
         font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -444,8 +442,8 @@ import { RiskStatusComponent } from './risk-status.component';
         border-radius: 4px;
         background: none;
         font: inherit;
-        font-size: 12px;
-        line-height: 16px;
+        font-size: 14px;
+        line-height: 20px;
         font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -592,9 +590,6 @@ import { RiskStatusComponent } from './risk-status.component';
       .ra-link {
         position: relative;
         align-self: flex-start;
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
         font-weight: 600;
         color: var(--link);
         text-decoration: none;
@@ -605,15 +600,6 @@ import { RiskStatusComponent } from './risk-status.component';
         content: '';
         position: absolute;
         inset: -8px -4px -12px;
-      }
-      /* 16px, the row's one glyph size (info button, pill glyphs). A Material
-         glyph keeps ~2px of air inside its box, so the ink is ~13px: on the
-         cap height of the 14px label. 12 would read as a superscript. */
-      .ra-link mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        line-height: 16px;
       }
       .ra-link:hover {
         color: var(--link-hover);
