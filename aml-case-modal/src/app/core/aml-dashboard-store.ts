@@ -32,12 +32,20 @@ export interface AuditEvent {
   who: string;
 }
 
+/**
+ * One row of the Next EDD checkpoints card, as the current AML Risks tab
+ * draws it: which checkpoint, the next threshold in words, and where the
+ * player stands against it. `actions` is the column APP-17691 adds.
+ */
 export interface EddCheckpoint {
-  id: 'deposit' | 'lifetime';
+  id: 'lifetime-deposits' | 'lifetime-net-loss';
+  /** What the edit button names: the measure, not the checkpoint set. */
+  measure: string;
   label: string;
-  threshold: number;
-  current: number;
-  actions: string;
+  threshold: string;
+  position: string;
+  /** null when there is no next threshold, so nothing to cross. */
+  actions: string | null;
 }
 
 export interface ArchivedCase {
@@ -170,18 +178,20 @@ export class AmlDashboardStore {
 
   readonly checkpoints: readonly EddCheckpoint[] = [
     {
-      id: 'deposit',
-      label: 'Deposits',
-      threshold: 5000,
-      current: 3820,
+      id: 'lifetime-deposits',
+      measure: 'lifetime deposits',
+      label: 'Global high risk checkpoint',
+      threshold: '£25,000 lifetime deposits',
+      position: 'Player is at £18,460 (74%)',
       actions: 'Open an EDD case and request source of funds',
     },
     {
-      id: 'lifetime',
-      label: 'Lifetime deposits',
-      threshold: 25000,
-      current: 18460,
-      actions: 'Open an EDD case and request source of wealth',
+      id: 'lifetime-net-loss',
+      measure: 'lifetime net loss',
+      label: 'Global high risk checkpoint',
+      threshold: 'No next threshold for lifetime net loss',
+      position: 'Player is at £2,140 (100%)',
+      actions: null,
     },
   ];
 

@@ -366,13 +366,21 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * that hands the panels their own scrolling.
        */
       .stage__page {
+        /* The gap between the widget row and the stage, which the page layer
+           reaches up into so that what scrolls out of it fades away under the
+           widgets instead of being cut off on a line nothing is drawn on. */
+        --fade: 16px;
         position: absolute;
-        inset: 0;
+        inset: calc(var(--fade) * -1) 0 0;
         z-index: -1;
         overflow-y: auto;
         overscroll-behavior: contain;
-        /* Room for the minimised bars, which dock over this corner. */
-        padding-bottom: var(--dock-h, 0px);
+        padding-top: var(--fade);
+        -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
+        mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
+        /* Room for the minimised bars, which dock over this corner, and a
+           gutter under the last card either way. */
+        padding-bottom: calc(var(--dock-h, 0px) + 20px);
         outline: none;
         transition:
           opacity 160ms ease-out,

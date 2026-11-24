@@ -69,6 +69,30 @@ check('the documentation link opens a new tab, safely',
 check('there is a Create AML case button', (await page.getByRole('button', { name: 'Create AML case' }).count()) === 1);
 await shot('dash-overview');
 
+console.log('\nLayout');
+const edges = await page.evaluate(() => {
+  const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+  return {
+    // The stage is the box the widget row and the panels share.
+    widgets: Math.round(r('.stage').right),
+    caseCard: r('aml-dashboard .case'),
+    rail: r('aml-dashboard .grid__side'),
+    risk: r('aml-dashboard .risk'),
+    main: r('aml-dashboard .grid__main'),
+  };
+});
+check('the dashboard runs to the page\'s right edge, where the widget row ends', Math.abs(edges.caseCard.right - edges.widgets) <= 1, edges);
+check('the case card stands over the rail, the risk card over the main column',
+  Math.abs(edges.caseCard.left - edges.rail.left) <= 1 && Math.abs(edges.risk.right - edges.main.right) <= 1, edges);
+
+console.log('\nEDD checkpoints');
+check('the card keeps its three columns and gains Actions on crossing',
+  (await page.locator('aml-dashboard .card').filter({ hasText: 'Next EDD checkpoints' }).locator('thead th').allInnerTexts()).slice(0, 4).join('|') ===
+    'Checkpoint|Next threshold|Player position|Actions on crossing');
+check('both checkpoints can be edited',
+  (await page.getByRole('button', { name: 'Edit the lifetime deposits checkpoint' }).count()) === 1 &&
+  (await page.getByRole('button', { name: 'Edit the lifetime net loss checkpoint' }).count()) === 1);
+
 console.log('\nScore-card');
 check('23 parameters in 6 sections',
   (await page.locator('aml-dashboard .tbl--score tbody tr:not(.band)').count()) === 23 &&

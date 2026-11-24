@@ -25,12 +25,6 @@ const BAND_TONE: Record<RiskBandId, PillTone> = {
 
 const TABS: readonly DashboardTab[] = ['overview', 'archive', 'audit'];
 
-const GBP = new Intl.NumberFormat('en-GB', {
-  style: 'currency',
-  currency: 'GBP',
-  maximumFractionDigits: 0,
-});
-
 const DAY = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   month: 'short',
@@ -72,7 +66,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
 
       <!-- ------------------------------------------------ current risk -->
       <div class="hero">
-        <div class="risk">
+        <div class="risk card">
           <p class="eyebrow">Current AML risk</p>
           <p class="risk__line">
             <ui-pill class="risk__band" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
@@ -107,7 +101,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           }
         </div>
 
-        <div class="case">
+        <div class="case card">
           <p class="eyebrow">Active AML case</p>
           @if (!cases.isResolved()) {
             <p class="case__line">
@@ -143,9 +137,8 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                     <thead>
                       <tr>
                         <th scope="col">Checkpoint</th>
-                        <th scope="col" class="num">Threshold</th>
-                        <th scope="col" class="num">Current</th>
-                        <th scope="col" class="num">Remaining</th>
+                        <th scope="col">Next threshold</th>
+                        <th scope="col">Player position</th>
                         <th scope="col">Actions on crossing</th>
                         <th scope="col"><span class="sr-only">Edit</span></th>
                       </tr>
@@ -153,16 +146,21 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                     <tbody>
                       @for (checkpoint of store.checkpoints; track checkpoint.id) {
                         <tr>
-                          <th scope="row">{{ checkpoint.label }}</th>
-                          <td class="num">{{ money(checkpoint.threshold) }}</td>
-                          <td class="num">{{ money(checkpoint.current) }}</td>
-                          <td class="num">{{ money(checkpoint.threshold - checkpoint.current) }}</td>
-                          <td>{{ checkpoint.actions }}</td>
+                          <td>{{ checkpoint.label }}</td>
+                          <td>{{ checkpoint.threshold }}</td>
+                          <td class="figures">{{ checkpoint.position }}</td>
+                          <td>
+                            @if (checkpoint.actions) {
+                              {{ checkpoint.actions }}
+                            } @else {
+                              <span class="quiet">None</span>
+                            }
+                          </td>
                           <td class="act">
                             <button
                               class="icon-btn"
                               type="button"
-                              [attr.aria-label]="'Edit the ' + checkpoint.label.toLowerCase() + ' checkpoint'"
+                              [attr.aria-label]="'Edit the ' + checkpoint.measure + ' checkpoint'"
                               matTooltip="Edit checkpoint"
                             >
                               <mat-icon fontSet="material-icons-outlined" aria-hidden="true">edit</mat-icon>
@@ -359,10 +357,14 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-size: 14px;
         line-height: 20px;
       }
+      /* No max-width: the widget row above runs the full width of the page,
+         and a dashboard that stopped short of it left the two with different
+         right edges. The rail is a fixed width, so only the main column
+         stretches. */
       .ad {
+        --rail: 320px;
         display: grid;
         gap: var(--lds-core-spacing-4, 16px);
-        max-width: 1200px;
       }
       .sr-only {
         position: absolute;
@@ -418,7 +420,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
 
       /* ---- cards ------------------------------------------------------ */
-      .hero,
       .card {
         border: 1px solid var(--line);
         border-radius: 12px;
@@ -435,9 +436,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
 
       /* ---- hero: the risk, and the case if there is one ---------------- */
+      /* The same two columns as the overview underneath - main and rail, one
+         gap - so the case card stands exactly over the rail's cards. */
       .hero {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+        grid-template-columns: minmax(0, 1fr) var(--rail);
+        gap: var(--lds-core-spacing-4, 16px);
       }
       .risk,
       .case {
@@ -447,7 +451,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        border-left: 1px solid var(--line);
       }
       .risk__line {
         display: flex;
@@ -578,7 +581,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
 
       .grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 320px;
+        grid-template-columns: minmax(0, 1fr) var(--rail);
         align-items: start;
         gap: var(--lds-core-spacing-4, 16px);
         padding-top: var(--lds-core-spacing-4, 16px);
@@ -669,6 +672,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
       .quiet {
         color: var(--foreground-secondary);
+      }
+      .figures {
+        font-variant-numeric: tabular-nums;
       }
 
       /* The score-card's rows are read down the first column, so the name is
@@ -842,10 +848,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         .hero {
           grid-template-columns: minmax(0, 1fr);
         }
-        .case {
-          border-left: 0;
-          border-top: 1px solid var(--line);
-        }
         .ad__title {
           flex-basis: 100%;
         }
@@ -891,10 +893,6 @@ export class AmlDashboardComponent {
 
   range(band: RiskBand, join = '–'): string {
     return band.end === null ? `${band.start}+` : `${band.start}${join}${band.end}`;
-  }
-
-  money(amount: number): string {
-    return GBP.format(amount);
   }
 
   /** "until revoked", or "until 20 Dec 2026". */
