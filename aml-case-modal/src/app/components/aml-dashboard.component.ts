@@ -1,0 +1,904 @@
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+import { AmlDashboardStore, DashboardTab, ScoreRow } from '../core/aml-dashboard-store';
+import { RiskBand, RiskBandId } from '../core/aml-risk';
+import { CaseStore } from '../core/case-store';
+import { StampPipe } from '../core/format';
+import { WorkspaceStore } from '../core/workspace-store';
+import { PillComponent, PillTone } from './ui-pill.component';
+
+/**
+ * A band is a pill tone and nothing else: no colour is made for the rating.
+ * Critical is the same red as high, filled - the step the SLA pill already
+ * takes from "at risk" to "breached".
+ */
+const BAND_TONE: Record<RiskBandId, PillTone> = {
+  low: 'success',
+  medium: 'warn',
+  high: 'danger',
+  critical: 'danger-solid',
+};
+
+const TABS: readonly DashboardTab[] = ['overview', 'archive', 'audit'];
+
+const GBP = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+  maximumFractionDigits: 0,
+});
+
+const DAY = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/**
+ * APP-17691: the AML dashboard that replaces the AML Risks tab in player
+ * details. Reached from Menu, SG / AML, AML Risks.
+ *
+ * What is on the first screen is decided by requirement 1: the current risk
+ * must be visible the moment the dashboard opens. So the rating, the score and
+ * the active case sit above the tabs and stay there on every tab; the tabs
+ * change only what is underneath.
+ */
+@Component({
+  selector: 'aml-dashboard',
+  standalone: true,
+  imports: [MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, PillComponent, StampPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <section class="ad" aria-labelledby="ad-title">
+      <header class="ad__head">
+        <h2 class="ad__title" id="ad-title">AML risk</h2>
+        <!-- Leaves the Back Office for Confluence, in a new tab - which is
+             what the glyph says. The links in the case modal lost theirs
+             because they stopped doing that; this one still does. -->
+        <a class="ad__doc" [href]="DOCS_URL" target="_blank" rel="noopener noreferrer">
+          AML framework documentation
+          <mat-icon aria-hidden="true">open_in_new</mat-icon>
+          <span class="sr-only">(opens in a new tab)</span>
+        </a>
+        <button class="ad__create" mat-stroked-button type="button">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          Create AML case
+        </button>
+      </header>
+
+      <!-- ------------------------------------------------ current risk -->
+      <div class="hero">
+        <div class="risk">
+          <p class="eyebrow">Current AML risk</p>
+          <p class="risk__line">
+            <ui-pill class="risk__band" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+            <span class="risk__score">{{ store.total() }}</span>
+            <span class="risk__unit">points</span>
+          </p>
+
+          <!-- One picture, one sentence for a screen reader. The four ranges
+               are printed under the bar, so the thresholds need no tooltip. -->
+          <div class="scale" role="img" [attr.aria-label]="scaleLabel()">
+            <div class="scale__track">
+              @for (band of store.bands; track band.id) {
+                <span class="scale__seg" [attr.data-band]="band.id" [class.is-current]="band.id === store.band().id"></span>
+              }
+              <span class="scale__marker" [style.left.%]="markerAt()"></span>
+            </div>
+            <div class="scale__legend" aria-hidden="true">
+              @for (band of store.bands; track band.id) {
+                <span class="scale__key" [class.is-current]="band.id === store.band().id">
+                  <span class="scale__name">{{ band.label }}</span>
+                  <span class="scale__range">{{ range(band) }}</span>
+                </span>
+              }
+            </div>
+          </div>
+
+          @if (store.nextBand(); as next) {
+            <p class="risk__next">
+              {{ next.start - store.total() }} points below {{ next.label }}, which starts at
+              {{ next.start }}.
+            </p>
+          }
+        </div>
+
+        <div class="case">
+          <p class="eyebrow">Active AML case</p>
+          @if (!cases.isResolved()) {
+            <p class="case__line">
+              <span class="case__id">#AML-1042</span>
+              <ui-pill size="sm" [severity]="cases.severity()">{{ cases.severity() }}</ui-pill>
+            </p>
+            <p class="case__meta">Opened {{ cases.createdAt() | stamp: 'date' }}</p>
+            <button class="case__open" mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
+              Open case
+            </button>
+          } @else {
+            <p class="case__none">This player has no active AML case.</p>
+          }
+        </div>
+      </div>
+
+      <mat-tab-group
+        class="ad__tabs"
+        [selectedIndex]="tabIndex()"
+        (selectedIndexChange)="store.tab.set(TABS[$event])"
+        [mat-stretch-tabs]="false"
+        animationDuration="0"
+        disablePagination
+      >
+        <!-- ------------------------------------------------- overview -->
+        <mat-tab label="Overview">
+          <div class="grid">
+            <div class="grid__main">
+              <section class="card" aria-labelledby="ad-edd">
+                <h3 class="card__title" id="ad-edd">Next EDD checkpoints</h3>
+                <div class="card__scroll">
+                  <table class="tbl">
+                    <thead>
+                      <tr>
+                        <th scope="col">Checkpoint</th>
+                        <th scope="col" class="num">Threshold</th>
+                        <th scope="col" class="num">Current</th>
+                        <th scope="col" class="num">Remaining</th>
+                        <th scope="col">Actions on crossing</th>
+                        <th scope="col"><span class="sr-only">Edit</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (checkpoint of store.checkpoints; track checkpoint.id) {
+                        <tr>
+                          <th scope="row">{{ checkpoint.label }}</th>
+                          <td class="num">{{ money(checkpoint.threshold) }}</td>
+                          <td class="num">{{ money(checkpoint.current) }}</td>
+                          <td class="num">{{ money(checkpoint.threshold - checkpoint.current) }}</td>
+                          <td>{{ checkpoint.actions }}</td>
+                          <td class="act">
+                            <button
+                              class="icon-btn"
+                              type="button"
+                              [attr.aria-label]="'Edit the ' + checkpoint.label.toLowerCase() + ' checkpoint'"
+                              matTooltip="Edit checkpoint"
+                            >
+                              <mat-icon fontSet="material-icons-outlined" aria-hidden="true">edit</mat-icon>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="ad-score">
+                <div class="card__head">
+                  <h3 class="card__title" id="ad-score">Risk score-card</h3>
+                  <p class="card__aside">
+                    <span class="sum">{{ store.total() }}</span> points
+                    <ui-pill size="sm" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+                  </p>
+                </div>
+                <div class="card__scroll">
+                  <table class="tbl tbl--score">
+                    <thead>
+                      <tr>
+                        <th scope="col">Risk parameter</th>
+                        <th scope="col">Exit criteria</th>
+                        <th scope="col">Result</th>
+                        <th scope="col" class="num">Points</th>
+                        <th scope="col"><span class="sr-only">Override</span></th>
+                      </tr>
+                    </thead>
+                    @for (section of store.sections(); track section.category) {
+                      <tbody>
+                        <tr class="band">
+                          <th scope="colgroup" colspan="3">{{ section.category }}</th>
+                          <td class="num">{{ section.points }}</td>
+                          <td></td>
+                        </tr>
+                        @for (row of section.rows; track row.parameter.id) {
+                          <tr [class.is-overridden]="row.override">
+                            <th scope="row">
+                              <span class="param">
+                                <span class="param__name">{{ row.parameter.label }}</span>
+                                <button
+                                  class="info"
+                                  type="button"
+                                  [attr.aria-label]="'About ' + row.parameter.label"
+                                  [matTooltip]="row.parameter.info"
+                                  matTooltipPosition="above"
+                                >
+                                  <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
+                                </button>
+                              </span>
+                              @if (row.override; as override) {
+                                <span class="param__override">
+                                  Overridden to {{ override.points }} points {{ overrideSpan(row) }} by
+                                  {{ override.by }}:
+                                  {{ override.reason }}
+                                </span>
+                              }
+                            </th>
+                            <td>{{ row.parameter.exitDays ? row.parameter.exitDays + ' days' : 'None' }}</td>
+                            <td>
+                              @if (row.override) {
+                                <ui-pill size="sm" tone="info">Overridden</ui-pill>
+                              } @else if (row.met) {
+                                <ui-pill size="sm" tone="danger" rim>Met</ui-pill>
+                              } @else {
+                                <span class="quiet">Not met</span>
+                              }
+                            </td>
+                            <!-- A zero says what it is a zero OF: the field's
+                                 worth is on the row, not behind a tooltip. -->
+                            <td class="num">
+                              <span class="pts" [class.pts--zero]="row.points === 0">{{ row.points }}</span>
+                              @if (row.points === 0) {
+                                <span class="pts__of">of {{ row.parameter.points }}</span>
+                              }
+                            </td>
+                            <td class="act">
+                              <button
+                                class="text-btn"
+                                type="button"
+                                [attr.aria-label]="(row.override ? 'Edit override: ' : 'Override: ') + row.parameter.label"
+                                (click)="store.overrideTarget.set(row.parameter.id)"
+                              >
+                                {{ row.override ? 'Edit override' : 'Override' }}
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    }
+                    <tfoot>
+                      <tr>
+                        <th scope="row" colspan="3">Total</th>
+                        <td class="num"><span class="sum">{{ store.total() }}</span></td>
+                        <td class="act">
+                          <ui-pill size="sm" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <aside class="grid__side">
+              <section class="card" aria-labelledby="ad-latest">
+                <h3 class="card__title" id="ad-latest">Latest AML events</h3>
+                <ol class="events">
+                  @for (event of store.latest(); track event.id) {
+                    <li class="events__item">
+                      <span class="events__what">{{ event.what }}</span>
+                      <span class="events__meta">{{ event.who }} · {{ event.at | stamp }}</span>
+                    </li>
+                  }
+                </ol>
+                <button class="text-btn text-btn--block" type="button" (click)="store.tab.set('audit')">
+                  View the full audit log
+                </button>
+              </section>
+            </aside>
+          </div>
+        </mat-tab>
+
+        <!-- -------------------------------------------- case archive -->
+        <mat-tab [label]="'Case archive (' + store.archive.length + ')'">
+          <section class="card card--tab" aria-label="Case archive">
+            <div class="card__scroll">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">Date opened</th>
+                    <th scope="col">Opening trigger</th>
+                    <th scope="col">Date closed</th>
+                    <th scope="col">Severity</th>
+                    <th scope="col"><span class="sr-only">Open</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (closed of store.archive; track closed.id) {
+                    <tr>
+                      <td class="nowrap">{{ closed.opened | stamp: 'date' }}</td>
+                      <td>{{ closed.trigger }}</td>
+                      <td class="nowrap">{{ closed.closed | stamp: 'date' }}</td>
+                      <td><ui-pill size="sm" [severity]="closed.severity">{{ closed.severity }}</ui-pill></td>
+                      <td class="act">
+                        <button class="text-btn" type="button" [attr.aria-label]="'Open closed case #' + closed.id">
+                          Open case
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </mat-tab>
+
+        <!-- ----------------------------------------------- audit log -->
+        <mat-tab label="Audit log">
+          <section class="card card--tab" aria-label="Audit log">
+            <div class="card__scroll">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">What</th>
+                    <th scope="col">Who</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (event of store.log(); track event.id) {
+                    <tr>
+                      <td class="nowrap">{{ event.at | stamp }}</td>
+                      <td>{{ event.what }}</td>
+                      <td class="nowrap">{{ event.who }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </mat-tab>
+      </mat-tab-group>
+    </section>
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+        color: var(--foreground-primary);
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .ad {
+        display: grid;
+        gap: var(--lds-core-spacing-4, 16px);
+        max-width: 1200px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      /* ---- head ------------------------------------------------------- */
+      .ad__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--lds-core-spacing-2, 8px) var(--lds-core-spacing-4, 16px);
+      }
+      .ad__title {
+        flex: 1;
+        margin: 0;
+        font-size: 20px;
+        line-height: 30px;
+        font-weight: 600;
+      }
+      .ad__doc {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 2px;
+        color: var(--link);
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 150ms ease-out;
+      }
+      .ad__doc mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .ad__doc:hover {
+          color: var(--link-hover);
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+      }
+      .ad__create mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+      }
+
+      /* ---- cards ------------------------------------------------------ */
+      .hero,
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+      .eyebrow {
+        margin: 0;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--foreground-secondary);
+      }
+
+      /* ---- hero: the risk, and the case if there is one ---------------- */
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+      }
+      .risk,
+      .case {
+        padding: var(--lds-core-spacing-5, 20px);
+      }
+      .case {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        border-left: 1px solid var(--line);
+      }
+      .risk__line {
+        display: flex;
+        align-items: baseline;
+        gap: var(--lds-core-spacing-2, 8px);
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
+      }
+      /* The pill is a fixed-height box, so it centres on the numeral rather
+         than hanging off the shared baseline. */
+      .risk__band {
+        align-self: center;
+        margin-right: var(--lds-core-spacing-1, 4px);
+      }
+      .risk__score {
+        font-size: 32px;
+        line-height: 40px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+      }
+      .risk__unit,
+      .risk__next {
+        color: var(--foreground-secondary);
+      }
+      .risk__next {
+        margin: var(--lds-core-spacing-3, 12px) 0 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /**
+       * Four equal segments, not four to scale. To scale, Low and Medium
+       * together would be a tenth of the bar and Critical would have no end
+       * to draw; what the agent needs is which band, and how far through it.
+       */
+      .scale {
+        margin-top: var(--lds-core-spacing-4, 16px);
+        max-width: 640px;
+      }
+      .scale__track {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+      }
+      .scale__seg {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--line);
+      }
+      .scale__seg.is-current[data-band='low'] {
+        background: var(--success);
+      }
+      .scale__seg.is-current[data-band='medium'] {
+        background: var(--warn);
+      }
+      .scale__seg.is-current[data-band='high'],
+      .scale__seg.is-current[data-band='critical'] {
+        background: var(--danger);
+      }
+      .scale__marker {
+        position: absolute;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        margin: -8px 0 0 -8px;
+        box-sizing: border-box;
+        border: 3px solid var(--foreground-primary);
+        border-radius: 50%;
+        background: var(--panel);
+        /* Only an override moves it, and then it should be seen to move. */
+        transition: left 240ms cubic-bezier(0.77, 0, 0.175, 1);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .scale__marker {
+          transition: none;
+        }
+      }
+      .scale__legend {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        margin-top: var(--lds-core-spacing-2, 8px);
+      }
+      .scale__key {
+        display: grid;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
+      }
+      .scale__key.is-current {
+        color: var(--foreground-primary);
+      }
+      .scale__name {
+        font-weight: 600;
+      }
+      .scale__range {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .case__line {
+        display: flex;
+        align-items: center;
+        gap: var(--lds-core-spacing-2, 8px);
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
+      }
+      .case__id {
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .case__meta,
+      .case__none {
+        margin: 2px 0 0;
+        color: var(--foreground-secondary);
+      }
+      .case__none {
+        margin-top: var(--lds-core-spacing-2, 8px);
+      }
+      .case__open {
+        margin-top: var(--lds-core-spacing-4, 16px);
+      }
+
+      /* ---- tabs ------------------------------------------------------- */
+      .ad__tabs {
+        --mat-tab-header-divider-height: 1px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        align-items: start;
+        gap: var(--lds-core-spacing-4, 16px);
+        padding-top: var(--lds-core-spacing-4, 16px);
+      }
+      .grid__main {
+        display: grid;
+        gap: var(--lds-core-spacing-4, 16px);
+        min-width: 0;
+      }
+      .card--tab {
+        margin-top: var(--lds-core-spacing-4, 16px);
+      }
+      .card__head {
+        display: flex;
+        align-items: center;
+        gap: var(--lds-core-spacing-3, 12px);
+      }
+      .card__title {
+        flex: 1;
+        margin: 0;
+        padding: var(--lds-core-spacing-4, 16px) var(--lds-core-spacing-5, 20px)
+          var(--lds-core-spacing-3, 12px);
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+      }
+      .card__aside {
+        display: flex;
+        align-items: center;
+        gap: var(--lds-core-spacing-2, 8px);
+        margin: 0;
+        padding-right: var(--lds-core-spacing-5, 20px);
+        color: var(--foreground-secondary);
+      }
+      .sum {
+        color: var(--foreground-primary);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      /* A table too wide for its card scrolls inside the card, not the page. */
+      .card__scroll {
+        overflow-x: auto;
+      }
+
+      /* ---- tables ----------------------------------------------------- */
+      .tbl {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .tbl th,
+      .tbl td {
+        padding: var(--lds-core-spacing-2, 8px) var(--lds-core-spacing-3, 12px);
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-weight: 400;
+      }
+      .tbl th:first-child,
+      .tbl td:first-child {
+        padding-left: var(--lds-core-spacing-5, 20px);
+      }
+      .tbl th:last-child,
+      .tbl td:last-child {
+        padding-right: var(--lds-core-spacing-5, 20px);
+      }
+      .tbl thead th {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--foreground-secondary);
+        white-space: nowrap;
+      }
+      .tbl tbody th[scope='row'] {
+        font-weight: 600;
+      }
+      .tbl .num {
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .tbl .act {
+        width: 1%;
+        text-align: right;
+        white-space: nowrap;
+      }
+      .nowrap {
+        white-space: nowrap;
+      }
+      .quiet {
+        color: var(--foreground-secondary);
+      }
+
+      /* The score-card's rows are read down the first column, so the name is
+         not bold here: twenty-three bold lines is no emphasis at all. */
+      .tbl--score tbody th[scope='row'] {
+        font-weight: 400;
+      }
+      /* The section band, as in the case modal: --background-tertiary, the
+         field label's size, uppercase. */
+      .tbl--score .band th,
+      .tbl--score .band td {
+        background: var(--background-tertiary);
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .tbl--score .band td.num {
+        letter-spacing: 0;
+      }
+      .param {
+        display: flex;
+        align-items: flex-start;
+        gap: 2px;
+      }
+      .param__override {
+        display: block;
+        margin-top: 2px;
+        max-width: 60ch;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
+      }
+      .pts {
+        font-weight: 600;
+      }
+      .pts--zero {
+        font-weight: 400;
+        color: var(--foreground-secondary);
+      }
+      .pts__of {
+        margin-left: 4px;
+        font-size: 12px;
+        color: var(--foreground-secondary);
+      }
+      .tbl tfoot th,
+      .tbl tfoot td {
+        border-top: 1px solid var(--line-strong);
+        padding-top: var(--lds-core-spacing-3, 12px);
+        padding-bottom: var(--lds-core-spacing-3, 12px);
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      /* ---- small controls -------------------------------------------- */
+      .info,
+      .icon-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--foreground-secondary);
+        transition:
+          background-color 150ms ease-out,
+          color 150ms ease-out;
+      }
+      .info {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        cursor: help;
+      }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        margin: -6px 0;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      /* 20px and 32px to look at, 40px to hit. */
+      .info::before,
+      .icon-btn::before {
+        content: '';
+        position: absolute;
+        inset: -10px;
+      }
+      .icon-btn::before {
+        inset: -4px;
+      }
+      .info mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+      .icon-btn mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+      }
+      .text-btn {
+        position: relative;
+        padding: 0;
+        border: 0;
+        border-radius: 2px;
+        background: none;
+        color: var(--link);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition: color 150ms ease-out;
+      }
+      .text-btn::before {
+        content: '';
+        position: absolute;
+        inset: -8px -4px;
+      }
+      .text-btn--block {
+        margin: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-5, 20px)
+          var(--lds-core-spacing-4, 16px);
+      }
+      .icon-btn:active,
+      .text-btn:active {
+        transform: scale(0.97);
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .info:hover,
+        .icon-btn:hover {
+          background: var(--colors-alpha-alpha-soft-hover, rgba(0, 0, 0, 0.06));
+          color: var(--foreground-primary);
+        }
+        .text-btn:hover {
+          color: var(--link-hover);
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+      }
+
+      /* ---- latest events ---------------------------------------------- */
+      .events {
+        display: grid;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .events__item {
+        display: grid;
+        gap: 2px;
+        padding: var(--lds-core-spacing-2, 8px) var(--lds-core-spacing-5, 20px);
+        border-top: 1px solid var(--line);
+      }
+      .events__meta {
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
+      }
+
+      /* ---- narrower --------------------------------------------------- */
+      @media (max-width: 1279.98px) {
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      @media (max-width: 719.98px) {
+        .hero {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .case {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+        .ad__title {
+          flex-basis: 100%;
+        }
+      }
+    `,
+  ],
+})
+export class AmlDashboardComponent {
+  readonly store = inject(AmlDashboardStore);
+  readonly cases = inject(CaseStore);
+  readonly ws = inject(WorkspaceStore);
+
+  /** Placeholder: the Confluence space for the AML framework. */
+  readonly DOCS_URL = 'https://lottomart.atlassian.net/wiki/spaces/AML/overview';
+  readonly TABS = TABS;
+
+  readonly tabIndex = computed(() => TABS.indexOf(this.store.tab()));
+
+  /**
+   * Where the marker sits, as a percentage of the track: its band's quarter,
+   * plus how far through that band the score is. Critical has no end, so it
+   * is drawn as if it were as wide as everything below it.
+   */
+  readonly markerAt = computed(() => {
+    const band = this.store.band();
+    const index = this.store.bands.indexOf(band);
+    const end = band.end ?? band.start * 2;
+    const through = Math.min(1, (this.store.total() - band.start) / (end - band.start));
+    // Kept a marker's half-width inside the track at both ends.
+    return Math.min(99, Math.max(1, ((index + through) / this.store.bands.length) * 100));
+  });
+
+  readonly scaleLabel = computed(
+    () =>
+      `${this.store.total()} points, ${this.store.band().label}. ` +
+      this.store.bands.map((band) => `${band.label}: ${this.range(band, ' to ')}`).join('. ') +
+      '.',
+  );
+
+  tone(band: RiskBand): PillTone {
+    return BAND_TONE[band.id];
+  }
+
+  range(band: RiskBand, join = '–'): string {
+    return band.end === null ? `${band.start}+` : `${band.start}${join}${band.end}`;
+  }
+
+  money(amount: number): string {
+    return GBP.format(amount);
+  }
+
+  /** "until revoked", or "until 20 Dec 2026". */
+  overrideSpan(row: ScoreRow): string {
+    return row.overrideEnds ? `until ${DAY.format(row.overrideEnds)}` : 'until revoked';
+  }
+}

@@ -17,6 +17,9 @@ import { AppTopBarComponent } from './chrome/app-top-bar.component';
 import { PlayerHeaderComponent } from './chrome/player-header.component';
 import { SideNavComponent } from './chrome/side-nav.component';
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
+import { AmlDashboardComponent } from './components/aml-dashboard.component';
+import { ScoreOverrideDialogComponent } from './components/score-override-dialog.component';
+import { AmlDashboardStore } from './core/aml-dashboard-store';
 import { AttachmentPreviewComponent } from './components/attachment-preview.component';
 import { BackOfficeWidgetsComponent } from './components/back-office-widgets.component';
 import { ConfirmUnlockDialogComponent } from './components/confirm-unlock-dialog.component';
@@ -43,6 +46,8 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
   standalone: true,
   imports: [
     AmlCaseModalComponent,
+    AmlDashboardComponent,
+    ScoreOverrideDialogComponent,
     AttachmentPreviewComponent,
     ConfirmUnlockDialogComponent,
     SgAlertModalComponent,
@@ -157,6 +162,21 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         is on, because no side is assigned to it.
       -->
           <div class="stage" #stage [@.disabled]="reducedMotion()">
+            <!--
+              The player-details section, when one is showing. It is the PAGE:
+              it lies under the panels, in the stage's own box, and a panel
+              that opens covers it the way it covers anything else on the page.
+              While covered it is inert and hidden, so neither the keyboard nor
+              the 16px between two panels can find it.
+            -->
+            @if (nav.section() === 'aml-risks') {
+              <aml-dashboard
+                class="stage__page"
+                tabindex="-1"
+                [class.stage__page--covered]="ws.visibleOrder().length > 0"
+                [attr.inert]="ws.visibleOrder().length > 0 ? '' : null"
+              />
+            }
             @for (id of ws.visibleOrder(); track id; let last = $last) {
               <!--
                 The animation state is the panel's POSITION, which is what its
@@ -230,6 +250,12 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
       is not supported in Angular 17, and the two conditions are exclusive
       in practice anyway - one is the modal's case, the other a table row.
     -->
+    <!-- Hosted here for the reason above, and one more: the dashboard sits in
+         a stacking context under the panels, and a dialog inside it would be
+         painted under the player bar. -->
+    @if (dashboard.overrideTarget()) {
+      <score-override-dialog />
+    }
     @if (cases.pendingForceUnlock()) {
       <confirm-unlock-dialog [caseId]="cases.pendingForceUnlock()" />
     }
@@ -327,6 +353,44 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         flex: 1;
         min-width: 0;
         min-height: 0;
+        /* Its own stacking context, so the page layer below can sit under the
+           panels without a z-index on either of the panels. */
+        isolation: isolate;
+      }
+      /**
+       * The page under the panels. Absolute, so it takes no part in the row
+       * the panels are laid out in and cannot change a width any of them was
+       * given; z-index -1, so it is painted before them.
+       *
+       * It scrolls itself: the document is not allowed to, by the same rule
+       * that hands the panels their own scrolling.
+       */
+      .stage__page {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        /* Room for the minimised bars, which dock over this corner. */
+        padding-bottom: var(--dock-h, 0px);
+        outline: none;
+        transition:
+          opacity 160ms ease-out,
+          visibility 0s;
+      }
+      /* Gone a little before the panel has finished arriving over it. */
+      .stage__page--covered {
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 160ms ease-out,
+          visibility 0s 160ms;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stage__page,
+        .stage__page--covered {
+          transition: none;
+        }
       }
       /**
        * Bottom right, hugging its content, stacking upward.
@@ -454,6 +518,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   /** Only for the force-unlock dialog above - see the template comment. */
   readonly store = inject(CaseStore);
   readonly cases = inject(CasesStore);
+  readonly dashboard = inject(AmlDashboardStore);
 
   /**
    * Rule 4's other half: the deep link the table's Open AML Case button opens.
@@ -554,7 +619,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
    * worst outcome of pressing Escape twice quickly.
    */
   onEscape(): void {
-    if (document.querySelector('dialog-shell, attachment-preview')) return;
+    // The player Menu is in the guard too: Escape closes the menu, and must
+    // not also take down the panel underneath it.
+    if (document.querySelector('dialog-shell, attachment-preview, player-menu')) return;
     const order = this.ws.visibleOrder();
     const newest = order[order.length - 1];
     if (newest) this.ws.close(newest);

@@ -1,7 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import { CaseStore } from '../core/case-store';
+import { WorkspaceStore } from '../core/workspace-store';
+import { NavStore } from '../core/nav-store';
+import { MenuTarget, PlayerMenuComponent } from './player-menu.component';
 
 /**
  * The black player bar, per frame 09.
@@ -12,7 +22,12 @@ import { CaseStore } from '../core/case-store';
 @Component({
   selector: 'player-header',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, PlayerMenuComponent],
+  host: {
+    '(document:pointerdown)': 'onOutsidePress($event)',
+    '(document:keydown.escape)': 'onEscape()',
+    '(focusout)': 'onFocusOut($event)',
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ph">
@@ -25,8 +40,17 @@ import { CaseStore } from '../core/case-store';
         <span class="ph__state">(ENABLED)</span>
       </h1>
 
-      <button class="ph__action" type="button">
-        <mat-icon>menu</mat-icon>
+      <!-- A disclosure, not a menu role: what it reveals is a page of links,
+           and aria-expanded on the button is the whole contract. -->
+      <button
+        #menuButton
+        class="ph__action"
+        type="button"
+        aria-controls="player-menu"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <mat-icon aria-hidden="true">menu</mat-icon>
         Menu
       </button>
       <button class="ph__action" type="button">
@@ -37,11 +61,19 @@ import { CaseStore } from '../core/case-store';
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
+
+    @if (menuOpen()) {
+      <player-menu id="player-menu" (choose)="onChoose($event)" />
+    }
   `,
   styles: [
     `
+      /* The Menu panel hangs from the bar's bottom edge and has to sit over
+         the page and its panels, so the bar is its positioning context. */
       :host {
         display: block;
+        position: relative;
+        z-index: 20;
       }
       .ph {
         display: flex;
@@ -90,6 +122,29 @@ import { CaseStore } from '../core/case-store';
         font-weight: 600;
         cursor: pointer;
       }
+      .ph__icon,
+      .ph__action {
+        transition:
+          background-color 150ms ease,
+          transform 120ms ease-out;
+      }
+      .ph__icon:active,
+      .ph__action:active {
+        transform: scale(0.97);
+      }
+      .ph__action[aria-expanded='true'] {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ph__icon,
+        .ph__action {
+          transition: none;
+        }
+        .ph__icon:active,
+        .ph__action:active {
+          transform: none;
+        }
+      }
       .ph__icon {
         width: 36px;
       }
@@ -125,6 +180,52 @@ import { CaseStore } from '../core/case-store';
 })
 export class PlayerHeaderComponent {
   readonly store = inject(CaseStore);
+  private readonly ws = inject(WorkspaceStore);
+  private readonly nav = inject(NavStore);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+
+  readonly menuOpen = signal(false);
+
+  @ViewChild('menuButton') private menuButton?: ElementRef<HTMLButtonElement>;
+
+  /**
+   * The AML entry point: Menu, SG / AML, AML Case.
+   *
+   * The same call the widget's Open case makes, so the panel arrives the same
+   * way from either place and takes focus itself - which is why this does not
+   * hand focus back to the Menu button the way Escape does.
+   */
+  onChoose(target: MenuTarget): void {
+    this.menuOpen.set(false);
+    if (target === 'aml-case') {
+      this.ws.open('aml');
+      return;
+    }
+    // AML Risks: the dashboard is the page, so a panel standing on it would
+    // hide the thing just asked for. The panels step down to their bars - not
+    // closed, nothing in them is lost - and focus goes to the dashboard.
+    for (const id of this.ws.visibleOrder()) this.ws.minimise(id);
+    this.nav.showSection('aml-risks');
+    setTimeout(() => document.querySelector<HTMLElement>('aml-dashboard')?.focus());
+  }
+
+  onOutsidePress(event: Event): void {
+    if (!this.menuOpen()) return;
+    if (!this.host.nativeElement.contains(event.target as Node)) this.menuOpen.set(false);
+  }
+
+  /** Tabbing out of the last link leaves the menu, so the menu goes too. */
+  onFocusOut(event: FocusEvent): void {
+    if (!this.menuOpen()) return;
+    const next = event.relatedTarget as Node | null;
+    if (next && !this.host.nativeElement.contains(next)) this.menuOpen.set(false);
+  }
+
+  onEscape(): void {
+    if (!this.menuOpen()) return;
+    this.menuOpen.set(false);
+    this.menuButton?.nativeElement.focus();
+  }
   /** From the frame. Not in the fixture - it is host-app data, not case data. */
   /**
    * Removed: the account number was a constant, so every player showed one

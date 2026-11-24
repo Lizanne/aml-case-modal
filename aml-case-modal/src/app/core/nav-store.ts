@@ -3,6 +3,13 @@ import { Injectable, signal } from '@angular/core';
 /** The two views the prototype has. No router - PROTOTYPE-TABLE.md §3. */
 export type AppView = 'player' | 'cases';
 
+/**
+ * What the player page shows under the widget row. null is the page as it has
+ * always been in this prototype; 'aml-risks' is the AML dashboard, the one
+ * section of player details the prototype draws.
+ */
+export type PlayerSection = 'aml-risks' | null;
+
 /** Only two tabs carry content; Idle and Archive render disabled. */
 export type CasesTab = 'active' | 'compliance';
 
@@ -42,6 +49,7 @@ export const CASES_TABS: readonly { id: string; label: string; enabled: boolean 
  *   ?view=cases&tab=active
  *   ?view=cases&tab=compliance
  *   ?view=player&case=<id>&modal=open
+ *   ?section=aml-risks
  *
  * Real routes are a dev-handoff note, not prototype work.
  */
@@ -49,6 +57,7 @@ export const CASES_TABS: readonly { id: string; label: string; enabled: boolean 
 export class NavStore {
   readonly view = signal<AppView>('player');
   readonly tab = signal<CasesTab>('active');
+  readonly section = signal<PlayerSection>(null);
 
   /** The case the player view should open, from ?case=. */
   readonly deepLinkCaseId = signal<string | null>(null);
@@ -58,6 +67,7 @@ export class NavStore {
     const q = new URLSearchParams(window.location.search);
     if (q.get('view') === 'cases') this.view.set('cases');
     if (q.get('tab') === 'compliance') this.tab.set('compliance');
+    if (q.get('section') === 'aml-risks') this.section.set('aml-risks');
     this.deepLinkCaseId.set(q.get('case'));
     this.deepLinkModalOpen.set(q.get('modal') === 'open');
   }
@@ -70,6 +80,12 @@ export class NavStore {
 
   showPlayer(): void {
     this.view.set('player');
+    this.writeUrl();
+  }
+
+  showSection(section: PlayerSection): void {
+    this.view.set('player');
+    this.section.set(section);
     this.writeUrl();
   }
 
@@ -91,6 +107,9 @@ export class NavStore {
     url.searchParams.set('view', this.view());
     if (this.view() === 'cases') url.searchParams.set('tab', this.tab());
     else url.searchParams.delete('tab');
+    const section = this.view() === 'player' ? this.section() : null;
+    if (section) url.searchParams.set('section', section);
+    else url.searchParams.delete('section');
     window.history.replaceState({}, '', url);
   }
 }
