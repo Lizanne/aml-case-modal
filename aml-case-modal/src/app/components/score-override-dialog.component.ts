@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatRadioModule } from '@angular/material/radio';
 
 import { AmlDashboardStore, ScoreRow } from '../core/aml-dashboard-store';
@@ -33,7 +34,7 @@ type Span = 'days' | 'revoked';
 @Component({
   selector: 'score-override-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatRadioModule, DialogShellComponent, PillComponent],
+  imports: [MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (row; as row) {
@@ -45,23 +46,51 @@ type Span = 'days' | 'revoked';
         answer it had not picked.
       -->
       <dialog-shell [heading]="row.override ? 'Edit override' : 'Override score'" (dismiss)="close()">
+        <!--
+          Three things, in the order they are needed: which field, what the
+          system made of it, and what saving will change. The change is the
+          only part in a box, because it is the only part that moves as the
+          answers below it do - and it is drawn as before and after, the way
+          the Adjust severity dialog draws its own.
+        -->
         <div class="what">
           <p class="what__name">{{ row.parameter.label }}</p>
-          <dl class="what__facts">
-            <div>
-              <dt>System result</dt>
-              <dd>{{ row.met ? 'Met' : 'Not met' }}, {{ row.met ? row.parameter.points : 0 }} of {{ row.parameter.points }} points</dd>
-            </div>
-            <!-- What saving will do, before it is done: the total moves as the
-                 answer above it changes. -->
-            <div aria-live="polite">
-              <dt>Total after override</dt>
+          <p class="what__system">
+            The system has this as {{ row.met ? 'met' : 'not met' }}. Worth
+            {{ row.parameter.points }} points when met.
+          </p>
+
+          <dl class="effect" aria-live="polite">
+            <div class="effect__cell">
+              <dt>This field</dt>
               <dd>
-                <span class="what__total">{{ newTotal() }} points</span>
-                <ui-pill size="sm" rim [tone]="tone(newBand().id)">{{ newBand().label }}</ui-pill>
-                @if (newBand().id !== store.band().id) {
-                  <span class="what__was">was {{ store.band().label }}</span>
+                @if (points() !== row.points) {
+                  <span class="effect__from">{{ row.points }}</span>
+                  <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
+                  <span class="sr-only">changes to</span>
                 }
+                <span class="effect__to">{{ points() }}</span>
+                <span class="effect__unit">{{ points() === row.points ? 'points, unchanged' : 'points' }}</span>
+              </dd>
+            </div>
+            <div class="effect__cell">
+              <dt>Player total</dt>
+              <dd>
+                @if (newTotal() !== store.total()) {
+                  <span class="effect__from">{{ store.total() }}</span>
+                  <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
+                  <span class="sr-only">changes to</span>
+                }
+                <span class="effect__to what__total">{{ newTotal() }}</span>
+                <span class="effect__unit">points</span>
+                <span class="effect__band">
+                  @if (newBand().id !== store.band().id) {
+                    <ui-pill size="sm" rim [tone]="tone(store.band().id)">{{ store.band().label }}</ui-pill>
+                    <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
+                    <span class="sr-only">changes to</span>
+                  }
+                  <ui-pill size="sm" rim [tone]="tone(newBand().id)">{{ newBand().label }}</ui-pill>
+                </span>
               </dd>
             </div>
           </dl>
@@ -137,49 +166,100 @@ type Span = 'days' | 'revoked';
   styles: [
     `
       /* ---- what is being overridden, and what saving will do ----------- */
-      .what {
-        padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      /* The subject of the dialog, so it is set as one: a step up from the
+         labels below it, on the panel itself rather than inside a box. */
+      .what__name {
+        margin: 0;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+        color: var(--foreground-primary);
+        text-wrap: balance;
+      }
+      .what__system {
+        margin: 2px 0 0;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      /* Two readings side by side: the field, and the player. */
+      .effect {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        margin: var(--lds-core-spacing-3, 12px) 0 0;
         border-radius: 8px;
         background: var(--background-tertiary);
       }
-      .what__name {
-        margin: 0;
-        font-size: 14px;
-        line-height: 20px;
+      .effect__cell {
+        min-width: 0;
+        padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
+      }
+      .effect__cell + .effect__cell {
+        border-left: 1px solid var(--line);
+      }
+      .effect dt {
+        font-size: 12px;
+        line-height: 16px;
         font-weight: 600;
-        color: var(--foreground-primary);
-      }
-      .what__facts {
-        display: grid;
-        gap: 2px;
-        margin: var(--lds-core-spacing-2, 8px) 0 0;
-        font-size: 14px;
-        line-height: 20px;
-        font-variant-numeric: tabular-nums;
-      }
-      /* Two columns, so the two results sit one above the other and can be
-         compared without reading across. */
-      .what__facts > div {
-        display: grid;
-        grid-template-columns: 148px minmax(0, 1fr);
-        gap: var(--lds-core-spacing-2, 8px);
-      }
-      .what__facts dt {
         color: var(--foreground-secondary);
       }
-      .what__facts dd {
+      .effect dd {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 2px var(--lds-core-spacing-2, 8px);
-        margin: 0;
+        gap: 2px 6px;
+        margin: 2px 0 0;
+        font-size: 16px;
+        line-height: 24px;
+        font-variant-numeric: tabular-nums;
+      }
+      /* What it is now recedes; what it will be is the reading. */
+      .effect__from {
+        color: var(--foreground-secondary);
+      }
+      .effect__to {
+        font-weight: 600;
         color: var(--foreground-primary);
       }
-      .what__total {
-        font-weight: 600;
-      }
-      .what__was {
+      .effect__unit {
+        font-size: 14px;
+        line-height: 20px;
         color: var(--foreground-secondary);
+      }
+      mat-icon.effect__arrow {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
+      }
+      /* Always its own line. Left to wrap, the band sat beside the total
+         when it was one pill and under it when it was two, and the box grew
+         and shrank as the answer below changed. */
+      .effect__band {
+        display: flex;
+        flex-basis: 100%;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+      }
+      @media (max-width: 479.98px) {
+        .effect {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .effect__cell + .effect__cell {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
       }
 
       /* ---- the two questions ------------------------------------------- */
