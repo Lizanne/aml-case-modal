@@ -92,13 +92,19 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           <!-- One picture, one sentence for a screen reader. The four ranges
                are printed under the bar, so the thresholds need no tooltip. -->
           <div class="scale" role="img" [attr.aria-label]="scaleLabel()">
-            <div class="scale__track">
-              @for (band of store.bands; track band.id) {
-                <span class="scale__seg" [attr.data-band]="band.id" [class.is-current]="band.id === store.band().id"></span>
+            <!--
+              A gauge that fills. Bands already passed are full and neutral,
+              the current one fills in its own colour as far as the score has
+              got, and the ones ahead are empty - so "how far through High" is
+              a length, not a dot to be judged against the ends of a bar.
+            -->
+            <div class="scale__track" [attr.data-band]="store.band().id" [style.--i]="position().index" [style.--t]="position().through">
+              @for (band of store.bands; track band.id; let i = $index) {
+                <span class="scale__seg" [attr.data-band]="band.id" [class.is-current]="band.id === store.band().id">
+                  <span class="scale__fill" [style.transform]="'scaleX(' + fill(i) + ')'"></span>
+                </span>
               }
-              <!-- Moved with transform, not left: the rail is the track's own
-                   width, so a percentage of it is a percentage of the track. -->
-              <span class="scale__rail" [style.transform]="'translateX(' + markerAt() + '%)'">
+              <span class="scale__rail">
                 <span class="scale__marker"></span>
               </span>
             </div>
@@ -112,48 +118,55 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             </div>
           </div>
 
-          <p class="risk__foot">
+          <!-- Two lines, always two: where the rating stands, then the case.
+               Run together they wrapped at some widths and not at others, and
+               the card's height followed. -->
+          <div class="risk__foot">
+            <p class="risk__standing">
             <!-- New this morning, or standing for months: the rating alone
-                 does not say. A date, not "3 days ago" - it is a fact about
-                 the player, and it is quoted in case notes. -->
-            @if (store.ratingSince(); as since) {
-              <span class="risk__since">{{ store.band().label }} since {{ since | stamp: 'date' }}</span>
-            }
-            @if (store.nextBand(); as next) {
-              <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
-            }
+                   does not say. A date, not "3 days ago" - it is a fact about
+                   the player, and it is quoted in case notes. -->
+              @if (store.ratingSince(); as since) {
+                <span class="risk__since">{{ store.band().label }} since {{ since | stamp: 'date' }}</span>
+              }
+              @if (store.nextBand(); as next) {
+                <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
+              }
+            </p>
+            <p class="risk__case">
             @if (hasActiveCase()) {
-              <span class="case">
-                Active case
-                <button class="text-btn case__link" type="button" (click)="ws.open('aml')">#AML-1042</button>
-                · {{ cases.severity() }} · opened {{ cases.createdAt() | stamp: 'date' }}
-                <!-- Only when it is somebody else's. The link still opens the
-                     case - reading it is not what the lock guards - and the
-                     panel's own band says what can and cannot be done. -->
-                @if (cases.lockState() === 'locked-to-other') {
-                  <span class="case__lock">· locked to {{ cases.lockOwner()?.name }}</span>
-                }
-              </span>
-            } @else {
-              <!-- Nested, not "@else if (...; as made)": Angular 17 has no alias
-                   on an else-if. -->
-              @if (store.createdCase(); as made) {
                 <span class="case">
-                  Active case #{{ made.id }} · {{ made.severity }} · opened {{ made.opened | stamp: 'date' }}
+                  Active case
+                  <button class="text-btn case__link" type="button" (click)="ws.open('aml')">#AML-1042</button>
+                  · {{ cases.severity() }} · opened {{ cases.createdAt() | stamp: 'date' }}
+                  <!-- Only when it is somebody else's. The link still opens the
+                       case - reading it is not what the lock guards - and the
+                       panel's own band says what can and cannot be done. -->
+                  @if (cases.lockState() === 'locked-to-other') {
+                    <span class="case__lock">· locked to {{ cases.lockOwner()?.name }}</span>
+                  }
                 </span>
               } @else {
-                <!-- Create lives beside the fact that makes it possible. One
-                     open case per player (rule 1), so with a case active there
-                     is nothing to offer and the button is not here. -->
-                <span class="case">
-                  No active AML case
-                  <button class="text-btn case__create" type="button" (click)="store.creatingCase.set(true)">
-                    Create AML case
-                  </button>
-                </span>
+                <!-- Nested, not "@else if (...; as made)": Angular 17 has no alias
+                     on an else-if. -->
+                @if (store.createdCase(); as made) {
+                  <span class="case">
+                    Active case #{{ made.id }} · {{ made.severity }} · opened {{ made.opened | stamp: 'date' }}
+                  </span>
+                } @else {
+                  <!-- Create lives beside the fact that makes it possible. One
+                       open case per player (rule 1), so with a case active there
+                       is nothing to offer and the button is not here. -->
+                  <span class="case">
+                    No active AML case
+                    <button class="text-btn case__create" type="button" (click)="store.creatingCase.set(true)">
+                      Create AML case
+                    </button>
+                  </span>
+                }
               }
-            }
-          </p>
+            </p>
+          </div>
         </div>
 
         <div class="why">
@@ -174,7 +187,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
               <p class="why__more">and {{ drivers().length - DRIVERS_SHOWN }} more in the score-card below</p>
             }
           } @else {
-            <p class="why__more">Nothing is adding points.</p>
+            <p class="why__none">Nothing is adding points.</p>
           }
         </div>
       </div>
@@ -573,17 +586,36 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
 
       /* ---- hero: how high, and why ------------------------------------- */
+      /**
+       * One height, whoever the player is.
+       *
+       * The card's height used to be its content's: two fields scoring made a
+       * short card, five a tall one, and everything under it moved as an
+       * agent went from one player to the next. Now the right half always
+       * keeps room for five rows and the line that counts the rest, and the
+       * left half pins its last two lines to the bottom - so both halves end
+       * on one edge and the card is the same box for every player.
+       */
       .hero {
+        --driver-row: 32px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: var(--lds-core-spacing-8, 32px);
         padding: var(--lds-core-spacing-5, 20px);
+      }
+      .risk,
+      .why {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
       }
       .why {
         padding-left: var(--lds-core-spacing-8, 32px);
         border-left: 1px solid var(--line);
       }
       .drivers {
+        /* Five rows and the four hairlines between them, used or not. */
+        min-height: calc(var(--driver-row) * 5 + 4px);
         margin: var(--lds-core-spacing-2, 8px) 0 0;
         padding: 0;
         list-style: none;
@@ -610,6 +642,22 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         margin-left: auto;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
+      }
+      .why__none {
+        min-height: calc(var(--driver-row) * 5 + 4px);
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
+        padding-top: 6px;
+        box-sizing: border-box;
+        color: var(--foreground-secondary);
+      }
+      /* Its line is kept whether or not there is anything to count. */
+      .why::after {
+        content: '';
+        display: block;
+        height: 22px;
+      }
+      .why:has(.why__more)::after {
+        display: none;
       }
       .why__more {
         margin: 6px 0 0;
@@ -654,13 +702,27 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .risk__foot {
         color: var(--foreground-secondary);
       }
-      /* Two facts on one line while there is room, each whole when not. */
       .risk__foot {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px var(--lds-core-spacing-5, 20px);
-        margin: var(--lds-core-spacing-4, 16px) 0 0;
+        /* Pinned to the bottom, so it shares an edge with the list beside it. */
+        margin-top: auto;
+        padding-top: var(--lds-core-spacing-4, 16px);
         font-variant-numeric: tabular-nums;
+      }
+      .risk__standing,
+      .risk__case {
+        display: flex;
+        gap: var(--lds-core-spacing-2, 8px);
+        min-height: 20px;
+        margin: 0;
+        white-space: nowrap;
+      }
+      .risk__case {
+        margin-top: 4px;
+      }
+      /* A dot between two facts on a line, drawn only when there are two. */
+      .risk__standing > span + span::before {
+        content: '·';
+        margin-right: var(--lds-core-spacing-2, 8px);
       }
 
       /**
@@ -678,41 +740,94 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         gap: 4px;
       }
       .scale__seg {
+        position: relative;
         height: 8px;
         border-radius: 4px;
         background: var(--line);
+        overflow: hidden;
       }
+      /* The part of the current band still ahead: the band's own tint, so the
+         whole segment reads as the one the player is in. */
       .scale__seg.is-current[data-band='low'] {
-        background: var(--success);
+        background: var(--success-bg-subtle);
+        box-shadow: inset 0 0 0 1px var(--line);
       }
       .scale__seg.is-current[data-band='medium'] {
-        background: var(--warn);
+        background: var(--warn-bg);
       }
       .scale__seg.is-current[data-band='high'],
       .scale__seg.is-current[data-band='critical'] {
+        background: var(--danger-bg-strong);
+      }
+      .scale__fill {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        /* Passed: neutral. One colour on the bar at a time. */
+        background: var(--line-strong);
+        transform-origin: left center;
+        transition: transform 240ms cubic-bezier(0.77, 0, 0.175, 1);
+      }
+      .scale__seg.is-current[data-band='low'] .scale__fill {
+        background: var(--success);
+      }
+      .scale__seg.is-current[data-band='medium'] .scale__fill {
+        background: var(--warn);
+      }
+      .scale__seg.is-current[data-band='high'] .scale__fill,
+      .scale__seg.is-current[data-band='critical'] .scale__fill {
         background: var(--danger);
       }
+      /**
+       * The rail is the track's own box, moved along it. A segment is a
+       * quarter of the track less its share of the three 4px gaps (25% - 3px),
+       * and starts one segment and one gap after the last (25% + 1px) - so
+       * the marker lands on the end of the fill to the pixel, and slides
+       * across a gap when the rating changes rather than jumping it.
+       *
+       * Clamped a radius in from both ends, so at 0 points it sits on the
+       * start of the bar instead of hanging off it.
+       */
       .scale__rail {
         position: absolute;
         inset: 0;
         pointer-events: none;
-        /* Only an override moves it, and then it should be seen to move. */
+        transform: translateX(
+          clamp(7px, calc(var(--i) * (25% + 1px) + var(--t) * (25% - 3px)), calc(100% - 7px))
+        );
         transition: transform 240ms cubic-bezier(0.77, 0, 0.175, 1);
       }
+      /**
+       * A solid dot in the band's colour, cut out of the bar by a ring of the
+       * card's own white, with a soft shadow under it. The ring is what makes
+       * it sit ON the bar: without it a red dot on a red fill is only a bump.
+       */
       .scale__marker {
         position: absolute;
         left: 0;
         top: 50%;
-        width: 16px;
-        height: 16px;
-        margin: -8px 0 0 -8px;
-        box-sizing: border-box;
-        border: 3px solid var(--foreground-primary);
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
         border-radius: 50%;
-        background: var(--panel);
+        background: var(--foreground-primary);
+        box-shadow:
+          0 0 0 2.5px var(--panel),
+          0 1px 3px 2px rgba(24, 24, 27, 0.16);
+      }
+      .scale__track[data-band='low'] .scale__marker {
+        background: var(--success);
+      }
+      .scale__track[data-band='medium'] .scale__marker {
+        background: var(--warn);
+      }
+      .scale__track[data-band='high'] .scale__marker,
+      .scale__track[data-band='critical'] .scale__marker {
+        background: var(--danger);
       }
       @media (prefers-reduced-motion: reduce) {
-        .scale__rail {
+        .scale__rail,
+        .scale__fill {
           transition: none;
         }
       }
@@ -1138,6 +1253,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           inset: -6px;
         }
         /* 44px rows, so two fields' targets meet and never overlap. */
+        .hero {
+          --driver-row: 44px;
+        }
         .drivers li {
           padding-top: 12px;
           padding-bottom: 12px;
@@ -1159,6 +1277,21 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           padding: var(--lds-core-spacing-4, 16px) 0 0;
           border-left: 0;
           border-top: 1px solid var(--line);
+        }
+        /* Stacked, the two halves no longer share an edge to hold, and a
+           phone has no room to keep empty rows: the card fits its content. */
+        .drivers,
+        .why__none {
+          min-height: 0;
+        }
+        .why::after {
+          display: none;
+        }
+        .risk__standing,
+        .risk__case {
+          flex-wrap: wrap;
+          gap: 0 var(--lds-core-spacing-4, 16px);
+          white-space: normal;
         }
       }
       /**
@@ -1277,18 +1410,22 @@ export class AmlDashboardComponent {
   readonly tabIndex = computed(() => TABS.indexOf(this.store.tab()));
 
   /**
-   * Where the marker sits, as a percentage of the track: its band's quarter,
-   * plus how far through that band the score is. Critical has no end, so it
-   * is drawn as if it were as wide as everything below it.
+   * Where the score stands on the gauge: which band, and how far through it,
+   * 0 to 1. Critical has no end, so it is drawn as if it were as wide as
+   * everything below it.
    */
-  readonly markerAt = computed(() => {
+  readonly position = computed(() => {
     const band = this.store.band();
-    const index = this.store.bands.indexOf(band);
-    const end = band.end ?? band.start * 2;
-    const through = Math.min(1, (this.store.total() - band.start) / (end - band.start));
-    // Kept a marker's half-width inside the track at both ends.
-    return Math.min(99, Math.max(1, ((index + through) / this.store.bands.length) * 100));
+    const end = band.end === null ? band.start * 2 : band.end + 1;
+    const through = Math.min(1, Math.max(0, (this.store.total() - band.start) / (end - band.start)));
+    return { index: this.store.bands.indexOf(band), through };
   });
+
+  /** How full a segment is: every band passed is full, every band ahead empty. */
+  fill(index: number): number {
+    const at = this.position();
+    return index < at.index ? 1 : index === at.index ? at.through : 0;
+  }
 
   readonly scaleLabel = computed(
     () =>

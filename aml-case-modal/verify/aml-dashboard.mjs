@@ -326,7 +326,7 @@ const facts = async () => ({
   widget: await page.locator('back-office-widgets article.w').count(),
   panel: await panel.count(),
   drivers: await page.locator('aml-dashboard .drivers li').count(),
-  more: (await page.locator('aml-dashboard .why__more').count()) ? await text('aml-dashboard .why__more') : '',
+  more: (await page.locator('aml-dashboard .why__more, aml-dashboard .why__none').count()) ? await text('aml-dashboard .why__more, aml-dashboard .why__none') : '',
 });
 await page.goto(`${BASE}/?section=aml-risks`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
@@ -463,6 +463,35 @@ await page.locator('aml-dashboard .case__link').click();
 await page.waitForTimeout(600);
 check('R-08: the case number still opens the case, and the panel says it is locked',
   (await panel.count()) === 1 && /Locked to/i.test(await panel.innerText()) && (await page.locator('confirm-unlock-dialog').count()) === 0);
+
+console.log('\nOne card, one height');
+const heights = {};
+const ends = {};
+for (const id of ['R-01', 'R-02', 'R-03', 'R-04', 'R-05', 'R-06', 'R-07', 'R-08']) {
+  await open(id);
+  const m = await page.evaluate(() => {
+    const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const hero = r('aml-dashboard .hero'), marker = r('aml-dashboard .scale__marker'), fill = r('aml-dashboard .scale__seg.is-current .scale__fill');
+    const foot = r('aml-dashboard .risk__foot'), why = r('aml-dashboard .why');
+    return { h: hero.height, off: Math.abs(marker.left + marker.width / 2 - fill.right), edges: Math.abs(foot.bottom - why.bottom) };
+  });
+  heights[id] = m.h;
+  ends[id] = m;
+}
+check('the risk card is the same height for every player, from nothing scoring to sixteen fields',
+  new Set(Object.values(heights)).size === 1, heights);
+check('the marker sits on the end of the fill (a radius in, at the two ends of the bar)',
+  Object.values(ends).every((m) => m.off <= 7.5) && ['R-02', 'R-03', 'R-05'].every((id) => ends[id].off <= 1), ends);
+check('both halves of the card end on the same line', Object.values(ends).every((m) => m.edges <= 1), ends);
+await open('R-06');
+// Measured from the card's own top: the AML widget arrives above it when the
+// case is created, which moves the whole dashboard, not the card's height.
+const below = () => page.evaluate(() => document.querySelector('aml-dashboard .grid').getBoundingClientRect().top - document.querySelector('aml-dashboard .hero').getBoundingClientRect().top);
+const before = await below();
+for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'System change' }).click();
+await page.waitForTimeout(400);
+const after = await below();
+check('fields starting to score do not move anything below the card', before === after, [before, after]);
 
 await page.locator('dev-state-switcher select').selectOption('R-04');
 await page.waitForTimeout(400);
