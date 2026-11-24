@@ -65,8 +65,15 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       </header>
 
       <!-- ------------------------------------------------ current risk -->
-      <div class="hero">
-        <div class="risk card">
+      <!-- ------------------------------------------------ current risk -->
+      <!--
+        One card, two halves: how high the risk is, and what is making it so.
+        The active case is a line of text here, not a card of its own - the
+        widget above already carries the case and its Open button, and two of
+        those 150px apart was one too many.
+      -->
+      <div class="hero card">
+        <div class="risk">
           <p class="eyebrow">Current AML risk</p>
           <p class="risk__line">
             <ui-pill class="risk__band" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
@@ -93,27 +100,41 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             </div>
           </div>
 
-          @if (store.nextBand(); as next) {
-            <p class="risk__next">
-              {{ next.start - store.total() }} points below {{ next.label }}, which starts at
-              {{ next.start }}.
-            </p>
-          }
+          <p class="risk__foot">
+            @if (store.nextBand(); as next) {
+              <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
+            }
+            @if (!cases.isResolved()) {
+              <span class="case">
+                Active case
+                <button class="text-btn case__link" type="button" (click)="ws.open('aml')">#AML-1042</button>
+                · {{ cases.severity() }} · opened {{ cases.createdAt() | stamp: 'date' }}
+              </span>
+            } @else {
+              <span class="case">No active AML case</span>
+            }
+          </p>
         </div>
 
-        <div class="case card">
-          <p class="eyebrow">Active AML case</p>
-          @if (!cases.isResolved()) {
-            <p class="case__line">
-              <span class="case__id">#AML-1042</span>
-              <ui-pill size="sm" [severity]="cases.severity()">{{ cases.severity() }}</ui-pill>
-            </p>
-            <p class="case__meta">Opened {{ cases.createdAt() | stamp: 'date' }}</p>
-            <button class="case__open" mat-flat-button color="primary" type="button" (click)="ws.open('aml')">
-              Open case
-            </button>
+        <div class="why">
+          <h3 class="eyebrow" id="ad-why">What is adding points</h3>
+          @if (drivers().length) {
+            <ol class="drivers" aria-labelledby="ad-why">
+              @for (row of drivers().slice(0, DRIVERS_SHOWN); track row.parameter.id) {
+                <li>
+                  <button class="text-btn" type="button" (click)="jump(row)">{{ row.parameter.label }}</button>
+                  @if (row.override) {
+                    <ui-pill size="sm" tone="info">Overridden</ui-pill>
+                  }
+                  <span class="drivers__pts">{{ row.points }}</span>
+                </li>
+              }
+            </ol>
+            @if (drivers().length > DRIVERS_SHOWN) {
+              <p class="why__more">and {{ drivers().length - DRIVERS_SHOWN }} more in the score-card below</p>
+            }
           } @else {
-            <p class="case__none">This player has no active AML case.</p>
+            <p class="why__more">Nothing is adding points.</p>
           }
         </div>
       </div>
@@ -200,7 +221,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                           <td></td>
                         </tr>
                         @for (row of section.rows; track row.parameter.id) {
-                          <tr [class.is-overridden]="row.override">
+                          <tr [id]="'score-' + row.parameter.id" [class.is-overridden]="row.override">
                             <th scope="row">
                               <span class="param">
                                 <span class="param__name">{{ row.parameter.label }}</span>
@@ -435,22 +456,50 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         color: var(--foreground-secondary);
       }
 
-      /* ---- hero: the risk, and the case if there is one ---------------- */
-      /* The same two columns as the overview underneath - main and rail, one
-         gap - so the case card stands exactly over the rail's cards. */
+      /* ---- hero: how high, and why ------------------------------------- */
       .hero {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) var(--rail);
-        gap: var(--lds-core-spacing-4, 16px);
-      }
-      .risk,
-      .case {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--lds-core-spacing-8, 32px);
         padding: var(--lds-core-spacing-5, 20px);
       }
-      .case {
+      .why {
+        padding-left: var(--lds-core-spacing-8, 32px);
+        border-left: 1px solid var(--line);
+      }
+      .drivers {
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .drivers li {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
+        gap: var(--lds-core-spacing-2, 8px);
+        padding: 6px 0;
+        border-top: 1px solid var(--line);
+      }
+      .drivers li:first-child {
+        border-top: 0;
+      }
+      .drivers .text-btn {
+        text-align: left;
+      }
+      /* The rows are 32px apart, so the hit area is exactly a row: any taller
+         and one field's target would overlap the next. */
+      .drivers .text-btn::before {
+        inset: -6px -4px;
+      }
+      .drivers__pts {
+        margin-left: auto;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .why__more {
+        margin: 6px 0 0;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
       }
       .risk__line {
         display: flex;
@@ -472,11 +521,15 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-variant-numeric: tabular-nums;
       }
       .risk__unit,
-      .risk__next {
+      .risk__foot {
         color: var(--foreground-secondary);
       }
-      .risk__next {
-        margin: var(--lds-core-spacing-3, 12px) 0 0;
+      /* Two facts on one line while there is room, each whole when not. */
+      .risk__foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px var(--lds-core-spacing-5, 20px);
+        margin: var(--lds-core-spacing-4, 16px) 0 0;
         font-variant-numeric: tabular-nums;
       }
 
@@ -487,7 +540,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
        */
       .scale {
         margin-top: var(--lds-core-spacing-4, 16px);
-        max-width: 640px;
       }
       .scale__track {
         position: relative;
@@ -548,30 +600,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
       .scale__range {
         font-variant-numeric: tabular-nums;
-      }
-
-      .case__line {
-        display: flex;
-        align-items: center;
-        gap: var(--lds-core-spacing-2, 8px);
-        margin: var(--lds-core-spacing-2, 8px) 0 0;
-      }
-      .case__id {
-        font-size: 16px;
-        line-height: 24px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-      }
-      .case__meta,
-      .case__none {
-        margin: 2px 0 0;
-        color: var(--foreground-secondary);
-      }
-      .case__none {
-        margin-top: var(--lds-core-spacing-2, 8px);
-      }
-      .case__open {
-        margin-top: var(--lds-core-spacing-4, 16px);
       }
 
       /* ---- tabs ------------------------------------------------------- */
@@ -844,10 +872,18 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           grid-template-columns: minmax(0, 1fr);
         }
       }
-      @media (max-width: 719.98px) {
+      @media (max-width: 899.98px) {
         .hero {
           grid-template-columns: minmax(0, 1fr);
+          gap: var(--lds-core-spacing-5, 20px);
         }
+        .why {
+          padding: var(--lds-core-spacing-4, 16px) 0 0;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+      }
+      @media (max-width: 719.98px) {
         .ad__title {
           flex-basis: 100%;
         }
@@ -863,6 +899,17 @@ export class AmlDashboardComponent {
   /** Placeholder: the Confluence space for the AML framework. */
   readonly DOCS_URL = 'https://lottomart.atlassian.net/wiki/spaces/AML/overview';
   readonly TABS = TABS;
+  /** The card is a summary: past five, the score-card below is the list. */
+  readonly DRIVERS_SHOWN = 5;
+
+  /** Every field adding points right now, biggest first. */
+  readonly drivers = computed<ScoreRow[]>(() =>
+    this.store
+      .sections()
+      .flatMap((section) => section.rows)
+      .filter((row) => row.points > 0)
+      .sort((a, b) => b.points - a.points),
+  );
 
   readonly tabIndex = computed(() => TABS.indexOf(this.store.tab()));
 
@@ -886,6 +933,23 @@ export class AmlDashboardComponent {
       this.store.bands.map((band) => `${band.label}: ${this.range(band, ' to ')}`).join('. ') +
       '.',
   );
+
+  /**
+   * Takes the agent from a line in the summary to that field's row in the
+   * score-card: scrolled to the middle, washed once so the eye lands on it,
+   * and focus left on its Override button - the likeliest next press.
+   */
+  jump(row: ScoreRow): void {
+    const target = document.getElementById('score-' + row.parameter.id);
+    if (!target) return;
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+    target.animate(
+      [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
+      { duration: 1400, easing: 'ease-out' },
+    );
+    target.querySelector<HTMLElement>('button.text-btn')?.focus({ preventScroll: true });
+  }
 
   tone(band: RiskBand): PillTone {
     return BAND_TONE[band.id];

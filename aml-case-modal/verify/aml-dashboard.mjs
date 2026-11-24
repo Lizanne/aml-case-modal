@@ -48,10 +48,30 @@ check('focus is in the dashboard', await page.evaluate(() => !!document.activeEl
 console.log('\nFirst view (requirement 1)');
 const first = await page.evaluate(() => {
   const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
-  return { score: r('aml-dashboard .risk__score'), band: r('aml-dashboard .risk__band'), caseBox: r('aml-dashboard .case'), h: innerHeight };
+  return { score: r('aml-dashboard .risk__score'), band: r('aml-dashboard .risk__band'), caseBox: r('aml-dashboard .case'), why: r('aml-dashboard .why'), h: innerHeight };
 });
 check('the rating, the score and the active case are above the fold',
-  first.score.bottom < first.h && first.band.bottom < first.h && first.caseBox.top < first.h, first);
+  first.score.bottom < first.h && first.band.bottom < first.h && first.caseBox.bottom < first.h && first.why.bottom < first.h, first);
+check('the active case is one line of text with one link, not a second Open case button',
+  /^Active case #AML-1042 · \w+ · opened \d{2} \w{3} \d{4}$/.test((await text('aml-dashboard .case')).replace(/\s+/g, ' ').trim()) &&
+  (await page.locator('aml-dashboard').getByRole('button', { name: 'Open case', exact: true }).count()) === 0);
+check('the card says how far the next band is', (await text('aml-dashboard .risk__next')) === '250 points to Critical');
+
+console.log('\nWhat is adding points');
+const driverRows = (await page.locator('aml-dashboard .drivers li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
+check('the five biggest fields, biggest first, overrides marked', driverRows.length === 5 &&
+  driverRows.join('|') === 'Linked account (similar details) 50|Occupation associated with risk Overridden 50|PAR link 50|High single deposit: £2,000 20|Stacking deposits 20', driverRows);
+check('the sixth is counted, not listed', (await text('aml-dashboard .why__more')) === 'and 1 more in the score-card below');
+await page.locator('aml-dashboard .drivers .text-btn', { hasText: 'PAR link' }).click();
+await page.waitForTimeout(700);
+const landed = await page.evaluate(() => {
+  const row = document.getElementById('score-par-link').getBoundingClientRect();
+  const box = document.querySelector('aml-dashboard').getBoundingClientRect();
+  return { inView: row.top >= box.top && row.bottom <= box.bottom, focus: document.activeElement?.getAttribute('aria-label') };
+});
+check('a field in the list goes to its row, with focus on its Override', landed.inView && landed.focus === 'Override: PAR link', landed);
+await dash.evaluate((el) => el.scrollTo(0, 0));
+await page.waitForTimeout(200);
 check('200 points is High risk', (await total()) === 200 && (await text('aml-dashboard .risk__band')) === 'High risk');
 check('the four bands and their ranges are printed',
   (await page.locator('aml-dashboard .scale__key').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ')).join('|') ===
@@ -75,15 +95,14 @@ const edges = await page.evaluate(() => {
   return {
     // The stage is the box the widget row and the panels share.
     widgets: Math.round(r('.stage').right),
-    caseCard: r('aml-dashboard .case'),
+    hero: r('aml-dashboard .hero'),
     rail: r('aml-dashboard .grid__side'),
-    risk: r('aml-dashboard .risk'),
     main: r('aml-dashboard .grid__main'),
   };
 });
-check('the dashboard runs to the page\'s right edge, where the widget row ends', Math.abs(edges.caseCard.right - edges.widgets) <= 1, edges);
-check('the case card stands over the rail, the risk card over the main column',
-  Math.abs(edges.caseCard.left - edges.rail.left) <= 1 && Math.abs(edges.risk.right - edges.main.right) <= 1, edges);
+check('the dashboard runs to the page\'s right edge, where the widget row ends', Math.abs(edges.hero.right - edges.widgets) <= 1, edges);
+check('the risk card spans the main column and the rail',
+  Math.abs(edges.hero.left - edges.main.left) <= 1 && Math.abs(edges.hero.right - edges.rail.right) <= 1, edges);
 
 console.log('\nEDD checkpoints');
 check('the card keeps its three columns and gains Actions on crossing',
@@ -180,9 +199,9 @@ await shot('dash-audit');
 
 console.log('\nWith the case panel');
 await page.getByRole('tab', { name: 'Overview' }).click();
-await page.locator('aml-dashboard .case__open').click();
+await page.locator('aml-dashboard .case__link').click();
 await page.waitForTimeout(600);
-check('Open case brings the panel up', (await panel.count()) === 1);
+check('the case link brings the panel up', (await panel.count()) === 1);
 check('and the dashboard under it is hidden and inert',
   (await dash.getAttribute('inert')) !== null && !(await dash.isVisible()));
 await page.keyboard.press('Escape');
