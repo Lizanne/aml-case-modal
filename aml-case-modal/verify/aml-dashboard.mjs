@@ -154,6 +154,18 @@ check('Override opens the dialog', (await dialog.count()) === 1);
 check('it opens on the opposite of the current result', await dialog.getByRole('radio', { name: '75 points' }).isChecked());
 check('and on a number of days', await dialog.getByRole('radio', { name: 'For a number of days' }).isChecked());
 const save = dialog.getByRole('button', { name: 'Save override' });
+check('nothing in the dialog opens with a focus mark on it',
+  await page.evaluate(() => !document.activeElement?.matches('input, textarea, button')));
+check('the dialog says what saving will do', (await dialog.locator('.what__total').innerText()) === '275 points');
+await dialog.getByRole('radio', { name: '0 points' }).check();
+check('and follows the answer', (await dialog.locator('.what__total').innerText()) === '200 points');
+await dialog.getByRole('radio', { name: '75 points' }).check();
+const h1 = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRect().height);
+await dialog.getByRole('radio', { name: 'Until the override is revoked' }).check();
+const h2 = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRect().height);
+check('choosing the other duration does not change the dialog\'s height', h1 === h2, [h1, h2]);
+await dialog.locator('.days__input').focus();
+check('focusing the days field chooses days', await dialog.getByRole('radio', { name: 'For a number of days' }).isChecked());
 check('Save waits for a reason', await save.isDisabled());
 await dialog.locator('textarea').fill('Customer disclosed a council seat on a call.');
 check('then is available', await save.isEnabled());

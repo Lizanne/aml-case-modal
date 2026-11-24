@@ -3,7 +3,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 
 import { AmlDashboardStore, ScoreRow } from '../core/aml-dashboard-store';
+import { RiskBandId, bandFor } from '../core/aml-risk';
 import { DialogShellComponent } from './dialog-shell.component';
+import { PillComponent, PillTone } from './ui-pill.component';
+
+/** The dashboard's own mapping: a band is a pill tone, never a new colour. */
+const BAND_TONE: Record<RiskBandId, PillTone> = {
+  low: 'success',
+  medium: 'warn',
+  high: 'danger',
+  critical: 'danger-solid',
+};
 
 type Span = 'days' | 'revoked';
 
@@ -23,21 +33,38 @@ type Span = 'days' | 'revoked';
 @Component({
   selector: 'score-override-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatRadioModule, DialogShellComponent],
+  imports: [MatButtonModule, MatRadioModule, DialogShellComponent, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (row; as row) {
-      <dialog-shell
-        [heading]="row.override ? 'Edit override' : 'Override score'"
-        initialFocus="mat-radio-button input"
-        (dismiss)="close()"
-      >
+      <!--
+        No initialFocus. The shell then focuses the dialog itself, and Tab
+        goes to the selected radio. Naming a radio here put focus on the FIRST
+        one - "0 points", the one not chosen - and Material paints a grey disc
+        behind any focused radio, so the dialog opened with a mark on the
+        answer it had not picked.
+      -->
+      <dialog-shell [heading]="row.override ? 'Edit override' : 'Override score'" (dismiss)="close()">
         <div class="what">
           <p class="what__name">{{ row.parameter.label }}</p>
-          <p class="what__now">
-            System result: {{ row.met ? 'met' : 'not met' }}, {{ row.met ? row.parameter.points : 0 }}
-            of {{ row.parameter.points }} points
-          </p>
+          <dl class="what__facts">
+            <div>
+              <dt>System result</dt>
+              <dd>{{ row.met ? 'Met' : 'Not met' }}, {{ row.met ? row.parameter.points : 0 }} of {{ row.parameter.points }} points</dd>
+            </div>
+            <!-- What saving will do, before it is done: the total moves as the
+                 answer above it changes. -->
+            <div aria-live="polite">
+              <dt>Total after override</dt>
+              <dd>
+                <span class="what__total">{{ newTotal() }} points</span>
+                <ui-pill size="sm" rim [tone]="tone(newBand().id)">{{ newBand().label }}</ui-pill>
+                @if (newBand().id !== store.band().id) {
+                  <span class="what__was">was {{ store.band().label }}</span>
+                }
+              </dd>
+            </div>
+          </dl>
         </div>
 
         <fieldset class="group">
@@ -53,26 +80,29 @@ type Span = 'days' | 'revoked';
         <fieldset class="group">
           <legend class="group__label">How long</legend>
           <mat-radio-group class="choices choices--stack" [value]="span()" (change)="onSpan($event)">
-            <mat-radio-button value="days">For a number of days</mat-radio-button>
-            @if (span() === 'days') {
-              <label class="days">
-                <input
-                  class="days__input"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  max="365"
-                  aria-label="Number of days"
-                  [attr.aria-invalid]="daysValid() ? null : 'true'"
-                  [value]="days()"
-                  (input)="days.set($any($event.target).valueAsNumber)"
-                  (change)="$event.stopPropagation()"
-                />
-                <span class="days__unit">days</span>
-                @if (!daysValid()) {
-                  <span class="days__error" role="alert">Enter a whole number from 1 to 365</span>
-                }
-              </label>
+            <!-- One line: "For [30] days". The field is always there, so
+                 choosing the other answer does not change the dialog's height
+                 and send it jumping up the screen. -->
+            <div class="days" [class.days--idle]="span() !== 'days'">
+              <mat-radio-button value="days" aria-label="For a number of days">For</mat-radio-button>
+              <input
+                class="days__input"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="365"
+                aria-label="Number of days"
+                [attr.aria-invalid]="span() === 'days' && !daysValid() ? 'true' : null"
+                [attr.aria-describedby]="span() === 'days' && !daysValid() ? 'days-error' : null"
+                [value]="days()"
+                (focus)="span.set('days')"
+                (input)="days.set($any($event.target).valueAsNumber)"
+                (change)="$event.stopPropagation()"
+              />
+              <span class="days__unit" aria-hidden="true">days</span>
+            </div>
+            @if (span() === 'days' && !daysValid()) {
+              <p class="days__error" id="days-error" role="alert">Enter a whole number from 1 to 365</p>
             }
             <mat-radio-button value="revoked">Until the override is revoked</mat-radio-button>
           </mat-radio-group>
@@ -84,10 +114,12 @@ type Span = 'days' | 'revoked';
             class="field__input"
             rows="3"
             aria-required="true"
+            aria-describedby="reason-hint"
             [value]="reason()"
             (input)="reason.set($any($event.target).value)"
             placeholder="What did you learn that the system does not know?"
           ></textarea>
+          <span class="field__hint" id="reason-hint">Required. It is recorded in the audit log.</span>
         </label>
 
         <ng-container dialogActions>
@@ -104,6 +136,7 @@ type Span = 'days' | 'revoked';
   `,
   styles: [
     `
+      /* ---- what is being overridden, and what saving will do ----------- */
       .what {
         padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
         border-radius: 8px;
@@ -116,15 +149,42 @@ type Span = 'days' | 'revoked';
         font-weight: 600;
         color: var(--foreground-primary);
       }
-      .what__now {
-        margin: 2px 0 0;
+      .what__facts {
+        display: grid;
+        gap: 2px;
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
         font-size: 14px;
         line-height: 20px;
-        color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
+      /* Two columns, so the two results sit one above the other and can be
+         compared without reading across. */
+      .what__facts > div {
+        display: grid;
+        grid-template-columns: 148px minmax(0, 1fr);
+        gap: var(--lds-core-spacing-2, 8px);
+      }
+      .what__facts dt {
+        color: var(--foreground-secondary);
+      }
+      .what__facts dd {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px var(--lds-core-spacing-2, 8px);
+        margin: 0;
+        color: var(--foreground-primary);
+      }
+      .what__total {
+        font-weight: 600;
+      }
+      .what__was {
+        color: var(--foreground-secondary);
+      }
+
+      /* ---- the two questions ------------------------------------------- */
       .group {
-        margin: var(--lds-core-spacing-4, 16px) 0 0;
+        margin: var(--lds-core-spacing-5, 20px) 0 0;
         padding: 0;
         border: 0;
         min-width: 0;
@@ -140,69 +200,107 @@ type Span = 'days' | 'revoked';
       .choices {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
-        /* Material's radio carries its own 10px of touch padding; pull the
-           group back so the first circle lines up with the legend above. */
-        margin-left: -10px;
+        gap: 0 var(--lds-core-spacing-2, 8px);
+        /* Material's radio carries 10px of touch padding around its circle;
+           pull the group back so the circle, not the padding, lines up with
+           the legend above it. */
+        margin: 0 0 -10px -10px;
       }
       .choices--stack {
         flex-direction: column;
-        gap: 0;
+        align-items: flex-start;
       }
       .days {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
-        /* Under its radio's label, not under the circle. */
-        margin: 0 0 4px 50px;
+        gap: var(--lds-core-spacing-2, 8px);
       }
       .days__input {
-        width: 88px;
+        width: 76px;
+        height: 36px;
         box-sizing: border-box;
-        padding: 8px 12px;
+        padding: 0 4px 0 12px;
         border: 1px solid var(--line-strong);
         border-radius: 8px;
+        background: var(--panel);
         font: inherit;
         font-size: 14px;
         line-height: 20px;
         color: var(--foreground-primary);
         font-variant-numeric: tabular-nums;
+        transition:
+          border-color 150ms ease-out,
+          color 150ms ease-out;
+      }
+      .days__unit {
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--foreground-primary);
+      }
+      /* The other answer is chosen: the number stays where it is, quieter,
+         and pressing into it chooses this answer again. */
+      .days--idle .days__input {
+        border-color: var(--line);
+        color: var(--foreground-secondary);
+      }
+      .days--idle .days__unit {
+        color: var(--foreground-secondary);
       }
       .days__input[aria-invalid='true'] {
         border-color: var(--danger);
       }
-      .days__unit {
-        font-size: 14px;
-        color: var(--foreground-secondary);
-      }
       .days__error {
-        flex-basis: 100%;
+        /* Under the field, not under the radio's circle. */
+        margin: 0 0 0 10px;
         font-size: 14px;
         line-height: 20px;
         color: var(--danger);
       }
+
+      /* ---- why --------------------------------------------------------- */
       .field {
         display: grid;
-        gap: 8px;
-        margin-top: var(--lds-core-spacing-3, 12px);
+        gap: var(--lds-core-spacing-2, 8px);
+        margin-top: var(--lds-core-spacing-5, 20px);
       }
       .field__input {
         width: 100%;
+        min-height: 80px;
         box-sizing: border-box;
         padding: 10px 12px;
         border: 1px solid var(--line-strong);
         border-radius: 8px;
         font: inherit;
         font-size: 14px;
+        line-height: 20px;
         color: var(--foreground-primary);
         resize: vertical;
+      }
+      .field__input::placeholder {
+        color: var(--foreground-secondary);
+      }
+      .field__hint {
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
       }
       .field__input:focus-visible,
       .days__input:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: -1px;
         border-color: var(--primary);
+      }
+      /* iOS zooms the page on focus into any field set under 16px. */
+      @media (pointer: coarse) {
+        .field__input,
+        .days__input {
+          font-size: 16px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .days__input {
+          transition: none;
+        }
       }
       /* Away from Save and Cancel: it undoes something, they do not. */
       .revoke {
@@ -213,7 +311,7 @@ type Span = 'days' | 'revoked';
   ],
 })
 export class ScoreOverrideDialogComponent {
-  private readonly store = inject(AmlDashboardStore);
+  readonly store = inject(AmlDashboardStore);
 
   /** Read once: the dialog edits the row it was opened on, not a moving one. */
   readonly row: ScoreRow | null = this.store.targetRow();
@@ -224,6 +322,14 @@ export class ScoreOverrideDialogComponent {
       metric already thinks in. */
   readonly days = signal<number>(this.row?.override?.days ?? this.row?.parameter.exitDays ?? 30);
   readonly reason = signal(this.row?.override?.reason ?? '');
+
+  /** The player's total if this is saved: this field's points swapped out. */
+  readonly newTotal = computed(() => this.store.total() - (this.row?.points ?? 0) + this.points());
+  readonly newBand = computed(() => bandFor(this.newTotal()));
+
+  tone(band: RiskBandId): PillTone {
+    return BAND_TONE[band];
+  }
 
   readonly daysValid = computed(() => {
     const n = this.days();
