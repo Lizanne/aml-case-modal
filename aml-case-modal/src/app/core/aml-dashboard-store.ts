@@ -131,6 +131,8 @@ export interface DashboardSnapshot {
   log: AuditEvent[];
   archive: ArchivedCase[];
   checkpoints: EddCheckpoint[];
+  /** When the score last changed. Defaults to the newest event in the log. */
+  updatedAt?: string;
 }
 
 /** The player the dashboard opens on: 200 points, High risk, one override. */
@@ -189,6 +191,15 @@ export class AmlDashboardStore {
    * the dashboard to stop offering Create and to say which case is active.
    */
   readonly createdCase = signal<{ id: string; severity: string; opened: string } | null>(null);
+
+  /**
+   * When the score last changed - by the system or by an override. Not when
+   * it was last CHECKED: most fields are re-read daily whether or not anything
+   * moved, so a "last checked" time would always say today and tell an agent
+   * nothing. null for a player who has never scored.
+   */
+  private readonly _updatedAt = signal<string | null>(HIGH_RISK.log[0]?.at ?? null);
+  readonly updatedAt = this._updatedAt.asReadonly();
 
   /** The last thing that changed, for the toast and the row it points at. */
   readonly notice = signal<DashboardNotice | null>(null);
@@ -273,12 +284,53 @@ export class AmlDashboardStore {
     this._log.set(snapshot.log);
     this.archive.set(snapshot.archive);
     this.checkpoints.set(snapshot.checkpoints);
+    this._updatedAt.set(snapshot.updatedAt ?? snapshot.log[0]?.at ?? null);
     this.tab.set('overview');
     this.logShown.set(AmlDashboardStore.PAGE);
     this.overrideTarget.set(null);
     this.creatingCase.set(false);
     this.createdCase.set(null);
     this.notice.set(null);
+  }
+
+  /** The next field the system could find met: unmet, and not overridden. */
+  private readonly nextUnmet = computed<ScoreParameter | null>(() => {
+    const state = this.entries();
+    const now = new Date();
+    return (
+      SCORE_PARAMETERS.find((parameter) => {
+        const entry = state[parameter.id];
+        return !entry?.met && !activeOverride(entry, now);
+      }) ?? null
+    );
+  });
+  readonly canSystemChange = computed(() => this.nextUnmet() !== null);
+
+  /**
+   * @internal dev-only. The system finds one more field met - a deposit
+   * lands, a screening match comes back - so the score moves without anyone
+   * touching it. Returns what changed, so the dev harness can follow the
+   * ticket's rule and open a case when the rating rises.
+   */
+  systemChange(): { parameter: ScoreParameter; before: RiskBand; after: RiskBand } | null {
+    const parameter = this.nextUnmet();
+    if (!parameter) return null;
+    const before = this.band();
+    this.entries.update((state) => ({ ...state, [parameter.id]: { ...state[parameter.id], met: true } }));
+    this._updatedAt.set(new Date().toISOString());
+    this.record(`${parameter.label} met: +${parameter.points} points, total ${this.total()}`, 'System');
+    this.recordBandChange(before);
+    return { parameter, before, after: this.band() };
+  }
+
+  /** @internal dev-only. A line in the log that the system wrote. */
+  logSystem(what: string): void {
+    this.record(what, 'System');
+  }
+
+  /** @internal dev-only. Says a system change out loud, on its row. */
+  notify(message: string, parameterId: string): void {
+    this.announce(message, parameterId);
   }
 
   /** Sets or replaces the override on a parameter, and logs what it did. */
@@ -291,6 +343,7 @@ export class AmlDashboardStore {
       ...state,
       [id]: { met: state[id]?.met ?? false, override: { ...change, by: AGENT, at } },
     }));
+    this._updatedAt.set(at);
     const span = change.days === null ? 'until revoked' : `for ${change.days} ${change.days === 1 ? 'day' : 'days'}`;
     this.record(`${parameter.label} overridden to ${change.points} points, ${span}: total ${this.total()}`, AGENT);
     this.recordBandChange(before);
@@ -305,6 +358,7 @@ export class AmlDashboardStore {
     const before = this.band();
     const removed = this.entries()[id]?.override;
     this.entries.update((state) => ({ ...state, [id]: { met: state[id]?.met ?? false } }));
+    this._updatedAt.set(new Date().toISOString());
     this.record(`${parameter.label} override revoked: total ${this.total()}`, AGENT);
     this.recordBandChange(before);
     this.overrideTarget.set(null);
@@ -321,6 +375,7 @@ export class AmlDashboardStore {
   private restoreOverride(id: string, label: string, override: ScoreOverride): void {
     const before = this.band();
     this.entries.update((state) => ({ ...state, [id]: { met: state[id]?.met ?? false, override } }));
+    this._updatedAt.set(new Date().toISOString());
     this.record(`${label} override restored: total ${this.total()}`, AGENT);
     this.recordBandChange(before);
     this.announce(`Override restored. ${label} scores ${override.points} points again.`, id);

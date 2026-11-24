@@ -25,6 +25,8 @@ const BAND_TONE: Record<RiskBandId, PillTone> = {
 
 const TABS: readonly DashboardTab[] = ['overview', 'archive', 'audit'];
 
+const RELATIVE = new Intl.RelativeTimeFormat('en-GB', { numeric: 'always' });
+
 const DAY = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   month: 'short',
@@ -70,7 +72,17 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       -->
       <div class="hero card">
         <div class="risk">
-          <p class="eyebrow">Current AML risk</p>
+          <div class="risk__head">
+            <p class="eyebrow">Current AML risk</p>
+            <!-- How fresh the number is. Relative, because "4 days ago" is the
+                 question being asked; the exact time is on hover and in the
+                 datetime for anything that reads it. -->
+            @if (store.updatedAt(); as at) {
+              <p class="risk__updated">
+                Updated <time [attr.datetime]="at" [title]="at | stamp">{{ since(at) }}</time>
+              </p>
+            }
+          </div>
           <p class="risk__line">
             <ui-pill class="risk__band" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
             <span class="risk__score">{{ store.total() }}</span>
@@ -581,6 +593,20 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-size: 12px;
         line-height: 16px;
         color: var(--foreground-secondary);
+      }
+      .risk__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 2px var(--lds-core-spacing-4, 16px);
+      }
+      .risk__updated {
+        margin: 0;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
       }
       .risk__line {
         display: flex;
@@ -1278,6 +1304,21 @@ export class AmlDashboardComponent {
     target.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
     this.wash(target);
     target.querySelector<HTMLElement>('button.text-btn')?.focus({ preventScroll: true });
+  }
+
+  /** "just now", "5 minutes ago", "4 days ago" - the largest whole unit. */
+  since(iso: string): string {
+    const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const steps: [limit: number, size: number, unit: Intl.RelativeTimeFormatUnit][] = [
+      [3600, 60, 'minute'],
+      [86400, 3600, 'hour'],
+      [86400 * 30, 86400, 'day'],
+      [86400 * 365, 86400 * 30, 'month'],
+      [Infinity, 86400 * 365, 'year'],
+    ];
+    const [, size, unit] = steps.find(([limit]) => seconds < limit)!;
+    return RELATIVE.format(-Math.floor(seconds / size), unit);
   }
 
   tone(band: RiskBand): PillTone {

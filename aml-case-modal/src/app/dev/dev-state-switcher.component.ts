@@ -54,6 +54,16 @@ import { DEFAULT_RISK_SCENARIO, RISK_SCENARIOS, applyRiskScenario } from './risk
            loaded case, and the table is not showing one. -->
       @if (onRisk()) {
       <div class="dev__actions">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="!dashboard.canSystemChange()"
+          matTooltip="The system finds one more field met. If the rating rises and no case is open, one is created"
+          (click)="systemChange()"
+        >
+          <mat-icon>bolt</mat-icon>
+          System change
+        </button>
         <button mat-stroked-button type="button" (click)="reload()">
           <mat-icon>restart_alt</mat-icon>
           Reset state
@@ -289,6 +299,37 @@ export class DevStateSwitcherComponent {
       this._current.set(applyScenario(this.store, this.ws, id));
       this.writeUrl('state', id);
     }
+  }
+
+  /**
+   * The score moves without an agent: the next unmet field becomes met.
+   *
+   * Then the ticket's rule for auto-created cases, in the one place both
+   * stores can be reached. A rise into Medium opens an AML case, into High an
+   * EDD case, into Critical an AML case - and only when none is open, because
+   * a player has one open case at a time (rule 1).
+   */
+  systemChange(): void {
+    const hadCase = this.ws.isPresent('aml') && !this.store.isResolved();
+    const change = this.dashboard.systemChange();
+    if (!change) return;
+
+    const { parameter, before, after } = change;
+    let message = `System update. ${parameter.label} is now met: +${parameter.points} points.`;
+    if (after.id !== before.id) {
+      message += ` Rating is now ${after.label}.`;
+      if (!hadCase) {
+        const severity = after.id === 'high' ? 'EDD' : 'AML';
+        // Unlocked: nobody has picked it up yet. Its panel stays shut, so the
+        // widget arriving on the row is the thing that is seen to happen.
+        applyScenario(this.store, this.ws, '00a');
+        this.store.seed({ severity });
+        this.ws.seed({ aml: { open: false } });
+        this.dashboard.logSystem(`AML case #AML-1042 created (${severity} severity)`);
+        message += ` An ${severity} case was created.`;
+      }
+    }
+    this.dashboard.notify(message, parameter.id);
   }
 
   reload(): void {

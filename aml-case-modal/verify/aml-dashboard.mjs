@@ -400,6 +400,40 @@ await page.getByRole('tab', { name: 'Audit log' }).click();
 await page.waitForTimeout(200);
 check('R-07: sixty-four events, ten at a time', (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 64 Show 10 more');
 
+console.log('\nSystem change and freshness');
+await open('R-03');
+check('the risk card says when the score last changed, with the exact time behind it',
+  /^Updated \d+ (day|month)s? ago$/.test((await text('aml-dashboard .risk__updated')).replace(/\s+/g, ' ').trim()) &&
+  /\d{4}-\d{2}-\d{2}T/.test((await page.locator('aml-dashboard .risk__updated time').getAttribute('datetime')) ?? '') &&
+  /\d{2} \w{3} \d{4}, \d{2}:\d{2}/.test((await page.locator('aml-dashboard .risk__updated time').getAttribute('title')) ?? ''));
+await open('R-06');
+check('a player who has never scored has no "Updated" line', (await page.locator('aml-dashboard .risk__updated').count()) === 0);
+const systemChange = page.getByRole('button', { name: 'System change' });
+await systemChange.click();
+await page.waitForTimeout(400);
+check('System change meets the next field: 25 points, still Low, still no case',
+  (await total()) === 25 && (await text('aml-dashboard .risk__band')) === 'Low risk' && (await page.locator('back-office-widgets article.w').count()) === 0 &&
+  /Met/.test(await row('Linked account (household link)').innerText()));
+check('the card now says it was updated just now', (await text('aml-dashboard .risk__updated')).replace(/\s+/g, ' ').trim() === 'Updated just now');
+check('and a notice says what the system did',
+  (await text('dashboard-toast .toast__text')) === 'System update. Linked account (household link) is now met: +25 points.');
+await systemChange.click();
+await page.waitForTimeout(500);
+check('the next one crosses into Medium and an AML case is created, with its widget',
+  (await total()) === 75 && (await text('aml-dashboard .risk__band')) === 'Medium risk' &&
+  (await page.locator('back-office-widgets article.w').count()) === 1 &&
+  /^Active case #AML-1042 · AML/.test((await text('aml-dashboard .case')).replace(/\s+/g, ' ').trim()) &&
+  /Rating is now Medium risk\. An AML case was created\.$/.test(await text('dashboard-toast .toast__text')));
+check('the log has the field, the rating change and the case, newest first',
+  (await page.locator('aml-dashboard .events__what').allInnerTexts()).slice(0, 3).join(' | ') ===
+    'AML case #AML-1042 created (AML severity) | Risk rating changed from Low risk to Medium risk | Linked account (similar details) met: +50 points, total 75');
+await systemChange.click();
+await page.waitForTimeout(500);
+check('a further rise does not open a second case: one open case per player',
+  (await total()) === 150 && (await text('aml-dashboard .risk__band')) === 'High risk' &&
+  (await page.locator('back-office-widgets article.w').count()) === 1 &&
+  !/case was created/.test(await text('dashboard-toast .toast__text')));
+
 await page.locator('dev-state-switcher select').selectOption('R-04');
 await page.waitForTimeout(400);
 check('choosing a state in the switcher applies it and goes back to Overview',
