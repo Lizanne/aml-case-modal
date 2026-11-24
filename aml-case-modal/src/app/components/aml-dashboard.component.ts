@@ -104,7 +104,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             @if (store.nextBand(); as next) {
               <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
             }
-            @if (!cases.isResolved()) {
+            @if (hasActiveCase()) {
               <span class="case">
                 Active case
                 <button class="text-btn case__link" type="button" (click)="ws.open('aml')">#AML-1042</button>
@@ -188,7 +188,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                       </tr>
                     </thead>
                     <tbody>
-                      @for (checkpoint of store.checkpoints; track checkpoint.id) {
+                      @for (checkpoint of store.checkpoints(); track checkpoint.id) {
                         <tr>
                           <th scope="row">
                             {{ checkpoint.measure }}
@@ -320,26 +320,33 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             <aside class="grid__side">
               <section class="card" aria-labelledby="ad-latest">
                 <h3 class="card__title" id="ad-latest">Latest AML events</h3>
-                <ol class="events">
-                  @for (event of store.latest(); track event.id) {
-                    <li class="events__item">
-                      <span class="events__what">{{ event.what }}</span>
-                      <span class="events__meta">{{ event.who }} · {{ event.at | stamp }}</span>
-                    </li>
-                  }
-                </ol>
-                <button class="text-btn text-btn--block" type="button" (click)="showAuditLog()">
-                  View the full audit log
-                </button>
+                @if (store.latest().length) {
+                  <ol class="events">
+                    @for (event of store.latest(); track event.id) {
+                      <li class="events__item">
+                        <span class="events__what">{{ event.what }}</span>
+                        <span class="events__meta">{{ event.who }} · {{ event.at | stamp }}</span>
+                      </li>
+                    }
+                  </ol>
+                  <button class="text-btn text-btn--block" type="button" (click)="showAuditLog()">
+                    View the full audit log
+                  </button>
+                } @else {
+                  <p class="empty empty--side">
+                    <span class="empty__title">No AML events yet</span>
+                    Score changes, overrides and cases are listed here as they happen.
+                  </p>
+                }
               </section>
             </aside>
           </div>
         </mat-tab>
 
         <!-- -------------------------------------------- case archive -->
-        <mat-tab [label]="'Case archive (' + store.archive.length + ')'">
+        <mat-tab [label]="'Case archive (' + store.archive().length + ')'">
           <section class="card card--tab" aria-label="Case archive">
-            @if (!store.archive.length) {
+            @if (!store.archive().length) {
               <p class="empty">
                 <span class="empty__title">No closed AML cases</span>
                 Cases for this player appear here once they are resolved.
@@ -364,7 +371,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                   </tr>
                 </thead>
                 <tbody>
-                  @for (closed of store.archive; track closed.id) {
+                  @for (closed of store.archive(); track closed.id) {
                     <tr>
                       <td class="figures nowrap">{{ closed.opened | stamp: 'date' }}</td>
                       <td>{{ closed.trigger }}</td>
@@ -393,6 +400,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <!-- ----------------------------------------------- audit log -->
         <mat-tab label="Audit log">
           <section class="card card--tab" aria-label="Audit log">
+            @if (!store.log().length) {
+              <p class="empty">
+                <span class="empty__title">No AML events yet</span>
+                Score changes, overrides and cases are listed here as they happen.
+              </p>
+            } @else {
             <div class="card__scroll">
               <table class="tbl tbl--audit">
                 <colgroup>
@@ -428,6 +441,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 </button>
               }
             </p>
+            }
           </section>
         </mat-tab>
       </mat-tab-group>
@@ -810,6 +824,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         color: var(--foreground-secondary);
         text-align: center;
       }
+      /* In the rail the card is narrow and already titled, so the empty state
+         is left-aligned under the title rather than centred in a void. */
+      .empty--side {
+        padding: 0 var(--lds-core-spacing-5, 20px) var(--lds-core-spacing-4, 16px);
+        text-align: left;
+      }
       .empty__title {
         font-weight: 600;
         color: var(--foreground-primary);
@@ -1185,6 +1205,12 @@ export class AmlDashboardComponent {
       document.querySelector<HTMLElement>('aml-dashboard [role="tab"][aria-selected="true"]')?.focus(),
     );
   }
+
+  /**
+   * A case that is on the page and not resolved. Presence matters as well as
+   * status: a player who has never had a case has no AML widget at all.
+   */
+  readonly hasActiveCase = computed(() => this.ws.isPresent('aml') && !this.cases.isResolved());
 
   /** The card is a summary: past five, the score-card below is the list. */
   readonly DRIVERS_SHOWN = 5;

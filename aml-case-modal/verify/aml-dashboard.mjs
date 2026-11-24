@@ -314,6 +314,98 @@ check('creating closes the dialog, names the new case, and withdraws Create',
   (await makeDialog.count()) === 0 && /Active case #AML-1043 · EDD · opened/.test((await text('aml-dashboard .case')).replace(/\s+/g, ' ')) && (await create.count()) === 0);
 check('and it is the newest audit event', /^AML case #AML-1043 created by an agent \(EDD severity\)/.test(await text('aml-dashboard .events__what')));
 
+console.log('\nDev states');
+const open = async (id) => {
+  await page.goto(`${BASE}/?section=aml-risks&rstate=${id}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
+};
+const facts = async () => ({
+  total: await total(),
+  band: await text('aml-dashboard .risk__band'),
+  caseLine: (await text('aml-dashboard .case')).replace(/\s+/g, ' ').trim(),
+  widget: await page.locator('back-office-widgets article.w').count(),
+  panel: await panel.count(),
+  drivers: await page.locator('aml-dashboard .drivers li').count(),
+  more: (await page.locator('aml-dashboard .why__more').count()) ? await text('aml-dashboard .why__more') : '',
+});
+await page.goto(`${BASE}/?section=aml-risks`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+check('with no state asked for, the dashboard opens on R-03 with the case panel closed',
+  new URL(page.url()).searchParams.get('rstate') === 'R-03' && (await panel.count()) === 0 && (await dash.isVisible()) && (await total()) === 200);
+check('the switcher offers the dashboard\'s own states, not the modal\'s',
+  (await page.locator('dev-state-switcher option').allInnerTexts()).map((t) => t.trim().slice(0, 4)).join(',') === 'R-01,R-02,R-03,R-04,R-05,R-06,R-07' &&
+  (await text('dev-state-switcher .dev__label')) === 'Risk state');
+
+await open('R-01');
+let f = await facts();
+check('R-01: 35 points, Low risk, no case, no AML widget, Create offered',
+  f.total === 35 && f.band === 'Low risk' && f.widget === 0 && /^No active AML case Create AML case$/.test(f.caseLine), f);
+check('R-01: the checkpoint is the low risk one, as production draws it',
+  /Global low risk checkpoint/.test(await text('aml-dashboard .tbl--edd tbody')) && /£37,500 lifetime deposits/.test(await text('aml-dashboard .tbl--edd tbody')));
+
+await open('R-02');
+f = await facts();
+check('R-02: 115 points, Medium risk, an AML case open, 10 points to High',
+  f.total === 115 && f.band === 'Medium risk' && /^Active case #AML-1042 · AML/.test(f.caseLine) && f.widget === 1 &&
+  (await text('aml-dashboard .risk__next')) === '10 points to High risk', f);
+await row('Roulette').getByRole('button', { name: /Override/ }).click();
+check('R-02: the dialog shows the rating about to change',
+  (await dialog.locator('.effect__row').last().innerText()).replace(/arrow_forward/g, '>').replace(/\s+/g, ' ').trim() === 'Risk rating Medium risk > changes to High risk');
+await dialog.locator('textarea').fill('Played roulette on a second device.');
+await dialog.getByRole('button', { name: 'Save override' }).click();
+await page.waitForTimeout(400);
+check('R-02: one 10-point override crosses into High', (await total()) === 125 && (await text('aml-dashboard .risk__band')) === 'High risk');
+
+await open('R-04');
+f = await facts();
+check('R-04: 1,105 points, Critical, five fields listed and eleven counted',
+  f.total === 1105 && f.band === 'Critical' && f.drivers === 5 && f.more === 'and 11 more in the score-card below' &&
+  (await page.locator('aml-dashboard .risk__next').count()) === 0, f);
+check('R-04: the biggest field leads the list', /^Sanctioned individual\s+500$/.test((await page.locator('aml-dashboard .drivers li').first().innerText()).replace(/\s+/g, ' ')));
+
+await open('R-05');
+f = await facts();
+const notes = (await page.locator('aml-dashboard .param__override').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
+check('R-05: four overrides, up and down, timed and until revoked',
+  f.total === 245 && notes.length === 4 &&
+  notes.filter((n) => /until revoked/.test(n)).length === 1 && notes.filter((n) => /until \d{2} \w{3} \d{4}/.test(n)).length === 3 &&
+  notes.filter((n) => /Overridden to 0 points/.test(n)).length === 2, { f, notes });
+check('R-05: a met field overridden to zero still says the system has it as met',
+  /System result: met\./.test(await row('Roulette').innerText()) && /0\s*of\s*10/.test(await row('Roulette').locator('.num').innerText()));
+const longRow = await page.evaluate(() => {
+  const r = document.getElementById('score-high-deposit'); const t = r.closest('table');
+  return { rowW: r.scrollWidth, tableW: t.clientWidth, h: r.getBoundingClientRect().height };
+});
+check('R-05: a long reason wraps inside its column', longRow.rowW <= longRow.tableW && longRow.h > 60, longRow);
+await shot('dash-r05');
+
+await open('R-06');
+f = await facts();
+check('R-06: zero points, Low risk, and the risk card says nothing is adding points',
+  f.total === 0 && f.band === 'Low risk' && f.drivers === 0 && f.more === 'Nothing is adding points.' && f.widget === 0, f);
+check('R-06: the latest events say what will appear there', /No AML events yet/.test(await text('aml-dashboard .grid__side')));
+await page.getByRole('tab', { name: 'Case archive (0)' }).click();
+await page.waitForTimeout(200);
+check('R-06: so does the archive', /No closed AML cases/.test(await text('aml-dashboard .mat-mdc-tab-body-active')));
+await page.getByRole('tab', { name: 'Audit log' }).click();
+await page.waitForTimeout(200);
+check('R-06: and the audit log', /No AML events yet/.test(await text('aml-dashboard .mat-mdc-tab-body-active')) && (await page.locator('aml-dashboard .more').count()) === 0);
+await shot('dash-r06');
+
+await open('R-07');
+await page.getByRole('tab', { name: 'Case archive (12)' }).click();
+await page.waitForTimeout(200);
+check('R-07: twelve closed cases', (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 12);
+await page.getByRole('tab', { name: 'Audit log' }).click();
+await page.waitForTimeout(200);
+check('R-07: sixty-four events, ten at a time', (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 64 Show 10 more');
+
+await page.locator('dev-state-switcher select').selectOption('R-04');
+await page.waitForTimeout(400);
+check('choosing a state in the switcher applies it and goes back to Overview',
+  (await total()) === 1105 && new URL(page.url()).searchParams.get('rstate') === 'R-04' &&
+  (await page.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')) === 'true');
+
 console.log('\nNarrow');
 await page.setViewportSize({ width: 360, height: 760 });
 await page.goto(`${BASE}/?state=02&section=aml-risks`, { waitUntil: 'networkidle' });

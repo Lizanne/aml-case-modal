@@ -124,6 +124,44 @@ const SEED_LOG: AuditEvent[] = [
   { id: 'e0', at: '2026-08-09T10:02:00Z', what: 'Risk rating changed from Low risk to Medium risk', who: 'System' },
 ];
 
+/** Everything the dashboard knows about one player. */
+export interface DashboardSnapshot {
+  entries: Record<string, ScoreEntry>;
+  /** Newest first. */
+  log: AuditEvent[];
+  archive: ArchivedCase[];
+  checkpoints: EddCheckpoint[];
+}
+
+/** The player the dashboard opens on: 200 points, High risk, one override. */
+export const HIGH_RISK: DashboardSnapshot = {
+  entries: SEED,
+  log: SEED_LOG,
+  archive: [
+    { id: 'AML-0877', opened: '2026-08-09T10:02:00Z', closed: '2026-08-14T11:05:00Z', trigger: 'Risk rating: Low to Medium', severity: 'AML' },
+    { id: 'AML-0612', opened: '2026-03-02T13:45:00Z', closed: '2026-03-20T09:30:00Z', trigger: 'Deposit checkpoint crossed: £2,500', severity: 'EDD' },
+    { id: 'AML-0398', opened: '2025-10-17T08:15:00Z', closed: '2025-10-29T15:10:00Z', trigger: 'Manual: created by an agent', severity: 'AML' },
+  ],
+  checkpoints: [
+    {
+      id: 'lifetime-deposits',
+      measure: 'Lifetime deposits',
+      label: 'Global high risk checkpoint',
+      threshold: '£25,000 lifetime deposits',
+      position: 'Player is at £18,460 (74%)',
+      actions: 'Open an EDD case and request source of funds',
+    },
+    {
+      id: 'lifetime-net-loss',
+      measure: 'Lifetime net loss',
+      label: 'Global high risk checkpoint',
+      threshold: 'No next threshold for lifetime net loss',
+      position: 'Player is at £2,140 (100%)',
+      actions: null,
+    },
+  ],
+};
+
 /**
  * State for the AML dashboard in player details: the score-card, its
  * overrides, and the audit log those overrides write to.
@@ -222,30 +260,26 @@ export class AmlDashboardStore {
     return null;
   });
 
-  readonly checkpoints: readonly EddCheckpoint[] = [
-    {
-      id: 'lifetime-deposits',
-      measure: 'Lifetime deposits',
-      label: 'Global high risk checkpoint',
-      threshold: '£25,000 lifetime deposits',
-      position: 'Player is at £18,460 (74%)',
-      actions: 'Open an EDD case and request source of funds',
-    },
-    {
-      id: 'lifetime-net-loss',
-      measure: 'Lifetime net loss',
-      label: 'Global high risk checkpoint',
-      threshold: 'No next threshold for lifetime net loss',
-      position: 'Player is at £2,140 (100%)',
-      actions: null,
-    },
-  ];
+  readonly checkpoints = signal<readonly EddCheckpoint[]>(HIGH_RISK.checkpoints);
+  readonly archive = signal<readonly ArchivedCase[]>(HIGH_RISK.archive);
 
-  readonly archive: readonly ArchivedCase[] = [
-    { id: 'AML-0877', opened: '2026-08-09T10:02:00Z', closed: '2026-08-14T11:05:00Z', trigger: 'Risk rating: Low to Medium', severity: 'AML' },
-    { id: 'AML-0612', opened: '2026-03-02T13:45:00Z', closed: '2026-03-20T09:30:00Z', trigger: 'Deposit checkpoint crossed: £2,500', severity: 'EDD' },
-    { id: 'AML-0398', opened: '2025-10-17T08:15:00Z', closed: '2025-10-29T15:10:00Z', trigger: 'Manual: created by an agent', severity: 'AML' },
-  ];
+  /**
+   * @internal dev-only. Puts the dashboard in a named state for the dev
+   * switcher: a whole player, not a patch, and everything transient - the
+   * open dialog, the toast, the tab, the paging - goes back to its start.
+   */
+  seed(snapshot: DashboardSnapshot): void {
+    this.entries.set(snapshot.entries);
+    this._log.set(snapshot.log);
+    this.archive.set(snapshot.archive);
+    this.checkpoints.set(snapshot.checkpoints);
+    this.tab.set('overview');
+    this.logShown.set(AmlDashboardStore.PAGE);
+    this.overrideTarget.set(null);
+    this.creatingCase.set(false);
+    this.createdCase.set(null);
+    this.notice.set(null);
+  }
 
   /** Sets or replaces the override on a parameter, and logs what it did. */
   setOverride(id: string, change: Pick<ScoreOverride, 'points' | 'days' | 'reason'>): void {

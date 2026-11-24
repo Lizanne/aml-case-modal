@@ -14,6 +14,8 @@ import {
   applyTableScenario,
 } from './table-scenarios';
 import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
+import { AmlDashboardStore } from '../core/aml-dashboard-store';
+import { DEFAULT_RISK_SCENARIO, RISK_SCENARIOS, applyRiskScenario } from './risk-scenarios';
 
 /**
  * Dev-only harness. Not part of the product surface.
@@ -34,7 +36,7 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
       <span class="dev__tag">Dev</span>
 
       <label class="dev__field">
-        <span class="dev__label">{{ onCases() ? 'Table state' : 'State' }}</span>
+        <span class="dev__label">{{ onCases() ? 'Table state' : onRisk() ? 'Risk state' : 'State' }}</span>
         <select class="dev__select" (change)="select($event)">
           @for (scenario of visibleScenarios(); track scenario.id) {
             <!-- [selected] per option, not [value] on the select: the options are
@@ -50,7 +52,14 @@ import { DEFAULT_SCENARIO, SCENARIOS, applyScenario } from '../core/scenarios';
 
       <!-- The modal's own controls. Hidden on the table view: they act on the
            loaded case, and the table is not showing one. -->
-      @if (!onCases()) {
+      @if (onRisk()) {
+      <div class="dev__actions">
+        <button mat-stroked-button type="button" (click)="reload()">
+          <mat-icon>restart_alt</mat-icon>
+          Reset state
+        </button>
+      </div>
+      } @else if (!onCases()) {
       <div class="dev__actions">
         <button
           mat-stroked-button
@@ -195,6 +204,7 @@ export class DevStateSwitcherComponent {
   readonly ws = inject(WorkspaceStore);
   readonly cases = inject(CasesStore);
   readonly nav = inject(NavStore);
+  readonly dashboard = inject(AmlDashboardStore);
   readonly scenarios = SCENARIOS;
 
   /**
@@ -207,20 +217,26 @@ export class DevStateSwitcherComponent {
    * resolve.
    */
   readonly onCases = computed(() => this.nav.view() === 'cases');
-  readonly visibleScenarios = computed(() =>
-    this.onCases() ? TABLE_SCENARIOS : SCENARIOS,
+  /**
+   * The third group: the AML dashboard's own states, offered while the
+   * dashboard is the page. The modal's states are about a case and say
+   * nothing about a player's score, so on this page they were a list of
+   * frames that changed nothing you could see.
+   */
+  readonly onRisk = computed(() => !this.onCases() && this.nav.section() === 'aml-risks');
+  readonly visibleScenarios = computed<readonly { id: string; label: string; hint: string }[]>(() =>
+    this.onCases() ? TABLE_SCENARIOS : this.onRisk() ? RISK_SCENARIOS : SCENARIOS,
   );
 
   private readonly _current = signal(DEFAULT_SCENARIO);
   private readonly _currentTable = signal(DEFAULT_TABLE_SCENARIO);
+  private readonly _currentRisk = signal(DEFAULT_RISK_SCENARIO);
   readonly current = computed(() =>
-    this.onCases() ? this._currentTable() : this._current(),
+    this.onCases() ? this._currentTable() : this.onRisk() ? this._currentRisk() : this._current(),
   );
 
-  readonly hint = computed(() =>
-    this.onCases()
-      ? (TABLE_SCENARIOS.find((s) => s.id === this._currentTable())?.hint ?? '')
-      : (SCENARIOS.find((s) => s.id === this._current())?.hint ?? ''),
+  readonly hint = computed(
+    () => this.visibleScenarios().find((s) => s.id === this.current())?.hint ?? '',
   );
 
   constructor() {
@@ -242,6 +258,14 @@ export class DevStateSwitcherComponent {
     if (picked && (q.get('state') ?? DEFAULT_SCENARIO) === DEFAULT_SCENARIO) this.store.loadCase(picked);
     this.writeUrl('state', this._current());
 
+    // The dashboard's states. An explicit ?rstate= always applies. With none,
+    // the default applies only when no modal frame was asked for either: a
+    // link that names ?state= is asking for that case, and gets it untouched.
+    if (this.onRisk() && (q.get('rstate') || !q.get('state'))) {
+      this._currentRisk.set(applyRiskScenario(this.dashboard, this.store, this.ws, q.get('rstate')));
+      this.writeUrl('rstate', this._currentRisk());
+    }
+
     if (this.onCases()) {
       this._currentTable.set(applyTableScenario(this.cases, this.nav, q.get('tstate')));
       // The default frame seeds the Active queue, which would override a
@@ -258,6 +282,9 @@ export class DevStateSwitcherComponent {
     if (this.onCases()) {
       this._currentTable.set(applyTableScenario(this.cases, this.nav, id));
       this.writeUrl('tstate', this._currentTable());
+    } else if (this.onRisk()) {
+      this._currentRisk.set(applyRiskScenario(this.dashboard, this.store, this.ws, id));
+      this.writeUrl('rstate', this._currentRisk());
     } else {
       this._current.set(applyScenario(this.store, this.ws, id));
       this.writeUrl('state', id);
@@ -265,10 +292,14 @@ export class DevStateSwitcherComponent {
   }
 
   reload(): void {
+    if (this.onRisk()) {
+      this._currentRisk.set(applyRiskScenario(this.dashboard, this.store, this.ws, this._currentRisk()));
+      return;
+    }
     this._current.set(applyScenario(this.store, this.ws, this._current()));
   }
 
-  private writeUrl(param: 'state' | 'tstate', id: string): void {
+  private writeUrl(param: 'state' | 'tstate' | 'rstate', id: string): void {
     const url = new URL(window.location.href);
     url.searchParams.set(param, id);
     window.history.replaceState({}, '', url);
