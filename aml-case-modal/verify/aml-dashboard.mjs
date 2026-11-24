@@ -211,7 +211,9 @@ await dialog.getByRole('radio', { name: 'Until the override is revoked' }).check
 await dialog.getByRole('button', { name: 'Save override' }).click();
 await page.waitForTimeout(400);
 check('crossing 450 makes it Critical', (await total()) === 775 && (await text('aml-dashboard .risk__band')) === 'Critical');
-check('and the rating change is logged as the system\'s', /^Risk rating changed from High risk to Critical/.test(await text('aml-dashboard .events__what')));
+check('the rating change is logged as the system\'s, and lands on the open case as a trigger',
+  (await page.locator('aml-dashboard .events__what').allInnerTexts()).slice(0, 2).join(' | ') ===
+    'Trigger added to AML case #AML-1042: Risk rating: High risk to Critical | Risk rating changed from High risk to Critical');
 check('nothing is promised above Critical', (await page.locator('aml-dashboard .risk__next').count()) === 0);
 
 await row('Sanctioned individual').getByRole('button', { name: /Edit override/ }).click();
@@ -273,11 +275,13 @@ check('and takes focus to that tab, not back to the top of the page',
 check('which is what, when, who - ten at a time',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).join('|') === 'When|What|Who' &&
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 10 &&
-  (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 19 Show 9 more');
-await page.getByRole('button', { name: 'Show 9 more' }).click();
+  (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 21 Show 10 more');
+await page.getByRole('button', { name: 'Show 10 more' }).click();
+await page.waitForTimeout(150);
+await page.getByRole('button', { name: 'Show 1 more' }).click();
 await page.waitForTimeout(150);
 check('Show more brings the rest, and then steps aside',
-  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 19 &&
+  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 21 &&
   (await page.locator('aml-dashboard .more button').count()) === 0);
 check('nor does the audit log', JSON.stringify(await lines()) === '{"top":"0px","bottom":"0px","layout":"fixed"}', await lines());
 await shot('dash-audit');
@@ -355,6 +359,26 @@ await dialog.locator('textarea').fill('Played roulette on a second device.');
 await dialog.getByRole('button', { name: 'Save override' }).click();
 await page.waitForTimeout(400);
 check('R-02: one 10-point override crosses into High', (await total()) === 125 && (await text('aml-dashboard .risk__band')) === 'High risk');
+check('R-02: with a case already open the rise adds a trigger to it, and no second case',
+  (await text('dashboard-toast .toast__text')) === 'Override saved. Roulette now scores 10 points. A trigger was added to the open case.' &&
+  (await page.locator('back-office-widgets article.w').count()) === 1 &&
+  (await page.locator('aml-dashboard .events__what').allInnerTexts()).slice(0, 2).join(' | ') ===
+    'Trigger added to AML case #AML-1042: Risk rating: Medium risk to High risk | Risk rating changed from Medium risk to High risk');
+await page.locator('aml-dashboard .case__link').click();
+await page.waitForTimeout(700);
+check('R-02: and the case itself shows the trigger, the way any trigger arrives',
+  /Risk rating: Medium risk to High risk/.test(await panel.innerText()), (await panel.innerText()).slice(0, 300));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(500);
+
+await open('R-01');
+await row('Sanctioned individual').getByRole('button', { name: /Override/ }).click();
+await dialog.locator('textarea').fill('Confirmed match after manual review.');
+await dialog.getByRole('button', { name: 'Save override' }).click();
+await page.waitForTimeout(500);
+check('R-01: an override that raises the rating with no case open creates one, as a system change would',
+  (await text('aml-dashboard .risk__band')) === 'Critical' && (await page.locator('back-office-widgets article.w').count()) === 1 &&
+  (await text('dashboard-toast .toast__text')) === 'Override saved. Sanctioned individual now scores 500 points. An AML case was created.');
 
 await open('R-04');
 f = await facts();
@@ -437,10 +461,10 @@ check('the log has the field, the rating change and the case, newest first',
     'AML case #AML-1042 created (AML severity) | Risk rating changed from Low risk to Medium risk | Linked account (similar details) met: +50 points, total 75');
 await systemChange.click();
 await page.waitForTimeout(500);
-check('a further rise does not open a second case: one open case per player',
+check('a further rise does not open a second case: it adds a trigger to the open one',
   (await total()) === 150 && (await text('aml-dashboard .risk__band')) === 'High risk' &&
   (await page.locator('back-office-widgets article.w').count()) === 1 &&
-  !/case was created/.test(await text('dashboard-toast .toast__text')));
+  /Rating is now High risk\. A trigger was added to the open case\.$/.test(await text('dashboard-toast .toast__text')));
 
 console.log('\nRating since, and a case in other hands');
 await open('R-03');

@@ -1224,6 +1224,21 @@ export class CaseStore {
             isNew: false,
           };
 
+    this.arrive(trigger);
+  }
+
+  /**
+   * A trigger the system raises on the open case for a reason of its own -
+   * the AML dashboard uses it when a player's risk rating rises while their
+   * case is open. A player has one open case at a time, so a rise that would
+   * have opened a case lands on the one that is there, the same way any other
+   * trigger does: nothing forced, the agent decides what it means.
+   */
+  addSystemTrigger(name: string, detail: string): void {
+    this.arrive({ id: nextId('trg'), name, detail, at: nowIso(), isNew: false });
+  }
+
+  private arrive(trigger: Trigger): void {
     this.triggers.update((list) => [trigger, ...list]);
     this.pendingRegeneration.set(true);
     const eventId = nextId('ev');

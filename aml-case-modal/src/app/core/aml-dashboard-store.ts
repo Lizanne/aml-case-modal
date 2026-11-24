@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
   RISK_BANDS,
@@ -16,6 +16,9 @@ import {
   overrideEnds,
   scoreTotal,
 } from './aml-risk';
+import { CaseStore } from './case-store';
+import { applyScenario } from './scenarios';
+import { WorkspaceStore } from './workspace-store';
 
 /** The agent the prototype is signed in as, as everywhere else in it. */
 const AGENT = 'Liz Fernandez';
@@ -195,6 +198,14 @@ export const HIGH_RISK: DashboardSnapshot = {
  */
 @Injectable({ providedIn: 'root' })
 export class AmlDashboardStore {
+  /**
+   * Read, and written in exactly one place: what a rise in the rating does to
+   * the player's case (see recordBandChange). The score-card itself knows
+   * nothing about cases.
+   */
+  private readonly cases = inject(CaseStore);
+  private readonly ws = inject(WorkspaceStore);
+
   private readonly entries = signal<ScoreState>(SEED);
   private readonly _log = signal<AuditEvent[]>(SEED_LOG);
   private seq = 100;
@@ -348,25 +359,19 @@ export class AmlDashboardStore {
    * touching it. Returns what changed, so the dev harness can follow the
    * ticket's rule and open a case when the rating rises.
    */
-  systemChange(): { parameter: ScoreParameter; before: RiskBand; after: RiskBand } | null {
+  systemChange(): void {
     const parameter = this.nextUnmet();
-    if (!parameter) return null;
+    if (!parameter) return;
     const before = this.band();
     this.entries.update((state) => ({ ...state, [parameter.id]: { ...state[parameter.id], met: true } }));
     this._updatedAt.set(new Date().toISOString());
     this.record(`${parameter.label} met: +${parameter.points} points, total ${this.total()}`, 'System');
-    this.recordBandChange(before);
-    return { parameter, before, after: this.band() };
-  }
-
-  /** @internal dev-only. A line in the log that the system wrote. */
-  logSystem(what: string): void {
-    this.record(what, 'System');
-  }
-
-  /** @internal dev-only. Says a system change out loud, on its row. */
-  notify(message: string, parameterId: string): void {
-    this.announce(message, parameterId);
+    const consequence = this.recordBandChange(before);
+    const rating = this.band().id === before.id ? '' : ` Rating is now ${this.band().label}.`;
+    this.announce(
+      `System update. ${parameter.label} is now met: +${parameter.points} points.${rating}${consequence}`,
+      parameter.id,
+    );
   }
 
   /** Sets or replaces the override on a parameter, and logs what it did. */
@@ -382,9 +387,9 @@ export class AmlDashboardStore {
     this._updatedAt.set(at);
     const span = change.days === null ? 'until revoked' : `for ${change.days} ${change.days === 1 ? 'day' : 'days'}`;
     this.record(`${parameter.label} overridden to ${change.points} points, ${span}: total ${this.total()}`, AGENT);
-    this.recordBandChange(before);
+    const consequence = this.recordBandChange(before);
     this.overrideTarget.set(null);
-    this.announce(`Override saved. ${parameter.label} now scores ${change.points} points.`, id);
+    this.announce(`Override saved. ${parameter.label} now scores ${change.points} points.${consequence}`, id);
   }
 
   /** Hands the parameter back to the system's own result. */
@@ -413,8 +418,8 @@ export class AmlDashboardStore {
     this.entries.update((state) => ({ ...state, [id]: { met: state[id]?.met ?? false, override } }));
     this._updatedAt.set(new Date().toISOString());
     this.record(`${label} override restored: total ${this.total()}`, AGENT);
-    this.recordBandChange(before);
-    this.announce(`Override restored. ${label} scores ${override.points} points again.`, id);
+    const consequence = this.recordBandChange(before);
+    this.announce(`Override restored. ${label} scores ${override.points} points again.${consequence}`, id);
   }
 
   private noticeSeq = 0;
@@ -426,12 +431,48 @@ export class AmlDashboardStore {
     this.notice.set(null);
   }
 
-  private recordBandChange(before: RiskBand): void {
+  /**
+   * Logs a change of rating and, when the rating has RISEN, does what the
+   * ticket says a rise does to the player's case. Returns a sentence saying
+   * so, for the notice - empty when there is nothing to add.
+   *
+   * A player has one open case at a time. So:
+   *
+   *   no case open   one is created, at the severity the ticket gives:
+   *                  AML into Medium, EDD into High, AML into Critical.
+   *   a case open    no second case. The rise lands on the open one as a
+   *                  trigger - the case modal already knows how to receive a
+   *                  trigger mid-case - and the agent decides what it means
+   *                  for severity.
+   *
+   * Whatever raised it: the system finding a field met, or an agent's
+   * override. The rating is what the rule is about, not who moved it.
+   */
+  private recordBandChange(before: RiskBand): string {
     const after = this.band();
-    if (after.id !== before.id) {
-      this.record(`Risk rating changed from ${before.label} to ${after.label}`, 'System');
-      this._ratingSince.set(new Date().toISOString());
+    if (after.id === before.id) return '';
+    this.record(`Risk rating changed from ${before.label} to ${after.label}`, 'System');
+    this._ratingSince.set(new Date().toISOString());
+    if (RISK_BANDS.indexOf(after) < RISK_BANDS.indexOf(before)) return '';
+
+    const change = `Risk rating: ${before.label} to ${after.label}`;
+    if (this.ws.isPresent('aml') && !this.cases.isResolved()) {
+      this.cases.addSystemTrigger(change, `Score-card total is now ${this.total()} points.`);
+      this.record(`Trigger added to AML case #AML-1042: ${change}`, 'System');
+      return ' A trigger was added to the open case.';
     }
+    // A case made by hand from the dashboard is on record but not in the
+    // panel, so there is nothing to add a trigger to and nothing to create.
+    if (this.createdCase()) return '';
+
+    const severity = after.id === 'high' ? 'EDD' : 'AML';
+    // Unlocked: nobody has picked it up yet. Its panel stays shut, so the
+    // widget arriving on the row is the thing that is seen to happen.
+    applyScenario(this.cases, this.ws, '00a');
+    this.cases.seed({ severity });
+    this.ws.seed({ aml: { open: false } });
+    this.record(`AML case #AML-1042 created (${severity} severity)`, 'System');
+    return ` An ${severity} case was created.`;
   }
 
   private record(what: string, who: string): void {
