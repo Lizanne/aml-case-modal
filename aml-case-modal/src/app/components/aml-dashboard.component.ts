@@ -829,9 +829,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-size: 12px;
         color: var(--foreground-secondary);
       }
+      /* The same hairline as every other row. The total is set apart by its
+         weight, not by a heavier rule: a darker line here was the one border
+         in the card that did not match the rest. */
       .tbl tfoot th,
       .tbl tfoot td {
-        border-top: 1px solid var(--line-strong);
+        border-top: 1px solid var(--line);
         font-weight: 600;
       }
 

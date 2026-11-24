@@ -139,6 +139,10 @@ check('a met field shows its points and nothing else', (await row('PAR link').lo
 const seeded = await row('Occupation associated with risk').innerText();
 check('an overridden field says so, to what, for how long, by whom',
   /Overridden to 50 points until revoked by Amara Okafor/.test(seeded) && /Edit override/.test(seeded), seeded);
+check('the total row sits on the same hairline as the rows above it', await page.evaluate(() => {
+  const c = (sel) => getComputedStyle(document.querySelector(sel)).borderTopColor;
+  return c('aml-dashboard .tbl--score tfoot th') === c('#score-domestic-pep > th');
+}));
 check('the foot total matches the head', (await text('aml-dashboard tfoot .sum')) === '200');
 const sums = (await page.locator('aml-dashboard tr.band .num').allInnerTexts()).map(Number);
 check('section subtotals add up to it', sums.reduce((a, b) => a + b, 0) === 200, sums);
