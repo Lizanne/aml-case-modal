@@ -112,6 +112,22 @@ check('both checkpoints can be edited',
   (await page.getByRole('button', { name: 'Edit the lifetime deposits checkpoint' }).count()) === 1 &&
   (await page.getByRole('button', { name: 'Edit the lifetime net loss checkpoint' }).count()) === 1);
 
+console.log('\nPill');
+const pills = await page.evaluate(() => {
+  const read = (el) => { const c = getComputedStyle(el); return [c.height, c.paddingLeft, c.fontSize, c.lineHeight, c.fontWeight, c.borderRadius, c.backgroundColor, c.color].join(' '); };
+  const probe = document.createElement('ui-pill');
+  const band = document.querySelector('aml-dashboard .risk__band');
+  // A real EDD pill at the default size, built the way the app builds one.
+  for (const a of band.attributes) if (a.name.startsWith('_ngcontent') || a.name.startsWith('_nghost')) probe.setAttribute(a.name, '');
+  probe.setAttribute('data-sev', 'EDD');
+  probe.setAttribute('data-size', 'md');
+  band.after(probe);
+  const out = { band: read(band), edd: read(probe) };
+  probe.remove();
+  return out;
+});
+check('the High risk pill is the EDD pill: same size, type, ground and ink', pills.band === pills.edd, pills);
+
 console.log('\nScore-card');
 check('23 parameters in 6 sections',
   (await page.locator('aml-dashboard .tbl--score tbody tr:not(.band)').count()) === 23 &&
@@ -180,12 +196,19 @@ await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 check('Escape closes the dialog and changes nothing', (await dialog.count()) === 0 && (await total()) === 275 && (await dash.isVisible()));
 
+console.log('\nTables');
+const lines = async () => page.evaluate(() => {
+  const t = document.querySelector('aml-dashboard .mat-mdc-tab-body-active .card--tab table');
+  const first = t.querySelector('thead th'); const last = t.querySelector('tbody tr:last-child td');
+  return { top: getComputedStyle(first).borderTopWidth, bottom: getComputedStyle(last).borderBottomWidth, layout: getComputedStyle(t).tableLayout };
+});
 console.log('\nTabs');
 await page.getByRole('tab', { name: /Case archive/ }).click();
 await page.waitForTimeout(200);
 check('the archive lists closed cases with the four columns',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).slice(0, 4).join('|') === 'Date opened|Opening trigger|Date closed|Severity' &&
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 3);
+check('the archive table draws no line against its card, top or bottom', JSON.stringify(await lines()) === '{"top":"0px","bottom":"0px","layout":"fixed"}', await lines());
 check('the risk stays on screen above the tabs', await page.locator('aml-dashboard .risk__score').isVisible());
 await shot('dash-archive');
 await page.getByRole('tab', { name: 'Overview' }).click();
@@ -195,6 +218,7 @@ check('the snippet leads to the full log', (await page.getByRole('tab', { name: 
 check('which is what, when, who - every event',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).join('|') === 'When|What|Who' &&
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 15);
+check('nor does the audit log', JSON.stringify(await lines()) === '{"top":"0px","bottom":"0px","layout":"fixed"}', await lines());
 await shot('dash-audit');
 
 console.log('\nWith the case panel');

@@ -76,7 +76,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <div class="risk">
           <p class="eyebrow">Current AML risk</p>
           <p class="risk__line">
-            <ui-pill class="risk__band" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+            <ui-pill class="risk__band" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
             <span class="risk__score">{{ store.total() }}</span>
             <span class="risk__unit">points</span>
           </p>
@@ -154,7 +154,14 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
               <section class="card" aria-labelledby="ad-edd">
                 <h3 class="card__title" id="ad-edd">Next EDD checkpoints</h3>
                 <div class="card__scroll">
-                  <table class="tbl">
+                  <table class="tbl tbl--edd">
+                    <colgroup>
+                      <col style="width: 23%" />
+                      <col style="width: 27%" />
+                      <col style="width: 21%" />
+                      <col />
+                      <col style="width: 64px" />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th scope="col">Checkpoint</th>
@@ -199,11 +206,18 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                   <h3 class="card__title" id="ad-score">Risk score-card</h3>
                   <p class="card__aside">
                     <span class="sum">{{ store.total() }}</span> points
-                    <ui-pill size="sm" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+                    <ui-pill size="sm" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
                   </p>
                 </div>
                 <div class="card__scroll">
                   <table class="tbl tbl--score">
+                    <colgroup>
+                      <col />
+                      <col style="width: 112px" />
+                      <col style="width: 120px" />
+                      <col style="width: 96px" />
+                      <col style="width: 132px" />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th scope="col">Risk parameter</th>
@@ -263,7 +277,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                             </td>
                             <td class="act">
                               <button
-                                class="text-btn"
+                                class="text-btn reveal"
                                 type="button"
                                 [attr.aria-label]="(row.override ? 'Edit override: ' : 'Override: ') + row.parameter.label"
                                 (click)="store.overrideTarget.set(row.parameter.id)"
@@ -280,7 +294,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                         <th scope="row" colspan="3">Total</th>
                         <td class="num"><span class="sum">{{ store.total() }}</span></td>
                         <td class="act">
-                          <ui-pill size="sm" [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
+                          <ui-pill size="sm" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
                         </td>
                       </tr>
                     </tfoot>
@@ -312,7 +326,14 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <mat-tab [label]="'Case archive (' + store.archive.length + ')'">
           <section class="card card--tab" aria-label="Case archive">
             <div class="card__scroll">
-              <table class="tbl">
+              <table class="tbl tbl--archive">
+                <colgroup>
+                  <col style="width: 148px" />
+                  <col />
+                  <col style="width: 148px" />
+                  <col style="width: 120px" />
+                  <col style="width: 124px" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">Date opened</th>
@@ -325,9 +346,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 <tbody>
                   @for (closed of store.archive; track closed.id) {
                     <tr>
-                      <td class="nowrap">{{ closed.opened | stamp: 'date' }}</td>
+                      <td class="figures nowrap">{{ closed.opened | stamp: 'date' }}</td>
                       <td>{{ closed.trigger }}</td>
-                      <td class="nowrap">{{ closed.closed | stamp: 'date' }}</td>
+                      <td class="figures nowrap">{{ closed.closed | stamp: 'date' }}</td>
                       <td><ui-pill size="sm" [severity]="closed.severity">{{ closed.severity }}</ui-pill></td>
                       <td class="act">
                         <button class="text-btn" type="button" [attr.aria-label]="'Open closed case #' + closed.id">
@@ -346,7 +367,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <mat-tab label="Audit log">
           <section class="card card--tab" aria-label="Audit log">
             <div class="card__scroll">
-              <table class="tbl">
+              <table class="tbl tbl--audit">
+                <colgroup>
+                  <col style="width: 176px" />
+                  <col />
+                  <col style="width: 184px" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">When</th>
@@ -357,9 +383,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 <tbody>
                   @for (event of store.log(); track event.id) {
                     <tr>
-                      <td class="nowrap">{{ event.at | stamp }}</td>
+                      <td class="when">{{ event.at | stamp }}</td>
                       <td>{{ event.what }}</td>
-                      <td class="nowrap">{{ event.who }}</td>
+                      <td>{{ event.who }}</td>
                     </tr>
                   }
                 </tbody>
@@ -445,6 +471,8 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--panel);
+        /* So a lit row follows the card's corners instead of squaring them. */
+        overflow: hidden;
       }
       .eyebrow {
         margin: 0;
@@ -654,18 +682,34 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         overflow-x: auto;
       }
 
-      /* ---- tables ----------------------------------------------------- */
+      /* ---- tables -----------------------------------------------------
+       *
+       * One table, four uses. What makes it read as one:
+       *
+       *   fixed columns   widths come from a colgroup, not from the content,
+       *                   so a row gaining an override note or a longer event
+       *                   cannot push the columns beside it around.
+       *   one rhythm      every row is 12px + a 20px line + 12px = 44px, and a
+       *                   pill or a number sits on that same 20px line.
+       *   lines between   a hairline separates two rows. Nothing is drawn
+       *                   above the first or below the last - the card's own
+       *                   edge is already there, and a second line against it
+       *                   was the doubled border on the two tab tables.
+       *   quiet header    small, secondary, no fill: it labels the columns
+       *                   and then gets out of the way of the rows.
+       */
       .tbl {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
       }
       .tbl th,
       .tbl td {
-        padding: var(--lds-core-spacing-2, 8px) var(--lds-core-spacing-3, 12px);
-        border-top: 1px solid var(--line);
+        padding: var(--lds-core-spacing-3, 12px);
         text-align: left;
         vertical-align: top;
         font-weight: 400;
+        overflow-wrap: anywhere;
       }
       .tbl th:first-child,
       .tbl td:first-child {
@@ -676,14 +720,29 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         padding-right: var(--lds-core-spacing-5, 20px);
       }
       .tbl thead th {
+        padding-top: var(--lds-core-spacing-2, 8px);
+        padding-bottom: var(--lds-core-spacing-2, 8px);
+        border-bottom: 1px solid var(--line);
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
         color: var(--foreground-secondary);
         white-space: nowrap;
       }
-      .tbl tbody th[scope='row'] {
-        font-weight: 600;
+      /* A table that opens its card has no title above it, so its header
+         takes the title's top padding instead of crowding the corner. */
+      .card--tab .tbl thead th {
+        padding-top: var(--lds-core-spacing-3, 12px);
+        padding-bottom: var(--lds-core-spacing-3, 12px);
+      }
+      .tbl tbody tr:not(:first-child) > * {
+        border-top: 1px solid var(--line);
+      }
+      .tbl tbody td {
+        transition: background-color 100ms ease;
+      }
+      .tbl tbody th {
+        transition: background-color 100ms ease;
       }
       .tbl .num {
         text-align: right;
@@ -691,7 +750,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-variant-numeric: tabular-nums;
       }
       .tbl .act {
-        width: 1%;
         text-align: right;
         white-space: nowrap;
       }
@@ -701,19 +759,39 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .quiet {
         color: var(--foreground-secondary);
       }
-      .figures {
+      .figures,
+      .when {
         font-variant-numeric: tabular-nums;
       }
-
-      /* The score-card's rows are read down the first column, so the name is
-         not bold here: twenty-three bold lines is no emphasis at all. */
-      .tbl--score tbody th[scope='row'] {
-        font-weight: 400;
+      /* The time an event happened is the index, not the news. */
+      .when {
+        color: var(--foreground-secondary);
+        white-space: nowrap;
       }
+
+      /* Narrow cards scroll their table sideways; these are the widths below
+         which a column would stop being readable. */
+      .tbl--edd {
+        min-width: 680px;
+      }
+      .tbl--score {
+        min-width: 660px;
+      }
+      .tbl--archive {
+        min-width: 620px;
+      }
+      .tbl--audit {
+        min-width: 560px;
+      }
+
       /* The section band, as in the case modal: --background-tertiary, the
-         field label's size, uppercase. */
+         field label's size, uppercase. It is a heading, not a row, so it
+         carries no separator and does not answer to the pointer. */
       .tbl--score .band th,
       .tbl--score .band td {
+        padding-top: var(--lds-core-spacing-2, 8px);
+        padding-bottom: var(--lds-core-spacing-2, 8px);
+        border-top: 0;
         background: var(--background-tertiary);
         font-size: 14px;
         line-height: 20px;
@@ -724,6 +802,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .tbl--score .band td.num {
         letter-spacing: 0;
       }
+      .tbl--score .band + tr > * {
+        border-top: 0;
+      }
       .param {
         display: flex;
         align-items: flex-start;
@@ -732,7 +813,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .param__override {
         display: block;
         margin-top: 2px;
-        max-width: 60ch;
         font-size: 12px;
         line-height: 16px;
         color: var(--foreground-secondary);
@@ -752,10 +832,38 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .tbl tfoot th,
       .tbl tfoot td {
         border-top: 1px solid var(--line-strong);
-        padding-top: var(--lds-core-spacing-3, 12px);
-        padding-bottom: var(--lds-core-spacing-3, 12px);
         font-weight: 600;
-        vertical-align: middle;
+      }
+
+      /**
+       * With a mouse: the row under the pointer lights, and Override - the
+       * same word on twenty-three rows - waits until its row is the one being
+       * looked at. An existing override keeps its "Edit override" in view,
+       * because that row has something to say.
+       *
+       * Never hover ALONE: keyboard focus inside the row shows it too, and on
+       * a touch screen nothing is ever hidden.
+       */
+      @media (hover: hover) and (pointer: fine) {
+        .tbl tbody tr:not(.band):hover > * {
+          background: var(--surface-hover);
+        }
+        .tbl .reveal {
+          opacity: 0;
+          transition: opacity 100ms ease;
+        }
+        .tbl tr:hover .reveal,
+        .tbl tr:focus-within .reveal,
+        .tbl tr.is-overridden .reveal {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tbl tbody td,
+        .tbl tbody th,
+        .tbl .reveal {
+          transition: none;
+        }
       }
 
       /* ---- small controls -------------------------------------------- */
