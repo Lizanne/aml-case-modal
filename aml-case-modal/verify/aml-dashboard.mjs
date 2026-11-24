@@ -218,6 +218,29 @@ await row('Sanctioned individual').getByRole('button', { name: /Edit override/ }
 await dialog.getByRole('button', { name: 'Revoke override' }).click();
 await page.waitForTimeout(400);
 check('revoking hands the field back to the system', (await total()) === 275 && /Not met/.test(await row('Sanctioned individual').innerText()));
+const toast = page.locator('dashboard-toast .toast');
+check('and says so, in a live region, with a way back',
+  (await toast.locator('.toast__text').innerText()) === 'Override revoked. Sanctioned individual now scores 0 points.' &&
+  (await page.locator('dashboard-toast [role="status"]').count()) === 1 &&
+  (await toast.getByRole('button', { name: 'Undo' }).count()) === 1);
+await toast.getByRole('button', { name: 'Undo' }).click();
+await page.waitForTimeout(300);
+const back = await row('Sanctioned individual').innerText();
+check('Undo puts the override back as it was: points, span and reason',
+  (await total()) === 775 && /Overridden to 500 points until revoked by Liz Fernandez/.test(back) && /Confirmed match after manual review\./.test(back), back);
+check('and the toast then says restored, with nothing further to undo',
+  /^Override restored\./.test(await toast.locator('.toast__text').innerText()) && (await toast.getByRole('button', { name: 'Undo' }).count()) === 0);
+await toast.getByRole('button', { name: 'Dismiss' }).click();
+check('Dismiss removes it', (await toast.count()) === 0);
+await row('Sanctioned individual').getByRole('button', { name: /Edit override/ }).click();
+await dialog.getByRole('button', { name: 'Revoke override' }).click();
+await page.waitForTimeout(300);
+await toast.hover();
+await page.waitForTimeout(6500);
+check('the toast waits while the pointer is on it', (await toast.count()) === 1);
+await page.mouse.move(700, 300);
+await page.waitForTimeout(6500);
+check('and goes on its own once left alone', (await toast.count()) === 0);
 
 await row('PAR link').getByRole('button', { name: /Override/ }).click();
 await page.keyboard.press('Escape');
@@ -250,11 +273,11 @@ check('and takes focus to that tab, not back to the top of the page',
 check('which is what, when, who - ten at a time',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).join('|') === 'When|What|Who' &&
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 10 &&
-  (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 15 Show 5 more');
-await page.getByRole('button', { name: 'Show 5 more' }).click();
+  (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 19 Show 9 more');
+await page.getByRole('button', { name: 'Show 9 more' }).click();
 await page.waitForTimeout(150);
 check('Show more brings the rest, and then steps aside',
-  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 15 &&
+  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 19 &&
   (await page.locator('aml-dashboard .more button').count()) === 0);
 check('nor does the audit log', JSON.stringify(await lines()) === '{"top":"0px","bottom":"0px","layout":"fixed"}', await lines());
 await shot('dash-audit');

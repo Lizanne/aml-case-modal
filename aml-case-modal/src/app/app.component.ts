@@ -19,6 +19,7 @@ import { SideNavComponent } from './chrome/side-nav.component';
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
 import { AmlDashboardComponent } from './components/aml-dashboard.component';
 import { CreateCaseDialogComponent } from './components/create-case-dialog.component';
+import { DashboardToastComponent } from './components/dashboard-toast.component';
 import { ScoreOverrideDialogComponent } from './components/score-override-dialog.component';
 import { AmlDashboardStore } from './core/aml-dashboard-store';
 import { AttachmentPreviewComponent } from './components/attachment-preview.component';
@@ -50,6 +51,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     AmlDashboardComponent,
     ScoreOverrideDialogComponent,
     CreateCaseDialogComponent,
+    DashboardToastComponent,
     AttachmentPreviewComponent,
     ConfirmUnlockDialogComponent,
     SgAlertModalComponent,
@@ -260,6 +262,9 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     }
     @if (dashboard.creatingCase()) {
       <create-case-dialog />
+    }
+    @if (nav.view() === 'player' && nav.section() === 'aml-risks') {
+      <dashboard-toast />
     }
     @if (cases.pendingForceUnlock()) {
       <confirm-unlock-dialog [caseId]="cases.pendingForceUnlock()" />

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -1222,6 +1222,25 @@ export class AmlDashboardComponent {
   );
 
   /**
+   * A row that has just been changed is washed once, the same wash a jump
+   * from the summary gives it: after a revoke the row has LOST something, and
+   * an absence is the one change the eye does not find on its own.
+   */
+  private readonly onChange = effect(() => {
+    const notice = this.store.notice();
+    if (!notice) return;
+    // After the row has been re-rendered with its new contents.
+    setTimeout(() => this.wash(document.getElementById('score-' + notice.parameterId)));
+  });
+
+  private wash(row: HTMLElement | null): void {
+    row?.animate(
+      [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
+      { duration: 800, easing: 'ease-out' },
+    );
+  }
+
+  /**
    * Takes the agent from a line in the summary to that field's row in the
    * score-card: scrolled to the middle, washed once so the eye lands on it,
    * and focus left on its Override button - the likeliest next press.
@@ -1231,10 +1250,7 @@ export class AmlDashboardComponent {
     if (!target) return;
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
     target.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
-    target.animate(
-      [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
-      { duration: 800, easing: 'ease-out' },
-    );
+    this.wash(target);
     target.querySelector<HTMLElement>('button.text-btn')?.focus({ preventScroll: true });
   }
 

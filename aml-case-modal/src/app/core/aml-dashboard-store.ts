@@ -37,6 +37,21 @@ export interface AuditEvent {
  * draws it: which checkpoint, the next threshold in words, and where the
  * player stands against it. `actions` is the column APP-17691 adds.
  */
+/**
+ * What the dashboard says back after a change. `undo` is there only when the
+ * change took something away: a revoke removes an override and its reason in
+ * one press, with no confirmation in front of it, so the way back is offered
+ * afterwards instead.
+ */
+export interface DashboardNotice {
+  /** Changes on every notice, so the same message twice is still two notices. */
+  seq: number;
+  message: string;
+  /** The score-card row that changed. */
+  parameterId: string;
+  undo?: () => void;
+}
+
 export interface EddCheckpoint {
   id: 'lifetime-deposits' | 'lifetime-net-loss';
   /** What is being measured. Leads the row: it is what tells two rows apart. */
@@ -136,6 +151,9 @@ export class AmlDashboardStore {
    * the dashboard to stop offering Create and to say which case is active.
    */
   readonly createdCase = signal<{ id: string; severity: string; opened: string } | null>(null);
+
+  /** The last thing that changed, for the toast and the row it points at. */
+  readonly notice = signal<DashboardNotice | null>(null);
 
   /** The parameter whose override dialog is up, if any. */
   readonly overrideTarget = signal<string | null>(null);
@@ -243,6 +261,7 @@ export class AmlDashboardStore {
     this.record(`${parameter.label} overridden to ${change.points} points, ${span}: total ${this.total()}`, AGENT);
     this.recordBandChange(before);
     this.overrideTarget.set(null);
+    this.announce(`Override saved. ${parameter.label} now scores ${change.points} points.`, id);
   }
 
   /** Hands the parameter back to the system's own result. */
@@ -250,10 +269,36 @@ export class AmlDashboardStore {
     const parameter = SCORE_PARAMETERS.find((candidate) => candidate.id === id);
     if (!parameter) return;
     const before = this.band();
+    const removed = this.entries()[id]?.override;
     this.entries.update((state) => ({ ...state, [id]: { met: state[id]?.met ?? false } }));
     this.record(`${parameter.label} override revoked: total ${this.total()}`, AGENT);
     this.recordBandChange(before);
     this.overrideTarget.set(null);
+
+    const now = effectivePoints(parameter, this.entries()[id], new Date());
+    this.announce(
+      `Override revoked. ${parameter.label} now scores ${now} points.`,
+      id,
+      removed ? () => this.restoreOverride(id, parameter.label, removed) : undefined,
+    );
+  }
+
+  /** Puts a revoked override back exactly as it was: same reason, author, date. */
+  private restoreOverride(id: string, label: string, override: ScoreOverride): void {
+    const before = this.band();
+    this.entries.update((state) => ({ ...state, [id]: { met: state[id]?.met ?? false, override } }));
+    this.record(`${label} override restored: total ${this.total()}`, AGENT);
+    this.recordBandChange(before);
+    this.announce(`Override restored. ${label} scores ${override.points} points again.`, id);
+  }
+
+  private noticeSeq = 0;
+  private announce(message: string, parameterId: string, undo?: () => void): void {
+    this.notice.set({ seq: ++this.noticeSeq, message, parameterId, undo });
+  }
+
+  dismissNotice(): void {
+    this.notice.set(null);
   }
 
   private recordBandChange(before: RiskBand): void {
