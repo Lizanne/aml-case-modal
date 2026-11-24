@@ -42,7 +42,7 @@ type Span = 'days' | 'revoked';
 
         <fieldset class="group">
           <legend class="group__label">Points while overridden</legend>
-          <mat-radio-group class="choices" [value]="points()" (change)="points.set($any($event).value)">
+          <mat-radio-group class="choices" [value]="points()" (change)="onPoints($event)">
             <mat-radio-button [value]="0">0 points</mat-radio-button>
             <mat-radio-button [value]="row.parameter.points">
               {{ row.parameter.points }} points
@@ -52,7 +52,7 @@ type Span = 'days' | 'revoked';
 
         <fieldset class="group">
           <legend class="group__label">How long</legend>
-          <mat-radio-group class="choices choices--stack" [value]="span()" (change)="span.set($any($event).value)">
+          <mat-radio-group class="choices choices--stack" [value]="span()" (change)="onSpan($event)">
             <mat-radio-button value="days">For a number of days</mat-radio-button>
             @if (span() === 'days') {
               <label class="days">
@@ -66,6 +66,7 @@ type Span = 'days' | 'revoked';
                   [attr.aria-invalid]="daysValid() ? null : 'true'"
                   [value]="days()"
                   (input)="days.set($any($event.target).valueAsNumber)"
+                  (change)="$event.stopPropagation()"
                 />
                 <span class="days__unit">days</span>
                 @if (!daysValid()) {
@@ -232,6 +233,25 @@ export class ScoreOverrideDialogComponent {
   readonly valid = computed(
     () => this.reason().trim().length > 0 && (this.span() === 'revoked' || this.daysValid()),
   );
+
+  /**
+   * (change) on mat-radio-group is the group's output AND the DOM event of
+   * the same name, and the number field sits inside the group. Its native
+   * change - fired by the stepper arrows, and on blur - bubbled up here as a
+   * plain Event with no .value, set the span to undefined, and the field
+   * removed itself from under the pointer. The field stops its own event;
+   * these two also refuse anything that is not one of their answers, so the
+   * next control put inside a group cannot do the same.
+   */
+  onSpan(event: unknown): void {
+    const value = (event as { value?: unknown }).value;
+    if (value === 'days' || value === 'revoked') this.span.set(value);
+  }
+
+  onPoints(event: unknown): void {
+    const value = (event as { value?: unknown }).value;
+    if (typeof value === 'number') this.points.set(value);
+  }
 
   save(row: ScoreRow): void {
     if (!this.valid()) return;

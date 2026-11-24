@@ -121,6 +121,17 @@ check('then is available', await save.isEnabled());
 await dialog.locator('.days__input').fill('0');
 check('zero days is refused, with a message', (await save.isDisabled()) && (await dialog.locator('.days__error').count()) === 1);
 await dialog.locator('.days__input').fill('14');
+// The stepper arrows fire a native change, which used to bubble into the
+// radio group and unset it - taking the field away mid-click.
+await dialog.locator('.days__input').focus();
+await page.keyboard.press('ArrowUp');
+await dialog.locator('.days__input').dispatchEvent('change');
+await page.waitForTimeout(100);
+check('stepping the days keeps the field and its radio',
+  (await dialog.locator('.days__input').count()) === 1 &&
+  (await dialog.locator('.days__input').inputValue()) === '15' &&
+  (await dialog.getByRole('radio', { name: 'For a number of days' }).isChecked()));
+await dialog.locator('.days__input').fill('14');
 await shot('dash-override-dialog');
 await save.click();
 await page.waitForTimeout(400);
