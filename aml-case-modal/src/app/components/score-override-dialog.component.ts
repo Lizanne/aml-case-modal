@@ -61,7 +61,7 @@ type Span = 'days' | 'revoked';
           </p>
 
           <dl class="effect" aria-live="polite">
-            <div class="effect__cell">
+            <div class="effect__row">
               <dt>This field</dt>
               <dd>
                 @if (points() !== row.points) {
@@ -70,10 +70,13 @@ type Span = 'days' | 'revoked';
                   <span class="sr-only">changes to</span>
                 }
                 <span class="effect__to">{{ points() }}</span>
-                <span class="effect__unit">{{ points() === row.points ? 'points, unchanged' : 'points' }}</span>
+                <span class="effect__unit">points</span>
+                @if (points() === row.points) {
+                  <span class="effect__same">unchanged</span>
+                }
               </dd>
             </div>
-            <div class="effect__cell">
+            <div class="effect__row">
               <dt>Player total</dt>
               <dd>
                 @if (newTotal() !== store.total()) {
@@ -83,14 +86,26 @@ type Span = 'days' | 'revoked';
                 }
                 <span class="effect__to what__total">{{ newTotal() }}</span>
                 <span class="effect__unit">points</span>
-                <span class="effect__band">
-                  @if (newBand().id !== store.band().id) {
-                    <ui-pill size="sm" rim [tone]="tone(store.band().id)">{{ store.band().label }}</ui-pill>
-                    <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
-                    <span class="sr-only">changes to</span>
-                  }
-                  <ui-pill size="sm" rim [tone]="tone(newBand().id)">{{ newBand().label }}</ui-pill>
-                </span>
+                @if (newTotal() === store.total()) {
+                  <span class="effect__same">unchanged</span>
+                }
+              </dd>
+            </div>
+            <!-- The rating is a reading of its own, with its own label - not
+                 a tag hung on the total. It is the consequence the other two
+                 lead to, so it is the last line. -->
+            <div class="effect__row">
+              <dt>Risk rating</dt>
+              <dd>
+                @if (newBand().id !== store.band().id) {
+                  <ui-pill size="sm" rim [tone]="tone(store.band().id)">{{ store.band().label }}</ui-pill>
+                  <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
+                  <span class="sr-only">changes to</span>
+                }
+                <ui-pill size="sm" rim [tone]="tone(newBand().id)">{{ newBand().label }}</ui-pill>
+                @if (newBand().id === store.band().id) {
+                  <span class="effect__same">unchanged</span>
+                }
               </dd>
             </div>
           </dl>
@@ -191,35 +206,41 @@ type Span = 'days' | 'revoked';
         color: var(--foreground-secondary);
         font-variant-numeric: tabular-nums;
       }
-      /* Two readings side by side: the field, and the player. */
+      /**
+       * Three readings down one column: the field, the total it feeds, the
+       * rating the total gives. Labels share a left edge and values share
+       * another, so a number, a pair of numbers and a pill all start on the
+       * same line and the eye runs straight down them.
+       *
+       * Always three rows of 24px, whatever the answer below - so nothing
+       * under this box moves when the answer changes.
+       */
       .effect {
         display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        gap: var(--lds-core-spacing-1, 4px);
         margin: var(--lds-core-spacing-3, 12px) 0 0;
+        padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
         border-radius: 8px;
         background: var(--background-tertiary);
       }
-      .effect__cell {
-        min-width: 0;
-        padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
-      }
-      .effect__cell + .effect__cell {
-        border-left: 1px solid var(--line);
+      .effect__row {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        align-items: center;
+        min-height: 24px;
       }
       .effect dt {
-        font-size: 12px;
-        line-height: 16px;
-        font-weight: 600;
+        font-size: 14px;
+        line-height: 20px;
         color: var(--foreground-secondary);
       }
       .effect dd {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
-        gap: 2px 6px;
-        margin: 2px 0 0;
-        font-size: 16px;
-        line-height: 24px;
+        gap: 6px;
+        margin: 0;
+        font-size: 14px;
+        line-height: 20px;
         font-variant-numeric: tabular-nums;
       }
       /* What it is now recedes; what it will be is the reading. */
@@ -230,10 +251,14 @@ type Span = 'days' | 'revoked';
         font-weight: 600;
         color: var(--foreground-primary);
       }
-      .effect__unit {
-        font-size: 14px;
-        line-height: 20px;
+      .effect__unit,
+      .effect__same {
         color: var(--foreground-secondary);
+      }
+      /* Set off from the value it qualifies. */
+      .effect__same::before {
+        content: '·';
+        margin-right: 6px;
       }
       mat-icon.effect__arrow {
         font-size: 16px;
@@ -241,25 +266,6 @@ type Span = 'days' | 'revoked';
         height: 16px;
         line-height: 16px;
         color: var(--foreground-secondary);
-      }
-      /* Always its own line. Left to wrap, the band sat beside the total
-         when it was one pill and under it when it was two, and the box grew
-         and shrank as the answer below changed. */
-      .effect__band {
-        display: flex;
-        flex-basis: 100%;
-        align-items: center;
-        gap: 4px;
-        margin-top: 2px;
-      }
-      @media (max-width: 479.98px) {
-        .effect {
-          grid-template-columns: minmax(0, 1fr);
-        }
-        .effect__cell + .effect__cell {
-          border-left: 0;
-          border-top: 1px solid var(--line);
-        }
       }
 
       /* ---- the two questions ------------------------------------------- */

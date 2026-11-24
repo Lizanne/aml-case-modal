@@ -162,12 +162,12 @@ check('and on a number of days', await dialog.getByRole('radio', { name: 'For a 
 const save = dialog.getByRole('button', { name: 'Save override' });
 check('nothing in the dialog opens with a focus mark on it',
   await page.evaluate(() => !document.activeElement?.matches('input, textarea, button')));
-const effect = async () => (await dialog.locator('.effect__cell').allInnerTexts()).map((t) => t.replace(/arrow_forward/g, '>').replace(/\s+/g, ' ').trim()).join(' | ');
+const effect = async () => (await dialog.locator('.effect__row').allInnerTexts()).map((t) => t.replace(/arrow_forward/g, '>').replace(/\s+/g, ' ').trim()).join(' | ');
 check('the dialog shows the change as before and after, for the field and the player',
-  (await effect()) === 'This field 0 > changes to 75 points | Player total 200 > changes to 275 points High risk', await effect());
+  (await effect()) === 'This field 0 > changes to 75 points | Player total 200 > changes to 275 points | Risk rating High risk unchanged', await effect());
 await dialog.getByRole('radio', { name: '0 points' }).check();
 check('and says "unchanged" when the answer is what the field already scores',
-  (await effect()) === 'This field 0 points, unchanged | Player total 200 points High risk', await effect());
+  (await effect()) === 'This field 0 points unchanged | Player total 200 points unchanged | Risk rating High risk unchanged', await effect());
 const hSame = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRect().height);
 await dialog.getByRole('radio', { name: '75 points' }).check();
 const hChanged = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRect().height);
