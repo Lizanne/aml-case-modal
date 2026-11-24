@@ -18,6 +18,7 @@ import { PlayerHeaderComponent } from './chrome/player-header.component';
 import { SideNavComponent } from './chrome/side-nav.component';
 import { AmlCaseModalComponent } from './components/aml-case-modal.component';
 import { AmlDashboardComponent } from './components/aml-dashboard.component';
+import { CreateCaseDialogComponent } from './components/create-case-dialog.component';
 import { ScoreOverrideDialogComponent } from './components/score-override-dialog.component';
 import { AmlDashboardStore } from './core/aml-dashboard-store';
 import { AttachmentPreviewComponent } from './components/attachment-preview.component';
@@ -48,6 +49,7 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
     AmlCaseModalComponent,
     AmlDashboardComponent,
     ScoreOverrideDialogComponent,
+    CreateCaseDialogComponent,
     AttachmentPreviewComponent,
     ConfirmUnlockDialogComponent,
     SgAlertModalComponent,
@@ -255,6 +257,9 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
          painted under the player bar. -->
     @if (dashboard.overrideTarget()) {
       <score-override-dialog />
+    }
+    @if (dashboard.creatingCase()) {
+      <create-case-dialog />
     }
     @if (cases.pendingForceUnlock()) {
       <confirm-unlock-dialog [caseId]="cases.pendingForceUnlock()" />

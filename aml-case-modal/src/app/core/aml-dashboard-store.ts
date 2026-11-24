@@ -39,7 +39,7 @@ export interface AuditEvent {
  */
 export interface EddCheckpoint {
   id: 'lifetime-deposits' | 'lifetime-net-loss';
-  /** What the edit button names: the measure, not the checkpoint set. */
+  /** What is being measured. Leads the row: it is what tells two rows apart. */
   measure: string;
   label: string;
   threshold: string;
@@ -124,6 +124,19 @@ export class AmlDashboardStore {
 
   readonly tab = signal<DashboardTab>('overview');
 
+  /** How many audit events the log shows before "Show more". */
+  static readonly PAGE = 10;
+  readonly logShown = signal(AmlDashboardStore.PAGE);
+
+  /** The Create AML case dialog. */
+  readonly creatingCase = signal(false);
+  /**
+   * A case made from the dashboard. The prototype's case panel holds one
+   * fixture case, so this is the record that one was created - enough for
+   * the dashboard to stop offering Create and to say which case is active.
+   */
+  readonly createdCase = signal<{ id: string; severity: string; opened: string } | null>(null);
+
   /** The parameter whose override dialog is up, if any. */
   readonly overrideTarget = signal<string | null>(null);
 
@@ -165,6 +178,21 @@ export class AmlDashboardStore {
 
   readonly log = this._log.asReadonly();
   readonly latest = computed(() => this._log().slice(0, 5));
+  readonly visibleLog = computed(() => this._log().slice(0, this.logShown()));
+  readonly logRemaining = computed(() => Math.max(0, this._log().length - this.logShown()));
+
+  showMoreLog(): void {
+    this.logShown.update((n) => n + AmlDashboardStore.PAGE);
+  }
+
+  /** Rule 1 allows one open case per player, so this is only offered when
+      there is none. */
+  createCase(severity: string, reason: string): void {
+    const opened = new Date().toISOString();
+    this.createdCase.set({ id: 'AML-1043', severity, opened });
+    this.record(`AML case #AML-1043 created by an agent (${severity} severity): ${reason}`, AGENT);
+    this.creatingCase.set(false);
+  }
 
   readonly targetRow = computed<ScoreRow | null>(() => {
     const id = this.overrideTarget();
@@ -179,7 +207,7 @@ export class AmlDashboardStore {
   readonly checkpoints: readonly EddCheckpoint[] = [
     {
       id: 'lifetime-deposits',
-      measure: 'lifetime deposits',
+      measure: 'Lifetime deposits',
       label: 'Global high risk checkpoint',
       threshold: '£25,000 lifetime deposits',
       position: 'Player is at £18,460 (74%)',
@@ -187,7 +215,7 @@ export class AmlDashboardStore {
     },
     {
       id: 'lifetime-net-loss',
-      measure: 'lifetime net loss',
+      measure: 'Lifetime net loss',
       label: 'Global high risk checkpoint',
       threshold: 'No next threshold for lifetime net loss',
       position: 'Player is at £2,140 (100%)',

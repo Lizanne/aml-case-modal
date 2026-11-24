@@ -58,10 +58,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           <mat-icon aria-hidden="true">open_in_new</mat-icon>
           <span class="sr-only">(opens in a new tab)</span>
         </a>
-        <button class="ad__create" mat-stroked-button type="button">
-          <mat-icon aria-hidden="true">add</mat-icon>
-          Create AML case
-        </button>
       </header>
 
       <!-- ------------------------------------------------ current risk -->
@@ -88,7 +84,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
               @for (band of store.bands; track band.id) {
                 <span class="scale__seg" [attr.data-band]="band.id" [class.is-current]="band.id === store.band().id"></span>
               }
-              <span class="scale__marker" [style.left.%]="markerAt()"></span>
+              <!-- Moved with transform, not left: the rail is the track's own
+                   width, so a percentage of it is a percentage of the track. -->
+              <span class="scale__rail" [style.transform]="'translateX(' + markerAt() + '%)'">
+                <span class="scale__marker"></span>
+              </span>
             </div>
             <div class="scale__legend" aria-hidden="true">
               @for (band of store.bands; track band.id) {
@@ -111,7 +111,23 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 · {{ cases.severity() }} · opened {{ cases.createdAt() | stamp: 'date' }}
               </span>
             } @else {
-              <span class="case">No active AML case</span>
+              <!-- Nested, not "@else if (...; as made)": Angular 17 has no alias
+                   on an else-if. -->
+              @if (store.createdCase(); as made) {
+                <span class="case">
+                  Active case #{{ made.id }} · {{ made.severity }} · opened {{ made.opened | stamp: 'date' }}
+                </span>
+              } @else {
+                <!-- Create lives beside the fact that makes it possible. One
+                     open case per player (rule 1), so with a case active there
+                     is nothing to offer and the button is not here. -->
+                <span class="case">
+                  No active AML case
+                  <button class="text-btn case__create" type="button" (click)="store.creatingCase.set(true)">
+                    Create AML case
+                  </button>
+                </span>
+              }
             }
           </p>
         </div>
@@ -174,7 +190,10 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                     <tbody>
                       @for (checkpoint of store.checkpoints; track checkpoint.id) {
                         <tr>
-                          <td>{{ checkpoint.label }}</td>
+                          <th scope="row">
+                            {{ checkpoint.measure }}
+                            <span class="sub">{{ checkpoint.label }}</span>
+                          </th>
                           <td>{{ checkpoint.threshold }}</td>
                           <td class="figures">{{ checkpoint.position }}</td>
                           <td>
@@ -186,10 +205,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                           </td>
                           <td class="act">
                             <button
-                              class="icon-btn"
+                              class="icon-btn is-stub"
                               type="button"
-                              [attr.aria-label]="'Edit the ' + checkpoint.measure + ' checkpoint'"
-                              matTooltip="Edit checkpoint"
+                              [attr.aria-label]="'Edit the ' + checkpoint.measure.toLowerCase() + ' checkpoint'"
+                              aria-disabled="true"
+                              matTooltip="Editing a checkpoint is not in this prototype"
                             >
                               <mat-icon fontSet="material-icons-outlined" aria-hidden="true">edit</mat-icon>
                             </button>
@@ -202,13 +222,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
               </section>
 
               <section class="card" aria-labelledby="ad-score">
-                <div class="card__head">
-                  <h3 class="card__title" id="ad-score">Risk score-card</h3>
-                  <p class="card__aside">
-                    <span class="sum">{{ store.total() }}</span> points
-                    <ui-pill size="sm" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
-                  </p>
-                </div>
+                <h3 class="card__title" id="ad-score">Risk score-card</h3>
                 <div class="card__scroll">
                   <table class="tbl tbl--score">
                     <colgroup>
@@ -224,7 +238,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                         <th scope="col">Exit criteria</th>
                         <th scope="col">Result</th>
                         <th scope="col" class="num">Points</th>
-                        <th scope="col"><span class="sr-only">Override</span></th>
+                        <th scope="col" class="act">Override</th>
                       </tr>
                     </thead>
                     @for (section of store.sections(); track section.category) {
@@ -252,12 +266,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                               @if (row.override; as override) {
                                 <span class="param__override">
                                   Overridden to {{ override.points }} points {{ overrideSpan(row) }} by
-                                  {{ override.by }}:
+                                  {{ override.by }}. System result: {{ row.met ? 'met' : 'not met' }}.
                                   {{ override.reason }}
                                 </span>
                               }
                             </th>
-                            <td>{{ row.parameter.exitDays ? row.parameter.exitDays + ' days' : 'None' }}</td>
+                            <td class="exit">{{ row.parameter.exitDays ? row.parameter.exitDays + ' days' : 'None' }}</td>
                             <td>
                               @if (row.override) {
                                 <ui-pill size="sm" tone="info">Overridden</ui-pill>
@@ -314,7 +328,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                     </li>
                   }
                 </ol>
-                <button class="text-btn text-btn--block" type="button" (click)="store.tab.set('audit')">
+                <button class="text-btn text-btn--block" type="button" (click)="showAuditLog()">
                   View the full audit log
                 </button>
               </section>
@@ -325,6 +339,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <!-- -------------------------------------------- case archive -->
         <mat-tab [label]="'Case archive (' + store.archive.length + ')'">
           <section class="card card--tab" aria-label="Case archive">
+            @if (!store.archive.length) {
+              <p class="empty">
+                <span class="empty__title">No closed AML cases</span>
+                Cases for this player appear here once they are resolved.
+              </p>
+            } @else {
             <div class="card__scroll">
               <table class="tbl tbl--archive">
                 <colgroup>
@@ -351,7 +371,13 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                       <td class="figures nowrap">{{ closed.closed | stamp: 'date' }}</td>
                       <td><ui-pill size="sm" [severity]="closed.severity">{{ closed.severity }}</ui-pill></td>
                       <td class="act">
-                        <button class="text-btn" type="button" [attr.aria-label]="'Open closed case #' + closed.id">
+                        <button
+                          class="text-btn is-stub"
+                          type="button"
+                          aria-disabled="true"
+                          matTooltip="Opening a closed case is not in this prototype"
+                          [attr.aria-label]="'Open closed case #' + closed.id"
+                        >
                           Open case
                         </button>
                       </td>
@@ -360,6 +386,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 </tbody>
               </table>
             </div>
+            }
           </section>
         </mat-tab>
 
@@ -381,7 +408,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                   </tr>
                 </thead>
                 <tbody>
-                  @for (event of store.log(); track event.id) {
+                  @for (event of store.visibleLog(); track event.id) {
                     <tr>
                       <td class="when">{{ event.at | stamp }}</td>
                       <td>{{ event.what }}</td>
@@ -391,6 +418,16 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 </tbody>
               </table>
             </div>
+            <!-- A long-standing player has hundreds of these. Ten at a time,
+                 newest first, and the count says how far down the list is. -->
+            <p class="more">
+              <span>Showing {{ store.visibleLog().length }} of {{ store.log().length }}</span>
+              @if (store.logRemaining(); as left) {
+                <button class="text-btn" type="button" (click)="store.showMoreLog()">
+                  Show {{ left < 10 ? left : 10 }} more
+                </button>
+              }
+            </p>
           </section>
         </mat-tab>
       </mat-tab-group>
@@ -446,6 +483,15 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         text-decoration: none;
         transition: color 150ms ease-out;
       }
+      /* 20px of text, 40px to hit. */
+      .ad__doc {
+        position: relative;
+      }
+      .ad__doc::before {
+        content: '';
+        position: absolute;
+        inset: -10px -4px;
+      }
       .ad__doc mat-icon {
         font-size: 16px;
         width: 16px;
@@ -459,13 +505,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           text-underline-offset: 2px;
         }
       }
-      .ad__create mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        line-height: 18px;
-      }
-
       /* ---- cards ------------------------------------------------------ */
       .card {
         border: 1px solid var(--line);
@@ -590,8 +629,16 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .scale__seg.is-current[data-band='critical'] {
         background: var(--danger);
       }
+      .scale__rail {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        /* Only an override moves it, and then it should be seen to move. */
+        transition: transform 240ms cubic-bezier(0.77, 0, 0.175, 1);
+      }
       .scale__marker {
         position: absolute;
+        left: 0;
         top: 50%;
         width: 16px;
         height: 16px;
@@ -600,11 +647,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         border: 3px solid var(--foreground-primary);
         border-radius: 50%;
         background: var(--panel);
-        /* Only an override moves it, and then it should be seen to move. */
-        transition: left 240ms cubic-bezier(0.77, 0, 0.175, 1);
       }
       @media (prefers-reduced-motion: reduce) {
-        .scale__marker {
+        .scale__rail {
           transition: none;
         }
       }
@@ -650,11 +695,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .card--tab {
         margin-top: var(--lds-core-spacing-4, 16px);
       }
-      .card__head {
-        display: flex;
-        align-items: center;
-        gap: var(--lds-core-spacing-3, 12px);
-      }
       .card__title {
         flex: 1;
         margin: 0;
@@ -663,14 +703,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-size: 16px;
         line-height: 24px;
         font-weight: 600;
-      }
-      .card__aside {
-        display: flex;
-        align-items: center;
-        gap: var(--lds-core-spacing-2, 8px);
-        margin: 0;
-        padding-right: var(--lds-core-spacing-5, 20px);
-        color: var(--foreground-secondary);
       }
       .sum {
         color: var(--foreground-primary);
@@ -755,6 +787,51 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
       .nowrap {
         white-space: nowrap;
+      }
+      /* The second line of a cell: what set this belongs to, under what it is. */
+      .sub {
+        display: block;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 400;
+        color: var(--foreground-secondary);
+      }
+      .tbl--edd tbody th {
+        font-weight: 600;
+      }
+      .case__create {
+        margin-left: var(--lds-core-spacing-2, 8px);
+      }
+      .empty {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: var(--lds-core-spacing-8, 32px) var(--lds-core-spacing-5, 20px);
+        color: var(--foreground-secondary);
+        text-align: center;
+      }
+      .empty__title {
+        font-weight: 600;
+        color: var(--foreground-primary);
+      }
+      .more {
+        display: flex;
+        align-items: center;
+        gap: var(--lds-core-spacing-4, 16px);
+        margin: 0;
+        padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-5, 20px);
+        border-top: 1px solid var(--line);
+        color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      /**
+       * Drawn, focusable and named, but not built: the ticket asks for no
+       * edit modal, and the prototype has one case to open. It says so on
+       * hover and focus rather than doing nothing in silence.
+       */
+      .is-stub {
+        color: var(--foreground-secondary);
+        cursor: not-allowed;
       }
       .quiet {
         color: var(--foreground-secondary);
@@ -941,8 +1018,8 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         margin: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-5, 20px)
           var(--lds-core-spacing-4, 16px);
       }
-      .icon-btn:active,
-      .text-btn:active {
+      .icon-btn:not(.is-stub):active,
+      .text-btn:not(.is-stub):active {
         transform: scale(0.97);
       }
       @media (hover: hover) and (pointer: fine) {
@@ -951,7 +1028,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           background: var(--colors-alpha-alpha-soft-hover, rgba(0, 0, 0, 0.06));
           color: var(--foreground-primary);
         }
-        .text-btn:hover {
+        .text-btn:not(.is-stub):hover {
           color: var(--link-hover);
           text-decoration: underline;
           text-underline-offset: 2px;
@@ -977,6 +1054,26 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         color: var(--foreground-secondary);
       }
 
+      /* ---- touch: every target reaches 44px ---------------------------- */
+      @media (pointer: coarse) {
+        .text-btn::before,
+        .drivers .text-btn::before {
+          inset: -12px -4px;
+        }
+        .info::before,
+        .ad__doc::before {
+          inset: -12px;
+        }
+        .icon-btn::before {
+          inset: -6px;
+        }
+        /* 44px rows, so two fields' targets meet and never overlap. */
+        .drivers li {
+          padding-top: 12px;
+          padding-bottom: 12px;
+        }
+      }
+
       /* ---- narrower --------------------------------------------------- */
       @media (max-width: 1279.98px) {
         .grid {
@@ -994,7 +1091,74 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           border-top: 1px solid var(--line);
         }
       }
+      /**
+       * Phone: the score-card stops being a table to look at. Scrolled
+       * sideways, its Override column - the row's one action - was off screen.
+       * Each row stacks instead: the field, then its result and points, then
+       * its exit criteria and the action.
+       */
       @media (max-width: 719.98px) {
+        .tbl--score {
+          display: block;
+          min-width: 0;
+        }
+        .tbl--score colgroup {
+          display: none;
+        }
+        .tbl--score thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+        }
+        .tbl--score tbody,
+        .tbl--score tfoot {
+          display: block;
+        }
+        .tbl--score tr {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 4px var(--lds-core-spacing-3, 12px);
+          align-items: center;
+          padding: var(--lds-core-spacing-3, 12px) var(--lds-core-spacing-4, 16px);
+        }
+        .tbl--score tbody tr:not(:first-child) {
+          border-top: 1px solid var(--line);
+        }
+        .tbl--score tr > * {
+          display: block;
+          padding: 0 !important;
+          border: 0 !important;
+          background: none !important;
+        }
+        .tbl--score tbody tr:not(.band) > th {
+          grid-column: 1 / -1;
+        }
+        .tbl--score .exit {
+          grid-row: 3;
+          color: var(--foreground-secondary);
+        }
+        .tbl--score .exit::before {
+          content: 'Exit criteria: ';
+        }
+        .tbl--score .band {
+          border-top: 0 !important;
+          background: var(--background-tertiary);
+        }
+        .tbl--score .band > td:last-child {
+          display: none;
+        }
+        .tbl--score tfoot tr {
+          border-top: 1px solid var(--line);
+        }
+        .tbl--score tfoot .act {
+          grid-column: 1 / -1;
+          text-align: left;
+        }
+        .tbl--score .reveal {
+          opacity: 1;
+        }
         .ad__title {
           flex-basis: 100%;
         }
@@ -1010,6 +1174,18 @@ export class AmlDashboardComponent {
   /** Placeholder: the Confluence space for the AML framework. */
   readonly DOCS_URL = 'https://lottomart.atlassian.net/wiki/spaces/AML/overview';
   readonly TABS = TABS;
+  /**
+   * The snippet's link changes tab, and the button that was pressed goes with
+   * the tab it lived in - so focus goes to the tab that was opened, not back
+   * to the top of the page.
+   */
+  showAuditLog(): void {
+    this.store.tab.set('audit');
+    setTimeout(() =>
+      document.querySelector<HTMLElement>('aml-dashboard [role="tab"][aria-selected="true"]')?.focus(),
+    );
+  }
+
   /** The card is a summary: past five, the score-card below is the list. */
   readonly DRIVERS_SHOWN = 5;
 
@@ -1057,7 +1233,7 @@ export class AmlDashboardComponent {
     target.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
     target.animate(
       [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
-      { duration: 1400, easing: 'ease-out' },
+      { duration: 800, easing: 'ease-out' },
     );
     target.querySelector<HTMLElement>('button.text-btn')?.focus({ preventScroll: true });
   }

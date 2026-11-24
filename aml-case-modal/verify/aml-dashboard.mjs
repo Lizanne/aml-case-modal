@@ -86,7 +86,8 @@ check('the scale has one spoken sentence', ((await page.locator('aml-dashboard .
 const doc = page.locator('aml-dashboard .ad__doc');
 check('the documentation link opens a new tab, safely',
   (await doc.getAttribute('target')) === '_blank' && ((await doc.getAttribute('rel')) ?? '').includes('noopener'));
-check('there is a Create AML case button', (await page.getByRole('button', { name: 'Create AML case' }).count()) === 1);
+check('Create AML case is not offered while a case is active (one open case per player)',
+  (await page.getByRole('button', { name: 'Create AML case' }).count()) === 0);
 await shot('dash-overview');
 
 console.log('\nLayout');
@@ -108,9 +109,11 @@ console.log('\nEDD checkpoints');
 check('the card keeps its three columns and gains Actions on crossing',
   (await page.locator('aml-dashboard .card').filter({ hasText: 'Next EDD checkpoints' }).locator('thead th').allInnerTexts()).slice(0, 4).join('|') ===
     'Checkpoint|Next threshold|Player position|Actions on crossing');
-check('both checkpoints can be edited',
-  (await page.getByRole('button', { name: 'Edit the lifetime deposits checkpoint' }).count()) === 1 &&
-  (await page.getByRole('button', { name: 'Edit the lifetime net loss checkpoint' }).count()) === 1);
+check('both checkpoints carry an edit button, marked as not built',
+  (await page.getByRole('button', { name: 'Edit the lifetime deposits checkpoint' }).getAttribute('aria-disabled')) === 'true' &&
+  (await page.getByRole('button', { name: 'Edit the lifetime net loss checkpoint' }).getAttribute('aria-disabled')) === 'true');
+check('each row leads with what it measures',
+  (await page.locator('aml-dashboard .tbl--edd tbody th').allInnerTexts()).map((t) => t.split('\n')[0].trim()).join('|') === 'Lifetime deposits|Lifetime net loss');
 
 console.log('\nPill');
 const pills = await page.evaluate(() => {
@@ -138,7 +141,10 @@ check('a zero says what it is a zero of', (await row('Domestic PEP').locator('.n
 check('a met field shows its points and nothing else', (await row('PAR link').locator('.num').innerText()).trim() === '50');
 const seeded = await row('Occupation associated with risk').innerText();
 check('an overridden field says so, to what, for how long, by whom',
-  /Overridden to 50 points until revoked by Amara Okafor/.test(seeded) && /Edit override/.test(seeded), seeded);
+  /Overridden to 50 points until revoked by Amara Okafor\. System result: not met\./.test(seeded) && /Edit override/.test(seeded), seeded);
+check('the total is stated in the risk card and the table foot, not a third time in the card head',
+  (await page.locator('aml-dashboard .card__aside').count()) === 0);
+check('the Override column is named', (await page.locator('aml-dashboard .tbl--score thead th').last().innerText()) === 'Override');
 check('the total row sits on the same hairline as the rows above it', await page.evaluate(() => {
   const c = (sel) => getComputedStyle(document.querySelector(sel)).borderTopColor;
   return c('aml-dashboard .tbl--score tfoot th') === c('#score-domestic-pep > th');
@@ -221,6 +227,8 @@ const lines = async () => page.evaluate(() => {
 console.log('\nTabs');
 await page.getByRole('tab', { name: /Case archive/ }).click();
 await page.waitForTimeout(200);
+check('opening a closed case is marked as not built',
+  (await page.getByRole('button', { name: 'Open closed case #AML-0877' }).getAttribute('aria-disabled')) === 'true');
 check('the archive lists closed cases with the four columns',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).slice(0, 4).join('|') === 'Date opened|Opening trigger|Date closed|Severity' &&
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 3);
@@ -231,9 +239,17 @@ await page.getByRole('tab', { name: 'Overview' }).click();
 await page.getByRole('button', { name: 'View the full audit log' }).click();
 await page.waitForTimeout(200);
 check('the snippet leads to the full log', (await page.getByRole('tab', { name: 'Audit log' }).getAttribute('aria-selected')) === 'true');
-check('which is what, when, who - every event',
+check('and takes focus to that tab, not back to the top of the page',
+  await page.evaluate(() => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.textContent.includes('Audit log')));
+check('which is what, when, who - ten at a time',
   (await page.locator('aml-dashboard .mat-mdc-tab-body-active thead th').allInnerTexts()).join('|') === 'When|What|Who' &&
-  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 15);
+  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 10 &&
+  (await text('aml-dashboard .more')).replace(/\s+/g, ' ').trim() === 'Showing 10 of 15 Show 5 more');
+await page.getByRole('button', { name: 'Show 5 more' }).click();
+await page.waitForTimeout(150);
+check('Show more brings the rest, and then steps aside',
+  (await page.locator('aml-dashboard .mat-mdc-tab-body-active tbody tr').count()) === 15 &&
+  (await page.locator('aml-dashboard .more button').count()) === 0);
 check('nor does the audit log', JSON.stringify(await lines()) === '{"top":"0px","bottom":"0px","layout":"fixed"}', await lines());
 await shot('dash-audit');
 
@@ -248,6 +264,27 @@ await page.keyboard.press('Escape');
 await page.waitForTimeout(600);
 check('closing the panel gives the dashboard back', (await dash.isVisible()) && (await dash.getAttribute('inert')) === null);
 
+console.log('\nNo active case');
+await page.goto(`${BASE}/?state=07&section=aml-risks`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+const create = page.getByRole('button', { name: 'Create AML case' });
+check('with the case resolved, the card says so and offers Create beside it',
+  /No active AML case/.test(await text('aml-dashboard .case')) && (await create.count()) === 1);
+await create.click();
+await page.waitForTimeout(300);
+const makeDialog = page.locator('create-case-dialog');
+const make = makeDialog.getByRole('button', { name: 'Create case' });
+check('Create opens a dialog that waits for a severity and a reason', (await makeDialog.count()) === 1 && (await make.isDisabled()));
+await makeDialog.getByRole('radio', { name: 'EDD' }).check();
+await makeDialog.locator('textarea').fill('Customer mentioned a cash business on a call.');
+await make.click();
+await page.waitForTimeout(400);
+check('creating closes the dialog, names the new case, and withdraws Create',
+  (await makeDialog.count()) === 0 && /Active case #AML-1043 · EDD · opened/.test((await text('aml-dashboard .case')).replace(/\s+/g, ' ')) && (await create.count()) === 0);
+check('and it is the newest audit event', /^AML case #AML-1043 created by an agent \(EDD severity\)/.test(await text('aml-dashboard .events__what')));
+
 console.log('\nNarrow');
 await page.setViewportSize({ width: 360, height: 760 });
 await page.goto(`${BASE}/?state=02&section=aml-risks`, { waitUntil: 'networkidle' });
@@ -261,6 +298,15 @@ const narrow = await page.evaluate(() => ({
 }));
 check('at 360 nothing scrolls sideways but the tables inside their cards',
   narrow.pageW <= 360 && narrow.dashW <= narrow.clientW, narrow);
+const stacked = await page.evaluate(() => {
+  const box = document.querySelector('aml-dashboard').getBoundingClientRect();
+  const btn = document.querySelector('#score-domestic-pep button.text-btn').getBoundingClientRect();
+  const card = document.querySelector('aml-dashboard .tbl--score').closest('.card__scroll');
+  return { right: btn.right, edge: box.right, scrolls: card.scrollWidth > card.clientWidth + 1, opacity: getComputedStyle(document.querySelector('#score-domestic-pep button.text-btn')).opacity };
+});
+check('at 360 the score-card stacks: Override is on screen without scrolling sideways',
+  stacked.right <= stacked.edge && !stacked.scrolls && stacked.opacity === '1', stacked);
+await page.locator('#score-domestic-pep').scrollIntoViewIfNeeded();
 await shot('dash-360');
 
 console.log(`\npage errors: ${pageErrors.length}`);
