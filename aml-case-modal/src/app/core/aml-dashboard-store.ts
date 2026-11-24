@@ -79,6 +79,12 @@ export interface ScoreRow {
   points: number;
   override: ScoreOverride | null;
   overrideEnds: Date | null;
+  /**
+   * A timed override that has run out. The field is back on the system's
+   * result, which looks exactly like a field nobody ever touched - so the
+   * row keeps the override that ended and the moment it did.
+   */
+  ended: { override: ScoreOverride; at: Date } | null;
 }
 
 export interface ScoreSection {
@@ -124,6 +130,19 @@ const SEED_LOG: AuditEvent[] = [
   { id: 'e0', at: '2026-08-09T10:02:00Z', what: 'Risk rating changed from Low risk to Medium risk', who: 'System' },
 ];
 
+function lapsed(
+  entry: ScoreEntry | undefined,
+  active: ScoreOverride | null,
+  now: Date,
+): ScoreRow['ended'] {
+  if (active || !entry?.override) return null;
+  const at = overrideEnds(entry.override);
+  return at && at.getTime() <= now.getTime() ? { override: entry.override, at } : null;
+}
+
+/** "Risk rating changed from X to Y" is how the log records a rating change. */
+const RATING_CHANGE = /^Risk rating changed/;
+
 /** Everything the dashboard knows about one player. */
 export interface DashboardSnapshot {
   entries: Record<string, ScoreEntry>;
@@ -133,6 +152,9 @@ export interface DashboardSnapshot {
   checkpoints: EddCheckpoint[];
   /** When the score last changed. Defaults to the newest event in the log. */
   updatedAt?: string;
+  /** When the player entered their current rating. Defaults to the newest
+      rating change in the log; absent if the rating has never changed. */
+  ratingSince?: string;
 }
 
 /** The player the dashboard opens on: 200 points, High risk, one override. */
@@ -201,6 +223,16 @@ export class AmlDashboardStore {
   private readonly _updatedAt = signal<string | null>(HIGH_RISK.log[0]?.at ?? null);
   readonly updatedAt = this._updatedAt.asReadonly();
 
+  /**
+   * When the player entered the rating they have now. "High risk" on its own
+   * does not say whether this is this morning's news or last quarter's.
+   * null when the rating has never changed: there is no date to give.
+   */
+  private readonly _ratingSince = signal<string | null>(
+    HIGH_RISK.log.find((event) => RATING_CHANGE.test(event.what))?.at ?? null,
+  );
+  readonly ratingSince = this._ratingSince.asReadonly();
+
   /** The last thing that changed, for the toast and the row it points at. */
   readonly notice = signal<DashboardNotice | null>(null);
 
@@ -227,6 +259,7 @@ export class AmlDashboardStore {
             points: effectivePoints(parameter, entry, now),
             override,
             overrideEnds: override ? overrideEnds(override) : null,
+            ended: lapsed(entry, override, now),
           };
         },
       );
@@ -285,6 +318,9 @@ export class AmlDashboardStore {
     this.archive.set(snapshot.archive);
     this.checkpoints.set(snapshot.checkpoints);
     this._updatedAt.set(snapshot.updatedAt ?? snapshot.log[0]?.at ?? null);
+    this._ratingSince.set(
+      snapshot.ratingSince ?? snapshot.log.find((event) => RATING_CHANGE.test(event.what))?.at ?? null,
+    );
     this.tab.set('overview');
     this.logShown.set(AmlDashboardStore.PAGE);
     this.overrideTarget.set(null);
@@ -394,6 +430,7 @@ export class AmlDashboardStore {
     const after = this.band();
     if (after.id !== before.id) {
       this.record(`Risk rating changed from ${before.label} to ${after.label}`, 'System');
+      this._ratingSince.set(new Date().toISOString());
     }
   }
 

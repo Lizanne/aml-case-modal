@@ -29,6 +29,8 @@ export interface RiskScenario {
   hint: string;
   /** The severity of the player's open case, or null for no case at all. */
   activeCase: Severity | null;
+  /** Who holds the case's lock. The agent, unless a state says otherwise. */
+  lock?: 'me' | 'other';
   /** A function: several states carry dates measured back from "now". */
   snapshot: () => DashboardSnapshot;
 }
@@ -166,11 +168,17 @@ export const RISK_SCENARIOS: readonly RiskScenario[] = [
   {
     id: 'R-05',
     label: 'R-05 - Overrides in every form',
-    hint: 'Four overrides: up and down, timed and until revoked, one ending in 3 days, one with a reason long enough to wrap. Requirement 5.3.5: overridden, and for how long.',
+    hint: 'Four overrides: up and down, timed and until revoked, one ending in 3 days, one with a reason long enough to wrap. A fifth ended 4 days ago, and its row says so. Requirement 5.3.5: overridden, and for how long.',
     activeCase: 'EDD',
     snapshot: () => ({
       entries: {
-        ...met('linked-similar', 'par-link', 'stacking'),
+        ...met('linked-similar', 'par-link'),
+        // Ran out four days ago: seven days, made eleven days back. The
+        // field is met, so it is scoring its 20 again.
+        stacking: {
+          met: true,
+          override: override(0, 7, 11, 'Daniel Reyes', 'Deposits were split by the bank, not by the customer.'),
+        },
         occupation: {
           met: false,
           override: override(50, null, 6, 'Amara Okafor', 'Customer confirmed on a call that they are paid in cash at a casino.'),
@@ -196,7 +204,9 @@ export const RISK_SCENARIOS: readonly RiskScenario[] = [
       },
       log: [
         event(0, 'Domestic PEP overridden to 75 points, for 14 days: total 245', 'Liz Fernandez'),
-        event(6, 'Occupation associated with risk overridden to 50 points, until revoked: total 170', 'Amara Okafor'),
+        event(4, 'Stacking deposits override ended: back to 20 points, total 170'),
+        event(6, 'Occupation associated with risk overridden to 50 points, until revoked: total 150', 'Amara Okafor'),
+        event(11, 'Stacking deposits overridden to 0 points, for 7 days: total 100', 'Daniel Reyes'),
         event(12, 'Roulette overridden to 0 points, for 90 days: total 120', 'Daniel Reyes'),
         event(27, 'High single deposit: £2,000 overridden to 0 points, for 30 days: total 130', 'Priya Raman-Castellanos'),
         event(28, 'AML case #AML-1042 created'),
@@ -246,6 +256,14 @@ export const RISK_SCENARIOS: readonly RiskScenario[] = [
       return { ...HIGH_RISK, log: [...HIGH_RISK.log, ...older], archive };
     },
   },
+  {
+    id: 'R-08',
+    label: 'R-08 - Case locked to another agent',
+    hint: 'The High risk player, with the case in someone else\u2019s hands. The risk card names who holds it; the case number still opens the case, read-only, with the panel\u2019s own lock band.',
+    activeCase: 'EDD',
+    lock: 'other',
+    snapshot: () => HIGH_RISK,
+  },
 ];
 
 export const DEFAULT_RISK_SCENARIO = 'R-03';
@@ -266,6 +284,9 @@ export function applyRiskScenario(
     // so the widget is on the row with Open case on it.
     applyScenario(store, ws, '01');
     store.seed({ severity: scenario.activeCase });
+    if (scenario.lock === 'other') {
+      store.seed({ lockState: 'locked-to-other', lockOwner: store.otherAgent(), lockedSince: ago(0, 3) });
+    }
     ws.seed({ aml: { open: false } });
   } else {
     // No case at all, which is not the same as a resolved one: the AML

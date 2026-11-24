@@ -113,6 +113,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           </div>
 
           <p class="risk__foot">
+            <!-- New this morning, or standing for months: the rating alone
+                 does not say. A date, not "3 days ago" - it is a fact about
+                 the player, and it is quoted in case notes. -->
+            @if (store.ratingSince(); as since) {
+              <span class="risk__since">{{ store.band().label }} since {{ since | stamp: 'date' }}</span>
+            }
             @if (store.nextBand(); as next) {
               <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
             }
@@ -121,6 +127,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 Active case
                 <button class="text-btn case__link" type="button" (click)="ws.open('aml')">#AML-1042</button>
                 · {{ cases.severity() }} · opened {{ cases.createdAt() | stamp: 'date' }}
+                <!-- Only when it is somebody else's. The link still opens the
+                     case - reading it is not what the lock guards - and the
+                     panel's own band says what can and cannot be done. -->
+                @if (cases.lockState() === 'locked-to-other') {
+                  <span class="case__lock">· locked to {{ cases.lockOwner()?.name }}</span>
+                }
               </span>
             } @else {
               <!-- Nested, not "@else if (...; as made)": Angular 17 has no alias
@@ -280,6 +292,17 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                                   Overridden to {{ override.points }} points {{ overrideSpan(row) }} by
                                   {{ override.by }}. System result: {{ row.met ? 'met' : 'not met' }}.
                                   {{ override.reason }}
+                                </span>
+                              }
+                              <!-- An override that ran out. Without this the
+                                   row is indistinguishable from one that was
+                                   never overridden, and the points it now
+                                   scores arrive with no explanation. -->
+                              @if (row.ended; as ended) {
+                                <span class="param__ended">
+                                  Override ended {{ day(ended.at) }}. It set this to
+                                  {{ ended.override.points }} points for {{ ended.override.days }} days, by
+                                  {{ ended.override.by }}. Back on the system result.
                                 </span>
                               }
                             </th>
@@ -933,6 +956,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         align-items: flex-start;
         gap: 2px;
       }
+      .param__ended,
       .param__override {
         display: block;
         margin-top: 2px;
@@ -1327,6 +1351,10 @@ export class AmlDashboardComponent {
 
   range(band: RiskBand, join = '–'): string {
     return band.end === null ? `${band.start}+` : `${band.start}${join}${band.end}`;
+  }
+
+  day(date: Date): string {
+    return DAY.format(date);
   }
 
   /** "until revoked", or "until 20 Dec 2026". */

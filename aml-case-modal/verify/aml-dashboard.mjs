@@ -333,7 +333,7 @@ await page.waitForTimeout(500);
 check('with no state asked for, the dashboard opens on R-03 with the case panel closed',
   new URL(page.url()).searchParams.get('rstate') === 'R-03' && (await panel.count()) === 0 && (await dash.isVisible()) && (await total()) === 200);
 check('the switcher offers the dashboard\'s own states, not the modal\'s',
-  (await page.locator('dev-state-switcher option').allInnerTexts()).map((t) => t.trim().slice(0, 4)).join(',') === 'R-01,R-02,R-03,R-04,R-05,R-06,R-07' &&
+  (await page.locator('dev-state-switcher option').allInnerTexts()).map((t) => t.trim().slice(0, 4)).join(',') === 'R-01,R-02,R-03,R-04,R-05,R-06,R-07,R-08' &&
   (await text('dev-state-switcher .dev__label')) === 'Risk state');
 
 await open('R-01');
@@ -377,6 +377,14 @@ const longRow = await page.evaluate(() => {
   return { rowW: r.scrollWidth, tableW: t.clientWidth, h: r.getBoundingClientRect().height };
 });
 check('R-05: a long reason wraps inside its column', longRow.rowW <= longRow.tableW && longRow.h > 60, longRow);
+const ended = (await page.locator('aml-dashboard .param__ended').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
+check('R-05: an override that ran out is still on its row, with when and what it was',
+  ended.length === 1 && /^Override ended \d{2} \w{3} \d{4}\. It set this to 0 points for 7 days, by Daniel Reyes\. Back on the system result\.$/.test(ended[0]), ended);
+const lapsedRow = await row('Stacking deposits').innerText();
+check('R-05: and that row scores and reads as the system has it, with a fresh Override on offer',
+  /Met/.test(lapsedRow) && !/Overridden/.test(lapsedRow.split('Override ended')[0]) &&
+  (await row('Stacking deposits').locator('.num').innerText()).trim() === '20' &&
+  (await row('Stacking deposits').getByRole('button', { name: 'Override: Stacking deposits' }).count()) === 1, lapsedRow);
 await shot('dash-r05');
 
 await open('R-06');
@@ -433,6 +441,28 @@ check('a further rise does not open a second case: one open case per player',
   (await total()) === 150 && (await text('aml-dashboard .risk__band')) === 'High risk' &&
   (await page.locator('back-office-widgets article.w').count()) === 1 &&
   !/case was created/.test(await text('dashboard-toast .toast__text')));
+
+console.log('\nRating since, and a case in other hands');
+await open('R-03');
+check('the card says how long the player has held this rating',
+  /^High risk since \d{2} \w{3} \d{4}$/.test(await text('aml-dashboard .risk__since')));
+await open('R-06');
+check('a rating that has never changed has no "since"', (await page.locator('aml-dashboard .risk__since').count()) === 0);
+await page.getByRole('button', { name: 'System change' }).click();
+await page.getByRole('button', { name: 'System change' }).click();
+await page.waitForTimeout(400);
+check('and gains one the moment the rating changes', /^Medium risk since \d{2} \w{3} \d{4}$/.test(await text('aml-dashboard .risk__since')));
+
+await open('R-08');
+const lockedLine = (await text('aml-dashboard .case')).replace(/\s+/g, ' ').trim();
+check('R-08: the case line names who holds the lock', /^Active case #AML-1042 · EDD · opened \d{2} \w{3} \d{4} · locked to \S+/.test(lockedLine), lockedLine);
+await open('R-03');
+check('R-03: a case locked to you says nothing extra', (await page.locator('aml-dashboard .case__lock').count()) === 0);
+await open('R-08');
+await page.locator('aml-dashboard .case__link').click();
+await page.waitForTimeout(600);
+check('R-08: the case number still opens the case, and the panel says it is locked',
+  (await panel.count()) === 1 && /Locked to/i.test(await panel.innerText()) && (await page.locator('confirm-unlock-dialog').count()) === 0);
 
 await page.locator('dev-state-switcher select').selectOption('R-04');
 await page.waitForTimeout(400);
