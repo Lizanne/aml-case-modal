@@ -288,7 +288,12 @@ export class AmlDashboardStore {
   });
 
   readonly log = this._log.asReadonly();
-  readonly latest = computed(() => this._log().slice(0, 5));
+  /**
+   * Ten, not five (26 Nov 2026): the card sits beside a score-card of twenty
+   * rows, and five left most of that column empty. Past ten, the full log is
+   * one click away.
+   */
+  readonly latest = computed(() => this._log().slice(0, 10));
   readonly visibleLog = computed(() => this._log().slice(0, this.logShown()));
   readonly logRemaining = computed(() => Math.max(0, this._log().length - this.logShown()));
 

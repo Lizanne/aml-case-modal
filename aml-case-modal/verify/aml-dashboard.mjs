@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 /**
  * APP-17691: the AML dashboard in player details.
  *
- * Reached from Menu, SG / AML, AML Risks. The score-card's arithmetic has its
+ * Reached from Menu, SG / AML, AML Dashboard. The score-card's arithmetic has its
  * own test (verify/aml-risk.mjs); this is the screen: that the risk is on the
  * first view, that an override moves the total and says so, and that the
  * dashboard and the case panel never share the stage.
@@ -38,9 +38,9 @@ await page.waitForTimeout(400);
 check('the dashboard is not on the page until it is asked for', (await dash.count()) === 0);
 check('the case panel is up', (await panel.count()) === 1);
 await menuButton.click();
-await page.locator('player-menu').getByRole('button', { name: 'AML Risks' }).click();
+await page.locator('player-menu').getByRole('button', { name: 'AML Dashboard' }).click();
 await page.waitForTimeout(600);
-check('Menu, AML Risks shows the dashboard', await dash.isVisible());
+check('Menu, AML Dashboard shows the dashboard', await dash.isVisible());
 check('and the case panel steps down to its bar', (await panel.count()) === 0 && (await page.locator('minimised-bar').count()) === 1);
 check('the URL says so', new URL(page.url()).searchParams.get('section') === 'aml-risks');
 check('focus is in the dashboard', await page.evaluate(() => !!document.activeElement?.closest('aml-dashboard')));
@@ -61,7 +61,7 @@ console.log('\nWhat is adding points');
 const driverRows = (await page.locator('aml-dashboard .drivers li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
 check('the five biggest fields, biggest first, overrides marked', driverRows.length === 5 &&
   driverRows.join('|') === 'Linked account (similar details) 50|Occupation associated with risk Overridden 50|PAR link 50|High single deposit: £2,000 20|Stacking deposits 20', driverRows);
-check('the sixth is counted, not listed', (await text('aml-dashboard .why__more')) === 'and 1 more in the score-card below');
+check('the sixth is counted, not listed, behind a button', (await text('aml-dashboard .why__more')) === 'Show all 6');
 await page.locator('aml-dashboard .drivers .text-btn', { hasText: 'PAR link' }).click();
 await page.waitForTimeout(700);
 const landed = await page.evaluate(() => {
@@ -401,7 +401,7 @@ check('R-01: an override that raises the rating with no case open creates one, a
 await open('R-04');
 f = await facts();
 check('R-04: 1,105 points, Critical, five fields listed and eleven counted',
-  f.total === 1105 && f.band === 'Critical' && f.drivers === 5 && f.more === 'and 11 more in the score-card below' &&
+  f.total === 1105 && f.band === 'Critical' && f.drivers === 5 && f.more === 'Show all 16' &&
   (await page.locator('aml-dashboard .risk__next').count()) === 0, f);
 check('R-04: the biggest field leads the list', /^Sanctioned individual\s+500$/.test((await page.locator('aml-dashboard .drivers li').first().innerText()).replace(/\s+/g, ' ')));
 

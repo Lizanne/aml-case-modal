@@ -58,8 +58,8 @@ const sgAml = await page.evaluate(() => {
 });
 const at = sgAml.findIndex((l) => l.label === 'AML Case');
 check(
-  'AML Case sits in SG / AML, straight after AML Risks, as a button',
-  at > 0 && sgAml[at - 1].label === 'AML Risks' && sgAml[at].tag === 'BUTTON',
+  'AML Case sits in SG / AML, straight after AML Dashboard, as a button',
+  at > 0 && sgAml[at - 1].label === 'AML Dashboard' && sgAml[at].tag === 'BUTTON',
   JSON.stringify(sgAml),
 );
 

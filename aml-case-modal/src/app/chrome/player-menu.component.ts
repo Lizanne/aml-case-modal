@@ -30,7 +30,7 @@ const item = (label: string): MenuItem => ({ label });
  * The player Menu, as production draws it, plus the one addition: AML Case.
  *
  * The groups and their order are production's. The AML entry sits in SG / AML
- * directly under AML Risks, its nearest relative, rather than at the end of
+ * directly under AML Dashboard, its nearest relative, rather than at the end of
  * the column where a new thing would normally be parked.
  */
 const GROUPS: readonly MenuGroup[] = [
@@ -58,7 +58,7 @@ const GROUPS: readonly MenuGroup[] = [
       item('Trigger Snoozes'),
       item('Alerts'),
       item('Limits & Affordability'),
-      { label: 'AML Risks', opens: 'aml-risks' },
+      { label: 'AML Dashboard', opens: 'aml-risks' },
       { label: 'AML Case', opens: 'aml-case' },
       item('Occupation'),
       item('Reminders'),

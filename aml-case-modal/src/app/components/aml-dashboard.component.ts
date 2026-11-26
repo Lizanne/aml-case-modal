@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, HostListener } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -37,7 +38,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
 
 /**
  * APP-17691: the AML dashboard that replaces the AML Risks tab in player
- * details. Reached from Menu, SG / AML, AML Risks.
+ * details. Reached from Menu, SG / AML, AML Dashboard.
  *
  * What is on the first screen is decided by requirement 1: the current risk
  * must be visible the moment the dashboard opens. So the rating, the score and
@@ -47,12 +48,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
 @Component({
   selector: 'aml-dashboard',
   standalone: true,
-  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, PillComponent, StampPipe],
+  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatMenuModule, MatTabsModule, MatTooltipModule, PillComponent, StampPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="ad" aria-labelledby="ad-title">
       <header class="ad__head">
-        <h2 class="ad__title" id="ad-title">AML risk</h2>
+        <h2 class="ad__title" id="ad-title">AML dashboard</h2>
         <!-- Leaves the Back Office for Confluence, in a new tab - which is
              what the glyph says. The links in the case modal lost theirs
              because they stopped doing that; this one still does. -->
@@ -201,7 +202,57 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
               }
             </ol>
             @if (drivers().length > DRIVERS_SHOWN) {
-              <p class="why__more">and {{ drivers().length - DRIVERS_SHOWN }} more in the score-card below</p>
+              <!-- A button, not a sentence (26 Nov 2026). "and 1 more in the
+                   score-card below" sent the agent down the page to find one
+                   row; this lists every field where they already are. The
+                   card keeps its height - the list opens over it. -->
+              <p class="why__more">
+                <button
+                  class="text-btn"
+                  type="button"
+                  #driversTrigger="matMenuTrigger"
+                  [matMenuTriggerFor]="driversMenu"
+                  (menuOpened)="focusDrivers()"
+                  (keydown.escape)="driversTrigger.closeMenu()"
+                >Show all {{ drivers().length }}</button>
+              </p>
+              <mat-menu #driversMenu="matMenu" class="pop pop--drivers">
+                <ng-template matMenuContent>
+                  <!-- stopPropagation: a mat-menu closes on any click inside
+                       it, and this is a list to read. -->
+                  <!-- Tab is kept from the menu: Material closes a menu on
+                       Tab, which would make every field after the first
+                       unreachable by keyboard. -->
+                  <div
+                    class="pop__body"
+                    (click)="$event.stopPropagation()"
+                    (keydown.escape)="driversTrigger.closeMenu()"
+                    (keydown.tab)="$event.stopPropagation()"
+                    (keydown.shift.tab)="$event.stopPropagation()"
+                  >
+                    <p class="pop__head" id="ad-why-all">
+                      What is adding points
+                      <span>{{ store.total() }} points</span>
+                    </p>
+                    <ol class="drivers drivers--all" aria-labelledby="ad-why-all" tabindex="0">
+                      @for (row of drivers(); track row.parameter.id) {
+                        <li>
+                          <button
+                            class="text-btn"
+                            type="button"
+                            [attr.aria-label]="row.parameter.label + ': go to this field in the score-card'"
+                            (click)="driversTrigger.closeMenu(); jumpSoon(row)"
+                          >{{ row.parameter.label }}</button>
+                          @if (row.override) {
+                            <ui-pill size="sm" tone="info">Overridden</ui-pill>
+                          }
+                          <span class="drivers__pts">{{ row.points }}</span>
+                        </li>
+                      }
+                    </ol>
+                  </div>
+                </ng-template>
+              </mat-menu>
             }
           } @else {
             <p class="why__none">Nothing is adding points.</p>
@@ -720,7 +771,44 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         margin: 6px 0 0;
         font-size: 12px;
         line-height: 16px;
+      }
+      /* ---- every field adding points, opened over the card ---------------- */
+      .pop__body {
+        padding: 16px 0 8px;
+        cursor: default;
+      }
+      .pop__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 0 0 4px;
+        padding: 0 16px;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        color: var(--foreground-primary);
+      }
+      .pop__head span {
+        font-weight: 400;
         color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      /* Ten rows, then it scrolls: a player with sixteen fields met must not
+         open a panel taller than the window. */
+      .drivers.drivers--all {
+        min-height: 0;
+        max-height: calc(var(--driver-row, 32px) * 10 + 9px);
+        margin: 0;
+        padding: 0 16px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .drivers--all:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: -2px;
       }
       .risk__head {
         display: flex;
@@ -1687,6 +1775,24 @@ export class AmlDashboardComponent {
       [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
       { duration: 800, easing: 'ease-out' },
     );
+  }
+
+  /**
+   * From the popover: the menu hands focus back to its button as it closes,
+   * so the jump waits a tick or its own focus would be taken straight back.
+   */
+  /**
+   * The panel holds links, not menu items, so Material puts focus nowhere
+   * useful when it opens. The first field takes it.
+   */
+  focusDrivers(): void {
+    setTimeout(() =>
+      document.querySelector<HTMLElement>('.pop--drivers .drivers--all .text-btn')?.focus({ preventScroll: true }),
+    );
+  }
+
+  jumpSoon(row: ScoreRow): void {
+    setTimeout(() => this.jump(row));
   }
 
   /**
