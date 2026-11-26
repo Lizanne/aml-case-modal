@@ -464,28 +464,33 @@ import { WorkPopoverComponent } from './work-popover.component';
                   <!-- To-do first. Two chips, then the count. Nothing is actionable. -->
                   <!--
                     Text, not chips - D-12. Four pills a row read as four
-                    controls; the column is a statement about what is left to
-                    do, and every to-do item is one to action.
+                    controls.
 
-                    Order and WEIGHT carry the priority, never colour alone:
-                    green marks completion, which is a different fact.
+                    Steady, picked 26 Nov 2026 from six: the required order
+                    never moves, so each action lines up down the table, and a
+                    ring or a filled tick on every item says which are left.
+                    Bold for "to do" needed explaining; a ring does not.
                   -->
                   <td class="cell--work">
                     <span class="work-row" [attr.aria-label]="workSummary(c)">
-                      @for (w of cases.workRow(c); track w.type; let i = $index) {
-                        @if (i > 0) {
-                          <span class="work__sep" aria-hidden="true">·</span>
-                        }
+                      @for (w of cases.requiredWork(c); track w.type) {
                         <span
                           class="work__item"
                           [class.work__item--done]="w.state === 'done'"
                           aria-hidden="true"
                         >
                           @if (w.state === 'done') {
-                            <!-- The Round outlined check, inline: a fill path on
-                                 currentColor, so the item's muted ink is the icon's. -->
-                            <svg class="work__tick" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                            <!-- The library's check_circle, Round outlined, inline
+                                 at 16 x 16 on currentColor. Outlined, not filled:
+                                 a solid disc in the label's own grey read darker
+                                 than the label, because text is thin strokes and a
+                                 disc is not. Lines the weight of the letters match. -->
+                            <svg class="work__glyph work__glyph--done" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
                               <path d="M8.00016 1.33331C4.32016 1.33331 1.3335 4.31998 1.3335 7.99998C1.3335 11.68 4.32016 14.6666 8.00016 14.6666C11.6802 14.6666 14.6668 11.68 14.6668 7.99998C14.6668 4.31998 11.6802 1.33331 8.00016 1.33331ZM8.00016 13.3333C5.06016 13.3333 2.66683 10.94 2.66683 7.99998C2.66683 5.05998 5.06016 2.66665 8.00016 2.66665C10.9402 2.66665 13.3335 5.05998 13.3335 7.99998C13.3335 10.94 10.9402 13.3333 8.00016 13.3333ZM10.5868 5.52665L6.66683 9.44665L5.4135 8.19331C5.1535 7.93331 4.7335 7.93331 4.4735 8.19331C4.2135 8.45331 4.2135 8.87331 4.4735 9.13331L6.20016 10.86C6.46016 11.12 6.88016 11.12 7.14016 10.86L11.5335 6.46665C11.7935 6.20665 11.7935 5.78665 11.5335 5.52665C11.2735 5.26665 10.8468 5.26665 10.5868 5.52665Z" />
+                            </svg>
+                          } @else {
+                            <svg class="work__glyph" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                              <circle cx="8" cy="8" r="5.917" />
                             </svg>
                           }
                           {{ cases.workLabel(w.type) }}
@@ -1723,44 +1728,38 @@ import { WorkPopoverComponent } from './work-popover.component';
         line-height: 20px;
         white-space: nowrap;
       }
+      /**
+       * Steady (26 Nov 2026). The glyph carries the state: a ring is to do,
+       * a filled tick is done. Weight only backs it up - 500 against 400 -
+       * because 600 on up to three items a row made this the loudest column
+       * on the page. The glyphs separate the items, so there are no dots.
+       * Inks are the two the table already has; nothing new.
+       */
       .work__item {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-weight: 400;
-        color: var(--foreground-secondary);
-      }
-      /* The one to action. */
-      /* Done, wherever it lands in the order. */
-      /**
-       * Rafal (2 Oct): to-do is the statement, done is the record.
-       *
-       * Every to-do item at 600 in full ink - not only the first, now that the
-       * row is the required set and each of them is one to action. Done items
-       * muted at 400 behind their tick. The success green goes with D-12's
-       * reading: completion is a tick, not a colour.
-       */
-      .work__item {
-        font-weight: 600;
+        font-weight: 500;
         color: var(--foreground-primary);
+      }
+      .work__item + .work__item {
+        margin-left: 4px;
       }
       .work__item--done {
         font-weight: 400;
         color: var(--foreground-secondary);
       }
-      .work__tick {
+      /* A 16 x 16 box, like every icon in the row. The circle inside is 13.33
+         across - the library icons' own inset (check_circle, info) - so it
+         sits level with the info glyph in Priority. */
+      .work__glyph {
         flex: none;
-        font-size: 16px;
         width: 16px;
         height: 16px;
-        line-height: 16px;
-      }
-      .work__sep {
-        flex: none;
-        color: var(--foreground-subtle);
+        min-width: 16px;
       }
       /* A control, but the quietest in the row: the four inline items are the
          scan, and this is only the way to the rest. */
@@ -1779,7 +1778,9 @@ import { WorkPopoverComponent } from './work-popover.component';
         font: inherit;
         font-size: 14px;
         font-weight: 500;
-        color: var(--foreground-subtle);
+        /* The table's muted ink. It had a grey of its own until 26 Nov 2026;
+           that was a colour outside the library. */
+        color: var(--foreground-secondary);
         cursor: pointer;
         transition: background-color 150ms ease;
       }

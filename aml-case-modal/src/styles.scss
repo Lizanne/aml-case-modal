@@ -228,16 +228,6 @@
    * for. Naming them is what makes the sticky column possible.
    */
   /**
-   * The quietest readable ink. Used for the Triggers column's "+N", which is
-   * a count rather than a label - it should recede behind the trigger name and
-   * its time, and still be read when wanted.
-   *
-   * #6F6F78 is the lightest grey that clears 4.5:1 on BOTH surfaces a row
-   * sits on: 4.98 on white, 4.53 on the hover wash. A step lighter (#71717A)
-   * passes on white and fails at 4.40 the moment the row is hovered.
-   */
-  --foreground-subtle: #6F6F78;
-  /**
    * A neutral disc a monogram can sit on. --line's value, not a new colour:
    * it is the lightest step that still reads as a shape against --panel.
    */

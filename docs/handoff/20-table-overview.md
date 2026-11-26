@@ -81,7 +81,6 @@ value).
 | `--background-tertiary` | `#F4F4F5` | Neutral pill ground; the held-by-another lock disc at rest |
 | `--surface-hover` | `var(--background-tertiary)` | Row hover; the count buttons' hover |
 | `--surface-subtle` | `#E4E4E7` | Currently unused (was the held disc) |
-| `--foreground-subtle` | `#6F6F78` | The count buttons at rest |
 | `--border-warning-subdued` / `--border-success-subdued` / `--border-negative-subdued` | `#FDE68A` / `#BBF7D0` / `#FECACA` | SLA pill borders |
 | `--danger-deep` | `#7F1D1D` | SLA breached text and dot |
 

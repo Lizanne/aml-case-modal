@@ -147,8 +147,8 @@ try {
   // ---------------------------------------------------------------- 3. all done, nothing custom
   console.log('\n3. All required done, nothing custom');
   i = await rowOf('7003');
-  const r3 = await page.evaluate((i) => { const tr = document.querySelectorAll('tbody tr')[i]; const items = [...tr.querySelectorAll('.work__item')]; return { n: items.length, done: items.filter((e) => e.classList.contains('work__item--done') && e.querySelector('.work__tick')).length, colour: getComputedStyle(items[0]).color, more: !!tr.querySelector('.work__more') }; }, i);
-  check('7003 row: three ticked, muted, no +N', r3.n === 3 && r3.done === 3 && r3.colour === 'rgb(82, 82, 91)' && !r3.more, JSON.stringify(r3));
+  const r3 = await page.evaluate((i) => { const tr = document.querySelectorAll('tbody tr')[i]; const items = [...tr.querySelectorAll('.work__item')]; return { n: items.length, done: items.filter((e) => e.classList.contains('work__item--done') && e.querySelector('.work__glyph')).length, colour: getComputedStyle(items[0]).color, more: !!tr.querySelector('.work__more') }; }, i);
+  check('7003 row: three done, muted, no +N', r3.n === 3 && r3.done === 3 && r3.colour === 'rgb(82, 82, 91)' && !r3.more, JSON.stringify(r3));
   await rowShot('03-all-done-row', i);
 
   // ---------------------------------------------------------------- 4. zero triggers

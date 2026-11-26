@@ -161,7 +161,7 @@ other `aria-sort="none"`. Persists for the session.
 ## Count buttons — one rule, two columns
 
 `.work__more` and `.trig__more` share one declaration: `min-height 32px`,
-`padding 0 8px`, `border-radius 4px`, 14px at 500, `--foreground-subtle` at
+`padding 0 8px`, `border-radius 4px`, 14px at 500, `--foreground-secondary` at
 rest; hover `--surface-hover` and `--foreground-primary`; focus ring `2px solid
 var(--primary)` offset 2. On the Triggers line the 32px box sits on a 20px line
 by a `-6px 0` margin, so the target stays 32 and the row stays 52. `aria-expanded`

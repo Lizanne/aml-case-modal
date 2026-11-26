@@ -219,9 +219,9 @@ try {
   check('both states are visible on first load - some with +N, some without',
     trig.withCount > 0 && trig.withoutCount > 0,
     `${trig.withCount} with, ${trig.withoutCount} without`);
-  check('name in default ink, age muted, count subtler than both',
+  check('name in default ink, age and count muted',
     trig.colours.name === 'rgb(9, 9, 11)' && trig.colours.at === 'rgb(82, 82, 91)' &&
-    trig.colours.more?.colour === 'rgb(111, 111, 120)' && trig.colours.more?.weight === '500',
+    trig.colours.more?.colour === 'rgb(82, 82, 91)' && trig.colours.more?.weight === '500',
     JSON.stringify(trig.colours));
   check('the count is the only control, present exactly where there is a count',
     trig.interactive === trig.withCount && trig.controls.every((c) => c === 'trig__more') &&
@@ -919,13 +919,13 @@ try {
         states: items.map((e) => (e.classList.contains('work__item--done') ? 'done' : 'todo')),
         weights: items.map((e) => cs(e).fontWeight),
         colours: items.map((e) => cs(e).color),
-        ticks: items.map((e) => !!e.querySelector('.work__tick')),
+        ticks: items.map((e) => !!e.querySelector('.work__glyph')),
         more: r.querySelector('.work__more')?.textContent.trim() ?? null,
         custom: c ? cmp.cases.customCount(c) : null,
       };
     });
     const anyMore = document.querySelector('.work__more');
-    const tick = document.querySelector('.work__tick');
+    const tick = document.querySelector('.work__glyph');
     return {
       req, perRow,
       anyPill: document.querySelectorAll('.cell--work ui-pill').length,
@@ -959,22 +959,20 @@ try {
       [...r.labels].sort().join() === [...REQ].sort().join()),
     JSON.stringify(work.perRow.map((r) => r.labels)));
   const inOrder = (labels) => labels.map((l) => REQ.indexOf(l)).every((v, i, a) => i === 0 || v > a[i - 1]);
-  check('to-do first, then done - each group in the required order',
-    work.perRow.every((r) => {
-      const firstDone = r.states.indexOf('done');
-      const grouped = firstDone < 0 || r.states.slice(firstDone).every((x) => x === 'done');
-      return grouped && inOrder(r.labels.filter((_, i) => r.states[i] === 'todo')) &&
-        inOrder(r.labels.filter((_, i) => r.states[i] === 'done'));
-    }), JSON.stringify(work.perRow.map((r) => r.labels.map((l, i) => l + (r.states[i] === 'done' ? ' (done)' : '')))));
-  check('to-do at 600 in full ink; done at 400, muted, behind a 16px tick',
-    work.perRow.every((r) => r.states.every((st, i) => st === 'todo'
-      ? r.weights[i] === '600' && r.colours[i] === 'rgb(9, 9, 11)' && !r.ticks[i]
-      : r.weights[i] === '400' && r.colours[i] === 'rgb(82, 82, 91)' && r.ticks[i])) &&
+  // Steady, 26 Nov 2026: the order never moves, so an action lines up down
+  // the table; a ring or a filled tick carries the state, weight backs it up.
+  check('always the required order, whatever is done',
+    work.perRow.every((r) => inOrder(r.labels)),
+    JSON.stringify(work.perRow.map((r) => r.labels.map((l, i) => l + (r.states[i] === 'done' ? ' (done)' : '')))));
+  check('every item has a 16px glyph; to-do at 500 in full ink, done at 400, muted',
+    work.perRow.every((r) => r.states.every((st, i) => r.ticks[i] && (st === 'todo'
+      ? r.weights[i] === '500' && r.colours[i] === 'rgb(9, 9, 11)'
+      : r.weights[i] === '400' && r.colours[i] === 'rgb(82, 82, 91)'))) &&
     work.tick?.w === 16 && work.tick?.h === 16,
     JSON.stringify({ tick: work.tick, first: work.perRow[0] }));
-  check('a middle dot and 8px between items, one line, nowrap',
-    work.sep.join() === '·' && work.gap === '8px' && work.nowrap === 'nowrap',
-    JSON.stringify({ sep: work.sep, gap: work.gap, nowrap: work.nowrap }));
+  check('no dots between items, one line, nowrap',
+    work.sep.length === 0 && work.nowrap === 'nowrap',
+    JSON.stringify({ sep: work.sep, nowrap: work.nowrap }));
   check('+N is the custom count, rendered only when there is one, and both states are on screen',
     work.perRow.every((r) => (r.custom === 0 ? r.more === null : r.more === `+${r.custom}`)) &&
     work.perRow.some((r) => r.custom === 0) && work.perRow.some((r) => r.custom > 0),
@@ -1113,9 +1111,9 @@ try {
   // MatMenuTrigger owns both, as on the other two popovers.
   check('the popover state is announced, and MatMenuTrigger owns it',
     tb.haspopup === 'menu' && tb.expanded === 'false', `${tb.haspopup} / ${tb.expanded}`);
-  check('it is Work\'s count: 32px tall, 8px sides, 14px at 500, subtle, pointer',
+  check('it is Work\'s count: 32px tall, 8px sides, 14px at 500, muted, pointer',
     tb.h >= 32 && tb.pad === '0px 8px' && tb.fs === '14px' && tb.weight === '500' &&
-    tb.colour === 'rgb(111, 111, 120)' && tb.cursor === 'pointer', JSON.stringify(tb));
+    tb.colour === 'rgb(82, 82, 91)' && tb.cursor === 'pointer', JSON.stringify(tb));
   // A 32px box on a 20px line, and neither the line nor the row grew for it.
   check('the line it sits on is still 20px and the row still 52, the box centred on it',
     tb.lineH === 20 && tb.rowH === 53 && tb.centred, `line ${tb.lineH}, row ${tb.rowH}, centred ${tb.centred}`);
@@ -1464,11 +1462,12 @@ try {
       const contact = items.find((e) => /Contact player/.test(e.textContent));
       const dones = items.filter((e) => e.classList.contains('work__item--done'));
       return { found: i >= 0, contactDone: contact?.classList.contains('work__item--done') ?? null,
-        contactInDoneGroup: !!contact && dones.includes(contact) && items.indexOf(contact) >= items.length - dones.length,
+        // Steady: done in place. Contact player is first in the required order and stays first.
+        contactInDoneGroup: !!contact && dones.includes(contact) && items.indexOf(contact) === 0,
         more: tr.querySelector('.work__more')?.textContent.trim() ?? null,
         custom: cmp.cases.customCount(cmp.rows()[i]), labels: items.length };
     }, target.id);
-    check('completing Contact player in the modal moves it to the done group in the row',
+    check('completing Contact player in the modal marks it done in the row, in place',
       saved.contact !== false && live2.found && live2.labels === 3 &&
       (target.contactTodo ? live2.contactDone === true && live2.contactInDoneGroup : true),
       JSON.stringify({ ...live2, saved, contactTodo: target.contactTodo }));
