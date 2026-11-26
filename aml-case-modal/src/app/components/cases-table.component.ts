@@ -716,9 +716,12 @@ import { WorkPopoverComponent } from './work-popover.component';
            icon to 0deg instantly rather than unwinding it backwards. */
         transform: rotate(0deg);
       }
+      /* 500ms, eased at both ends. At 200ms on a hard ease-out the glyph
+         covered 215 of its 360 degrees in the first three frames: a flick,
+         not a turn. A full turn is long travel, and it needs the time. */
       .cases__refresh.is-spinning .mat-icon {
         transform: rotate(360deg);
-        transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+        transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
       }
       /**
        * Reduced motion gets the acknowledgement without the rotation: the
@@ -2080,17 +2083,14 @@ export class CasesTableComponent {
    * The class is dropped on a timer rather than on transitionend: under
    * reduced motion there is no transform and so no transitionend to listen
    * for, and the animation there would never be cleared. One timer covers
-   * both, and re-clicking mid-spin restarts it rather than queueing.
+   * both.
    */
   refresh(): void {
     this.cases.now.set(Date.now());
-    clearTimeout(this.spinTimer);
-    this.spinning.set(false);
-    // Next frame, so a click during a spin retriggers the transition instead
-    // of the class never having left.
-    requestAnimationFrame(() => {
-      this.spinning.set(true);
-      this.spinTimer = setTimeout(() => this.spinning.set(false), 200);
-    });
+    // A press during a turn still refreshes, and lets the turn finish.
+    // Restarting it snapped the glyph back to upright mid-spin.
+    if (this.spinning()) return;
+    this.spinning.set(true);
+    this.spinTimer = setTimeout(() => this.spinning.set(false), 500);
   }
 }

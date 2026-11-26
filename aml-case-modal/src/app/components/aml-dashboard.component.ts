@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, HostListener } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, HostListener, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -62,6 +62,22 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           <mat-icon aria-hidden="true">open_in_new</mat-icon>
           <span class="sr-only">(opens in a new tab)</span>
         </a>
+        <!-- The cases table's refresh button, on purpose: same square, same
+             glyph, same turn. In the header because it re-reads the whole
+             page, not one card. It does not touch "Updated": that is when the
+             score last changed, and re-reading it changes nothing. -->
+        <button
+          mat-stroked-button
+          type="button"
+          class="ad__refresh"
+          [class.is-spinning]="spinning()"
+          (click)="refresh()"
+          matTooltip="Refresh dashboard"
+          aria-label="Refresh dashboard"
+        >
+          <mat-icon>refresh</mat-icon>
+        </button>
+        <span class="sr-only" role="status">{{ refreshed() }}</span>
       </header>
 
       <!-- ------------------------------------------------ current risk -->
@@ -668,6 +684,45 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
           color: var(--link-hover);
           text-decoration: underline;
           text-underline-offset: 2px;
+        }
+      }
+      /* The table's refresh button, measure for measure - see .cases__refresh
+         in cases-table.component.ts for why each line is there. */
+      .ad__refresh.mat-mdc-outlined-button {
+        flex: none;
+        align-self: center;
+        width: 32px;
+        height: 32px;
+        min-width: 0;
+        padding: 0;
+        line-height: 32px;
+      }
+      .ad__refresh .mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        margin: 0;
+        flex-shrink: 0;
+        transform: rotate(0deg);
+      }
+      /* 500ms, eased at both ends. At 200ms on a hard ease-out the glyph
+         covered 215 of its 360 degrees in the first three frames: a flick,
+         not a turn. A full turn is long travel, and it needs the time. */
+      .ad__refresh.is-spinning .mat-icon {
+        transform: rotate(360deg);
+        transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ad__refresh.is-spinning .mat-icon {
+          transform: none;
+          transition: none;
+          animation: ad-refresh-pulse 200ms ease-out;
+        }
+      }
+      @keyframes ad-refresh-pulse {
+        50% {
+          opacity: 0.4;
         }
       }
       /* ---- cards ------------------------------------------------------ */
@@ -1297,8 +1352,14 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .param {
         display: block;
       }
+      /* The boxes were already centred on each other; the ink was not. The
+         name's box is centred on ascender-to-descender, and its letters sit
+         in the lower part of that, so a circle centred on the box rode about
+         a pixel high of the words. One pixel down puts it on them. The whole
+         button moves, so the hover disc stays round the glyph. */
       .param .info {
         vertical-align: top;
+        top: 1px;
       }
       /* No break inside the tail, and none before it: its no-break space
          glues it to the name's last word. */
@@ -1651,6 +1712,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         .ad__title {
           flex-basis: 100%;
         }
+        /* Title on its own line; the link starts the next and the button
+           ends it. */
+        .ad__refresh.mat-mdc-outlined-button {
+          margin-left: auto;
+        }
       }
     `,
   ],
@@ -1673,6 +1739,28 @@ export class AmlDashboardComponent {
   /** Placeholder: the Confluence space for the AML framework. */
   readonly DOCS_URL = 'https://lottomart.atlassian.net/wiki/spaces/AML/overview';
   readonly TABS = TABS;
+
+  /** Drives the Refresh glyph's turn, as on the cases table. */
+  readonly spinning = signal(false);
+  /** Spoken, not shown: the turn is the sighted confirmation. */
+  readonly refreshed = signal('');
+  private spinTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /**
+   * Re-reads the store. In the prototype there is nothing new to fetch, so
+   * what changes is the relative times ("Updated 4 days ago"), which are
+   * worked out again on the render this causes. Timer, not transitionend,
+   * as on the cases table: reduced motion has no transition to end.
+   */
+  refresh(): void {
+    this.refreshed.set('');
+    requestAnimationFrame(() => this.refreshed.set('Dashboard refreshed'));
+    // A press during a turn lets the turn finish. Restarting it snapped the
+    // glyph back to upright mid-spin, which is the jump that looked broken.
+    if (this.spinning()) return;
+    this.spinning.set(true);
+    this.spinTimer = setTimeout(() => this.spinning.set(false), 500);
+  }
   /**
    * The snippet's link changes tab, and the button that was pressed goes with
    * the tab it lived in - so focus goes to the tab that was opened, not back

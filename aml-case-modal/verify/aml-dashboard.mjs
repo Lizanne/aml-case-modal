@@ -84,6 +84,18 @@ const marker = await page.evaluate(() => {
 check('the marker sits inside the High band', marker.band === 'high' && marker.x >= marker.from && marker.x <= marker.to, marker);
 check('the scale has one spoken sentence', ((await page.locator('aml-dashboard .scale').getAttribute('aria-label')) ?? '').startsWith('200 points, High risk.'));
 const doc = page.locator('aml-dashboard .ad__doc');
+{
+  const refresh = page.getByRole('button', { name: 'Refresh dashboard' });
+  const box = await refresh.boundingBox();
+  await refresh.click();
+  await page.waitForTimeout(60);
+  const turning = await refresh.evaluate((el) => el.classList.contains('is-spinning'));
+  await page.waitForTimeout(700);
+  check('Refresh is the table\'s 32px square, turns once and says so',
+    box?.width === 32 && box?.height === 32 && turning &&
+    !(await refresh.evaluate((el) => el.classList.contains('is-spinning'))) &&
+    (await text('aml-dashboard .ad__head [role=status]')) === 'Dashboard refreshed', { box, turning });
+}
 check('the documentation link opens a new tab, safely',
   (await doc.getAttribute('target')) === '_blank' && ((await doc.getAttribute('rel')) ?? '').includes('noopener'));
 check('Create AML case is not offered while a case is active (one open case per player)',
@@ -457,7 +469,8 @@ check('the risk card says when the score last changed, with the exact time behin
   /\d{4}-\d{2}-\d{2}T/.test((await page.locator('aml-dashboard .risk__updated time').getAttribute('datetime')) ?? '') &&
   (await page.locator('aml-dashboard .risk__updated time').getAttribute('tabindex')) === '0');
 // The exact time is a tooltip that the keyboard reaches too, not a title.
-await page.locator('aml-dashboard .ad__doc').focus();
+// Refresh is the last stop in the header, so "Updated" is the next Tab.
+await page.locator('aml-dashboard .ad__refresh').focus();
 await page.keyboard.press('Tab');
 await page.waitForTimeout(500);
 check('focusing "Updated" shows the exact time', /\d{2} \w{3} \d{4}, \d{2}:\d{2}/.test((await page.locator('.mat-mdc-tooltip').allInnerTexts()).join(' ')));

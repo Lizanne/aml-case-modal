@@ -776,7 +776,7 @@ button .mat-icon,
  * button's measure.
  * ------------------------------------------------------------------------ */
 @media (max-width: 719.98px) {
-  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(workflow-panel .stream *):not(.head__main *),
+  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(.ad__refresh):not(workflow-panel .stream *):not(.head__main *),
   .w__btn,
   .add-btn:not(workflow-panel .stream *):not(.head__main *),
   .toast__undo {
@@ -786,7 +786,7 @@ button .mat-icon,
     font-size: 16px !important;
     line-height: 24px !important;
   }
-  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(workflow-panel .stream *):not(.head__main *) .mat-icon,
+  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(.ad__refresh):not(workflow-panel .stream *):not(.head__main *) .mat-icon,
   .w__btn .mat-icon,
   .w__btn svg,
   .add-btn:not(workflow-panel .stream *):not(.head__main *) .mat-icon {
