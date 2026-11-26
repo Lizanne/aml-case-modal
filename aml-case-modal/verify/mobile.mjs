@@ -333,7 +333,8 @@ check('Submit renders first', foot.submitFirst);
 check('both buttons full width', foot.fullWidth);
 check('16px gutters, 8px gap', foot.padding === '16px' && foot.gap === '8px',
   `${foot.padding} / ${foot.gap}`);
-check('stream is 20px all round', foot.streamPad === '20px', foot.streamPad);
+// 16px at the sides since 25 Nov 2026: one side gutter on a phone, everywhere.
+check('stream is 20px top and bottom, 16px at the sides', foot.streamPad === '20px 16px', foot.streamPad);
 // Derived from the footer's measured height, not a guess.
 check('scroll padding clears the footer', /^[1-9]\d*px$/.test(foot.scrollPad), foot.scrollPad);
 check('the last stream item is not clipped', !foot.lastClipped);
@@ -372,7 +373,7 @@ console.log('\nDialogs are viewport-anchored bottom sheets');
           (footW - parseFloat(footCs.paddingLeft) - parseFloat(footCs.paddingRight))) <= 1),
       };
     }, width);
-    check(`${state}: 16px gutter each side`, d.left === GUTTER && d.right === GUTTER,
+    check(`${state}: edge to edge, no side gutter`, d.left === 0 && d.right === 0,
       `${d.left} / ${d.right}`);
     check(`${state}: anchored to the bottom edge`, d.bottomGap === 0, `${d.bottomGap}px`);
     check(`${state}: top corners rounded only`, /^14px 14px 0px 0px$/.test(d.radius), d.radius);
@@ -500,6 +501,31 @@ console.log('\nDesktop is untouched');
   check('desktop: the detail gets a full line, clamped to one',
     strip.detailWrap === 'nowrap' && strip.detailW > strip.stripW * 0.8,
     `${strip.detailW} of ${strip.stripW}, whiteSpace=${strip.detailWrap}`);
+  await page.close();
+}
+
+console.log('\nTab bars never paginate');
+for (const [w, q, seg] of [[1440, '?state=01', false], [320, '?state=01', true], [320, '?view=cases', false]]) {
+  const page = await browser.newPage({ viewport: { width: w, height: 850 } });
+  await page.goto(`${BASE}/${q}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  if (seg) { await page.locator('aml-case-modal button:has-text("Player info")').first().click(); await page.waitForTimeout(300); }
+  const t = await page.evaluate(() => {
+    const h = document.querySelector('.mat-mdc-tab-header');
+    const c = h;
+    const pag = h.querySelector('.mat-mdc-tab-header-pagination');
+    const last = [...h.querySelectorAll('.mat-mdc-tab')].at(-1);
+    last.focus();
+    const lr = last.getBoundingClientRect(), cr = c.getBoundingClientRect();
+    return {
+      arrows: h.classList.contains('mat-mdc-tab-header-pagination-controls-enabled') || getComputedStyle(pag).display !== 'none',
+      overflows: c.scrollWidth > c.clientWidth + 1, scrolls: getComputedStyle(c).overflowX === 'auto',
+      lastVisible: lr.right <= cr.right + 1 && lr.left >= cr.left - 1,
+    };
+  });
+  check(`${w}px ${q}: no pagination arrows`, !t.arrows);
+  check(`${w}px ${q}: a bar that runs out of room scrolls, and a focused tab is brought into view`,
+    t.scrolls && t.lastVisible, JSON.stringify(t));
   await page.close();
 }
 

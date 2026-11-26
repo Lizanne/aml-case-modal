@@ -18,7 +18,8 @@ hover to any of these has introduced a bug**, not polish.
 | `minimised-bar` surface | **Inert** | Only its two icon buttons are live |
 | Trigger strip divider | **Interactive** | The one control in the strip |
 | Risk assessment row | **Inert** | Text and an info button; it is **tinted** (not hovered) while its form is open |
-| `risk-status` | **Interactive for the lock owner**, a label otherwise | It opens Assess risk. A real `<button>` with an edit glyph - the only thing on the row that changes |
+| `risk-status` | **Never** | A label, like every pill. The action beside it is the control |
+| Risk row action (Assess / Change assessment) | **Interactive for the lock owner**, absent otherwise | Opens Assess risk for the field. A text button when the field is Action required, a pencil icon button once assessed |
 | Risk assessment info button | **Interactive** | Tooltip on hover and focus, nothing else |
 | `section-risk-table` row | **Inert** | A summary |
 
@@ -40,9 +41,9 @@ hover to any of these has introduced a bug**, not polish.
 | Add action | disabled | enabled | disabled | **absent** |
 | Adjust severity | disabled | enabled | disabled | **absent (no footer)** |
 | Assess (placeholder) | disabled | enabled | disabled | **absent** |
-| Finalize (placeholder) | disabled | enabled once nothing is Action required | disabled | **absent** |
-| Risk status | label | **button**, until finalized | label | label |
-| Resync | unavailable (focusable) | enabled, until finalized | unavailable (focusable) | **absent** |
+| Finalise (placeholder) | disabled | enabled once nothing is Action required | disabled | **absent** |
+| Risk status | label | **button**, until finalised | label | label |
+| Resync | unavailable (focusable) | enabled, until finalised | unavailable (focusable) | **absent** |
 | Submit decision | disabled | per rule 4 | disabled | **absent** |
 | Widget `Open case` | absent | present | absent | absent |
 
@@ -55,7 +56,7 @@ hover to any of these has introduced a bug**, not polish.
 > snapshot was out of sync). That block is gone - a new trigger no longer stops
 > anything - so `canRecord` and `canAct` are the same gate now. Both names
 > remain: `canAct` for acting on the case, `canRecord` where a form is involved.
-> Resync's own gate, `canResync`, adds "not finalized, not already resyncing".
+> Resync's own gate, `canResync`, adds "not finalised, not already resyncing".
 
 **Force unlock is demoted at rest** — no border or fill, muted ink — and turns
 danger-coloured on hover and focus.
@@ -101,9 +102,9 @@ act. A timeline event is written.
 
 Four required items: `Document requests` and `Open source searches` as
 **amber Action required pills** - the same pill their rows show in the Risk
-assessment - then `Contact player` and `Finalize risk assessment` outlined
+assessment - then `Contact player` and `Finalise risk assessment` outlined
 and hollow. Four dashed placeholders: two `Assess` with the field name and
-its Action required pill, one `Record`, and Finalize with its button
+its Action required pill, one `Record`, and Finalise with its button
 **disabled** and `Assess Document requests and Open source searches first.`
 beneath. Add action available. Submit disabled, with its reason in the pinned
 required bar and a tooltip on the button — **not** in footer helper text.
@@ -138,13 +139,13 @@ The Record variant of the form, opened before either assessment. Proves rule
 4: order does not matter, Submit checks set membership. The other three
 placeholders stay.
 
-### 03 — Everything required done, risk assessment finalized
+### 03 — Everything required done, risk assessment finalised
 
 All four chips done: the two assessments as green **No risk** pills, Contact
-player and Finalize as success ticks. The stream holds both assessment
+player and Finalise as success ticks. The stream holds both assessment
 cards (each with `No risk` and `Was Action required`), the player contact,
-the severity escalation and the `Risk assessment finalized` card with its
-section table. The Risk assessment shows the Finalized line, every status a
+the severity escalation and the `Risk assessment finalised` card with its
+section table. The Risk assessment shows the Finalised line, every status a
 label, Resync unavailable. Submit enabled. Extras still available and they
 never re-gate Submit.
 
@@ -182,8 +183,8 @@ that submitting resolves the case. When an unsaved draft exists the amber warnin
 
 Tabs reduce to Risk assessment and Timeline. No required bar, no placeholders,
 no Add action, no footer, **no lock row at all**. The Risk assessment shows as
-finalized: the Finalized line, every status a plain label, no Resync. The
-finalize card in the stream carries the section table as it stood.
+finalised: the Finalised line, every status a plain label, no Resync. The
+finalise card in the stream carries the section table as it stood.
 
 > **Why the live view and the audit view are the same view with the controls
 > removed:** so they cannot drift apart.
@@ -191,7 +192,7 @@ finalize card in the stream carries the section table as it stood.
 ### 08 — Add action menu open
 
 Two items — Contact player, Add a note — each opening the same record form.
-Assessing a field is done from its status or its placeholder, never from this
+Assessing a field is done from its row's action or its placeholder, never from this
 menu. Menu opens on Enter, closes on Esc **returning focus to the trigger**.
 With a draft that has content open, an item does not open a second form: the
 open one is revealed with the draft-guard line.
@@ -238,13 +239,13 @@ The `Resync completed` entry lists five updated values and names Latest fraud
 scores and Deposit spike as risks that changed. Both fields are Action required
 - amber in the Risk assessment **and** amber in the chip bar - and on the
 required list; VPN usage kept its risk with a new value; the
-Generated stamp is the resync time. Finalize is disabled again and names the
+Generated stamp is the resync time. Finalise is disabled again and names the
 two fields.
 
-### 15 — Finalize risk assessment
+### 15 — Finalise risk assessment
 
-Every field assessed, so Finalize's form is open: the live section table,
-the note, the lock choice, `Finalize`. No attachments.
+Every field assessed, so Finalise's form is open: the live section table,
+the note, the lock choice, `Finalise`. No attachments.
 
 ### 11 — Past AML cases tab
 
@@ -289,7 +290,8 @@ in prototyping.
 | Attachment remove | transparent | compact danger | ring | — | absent when saved |
 | Bar icon buttons | transparent | tint filling the **whole** 40×40 | ring | — | n/a |
 | Tab | 14/20 regular | tint | ring | — | n/a |
-| Risk status button | status fill + rim + edit glyph @0.7 | deeper fill in its own hue, glyph @1 | ring, offset 2 | `scale(0.97)` | becomes a label |
+| Assess (row) | `--link` label, no fill | `--link` state layer | ring + layer | layer + `scale(0.96)`, no ripple | absent |
+| Change assessment (row) | `--foreground-secondary` pencil | Material icon-button layer, pencil to primary ink | ring | Material layer | absent |
 | Risk info button | transparent, secondary ink | `--colors-alpha-alpha-soft-hover`, primary ink | ring | — | n/a |
 | Resync | outlined | Material layer | ring | Material layer | `disabledInteractive`: disabled look, still focusable, reason on describedby and tooltip |
 

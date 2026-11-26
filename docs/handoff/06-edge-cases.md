@@ -76,7 +76,7 @@ Every list tab needs one.
 | Surface | Empty state |
 |---|---|
 | Workflow stream | **No empty line.** The dashed placeholders name each outstanding action, which says more than a generic line above them |
-| Left panel, resolved | The Risk assessment as finalized: a `Finalized by … · <stamp>` line, every status a plain label, no Resync |
+| Left panel, resolved | The Risk assessment as finalised: a `Finalised by … · <stamp>` line, every status a plain label, no Resync |
 | Risk assessment, a field with no value | Not reachable with the mock data; every field has at least one line. Open source searches opens as `No searches recorded` (open question 13) |
 | Resync with nothing new | Runs in full - confirm, overlay - and writes `Resync completed` / `No changes.` |
 | Widget, no open case | A `Create case` state — designed and in the component set, **out of scope for this ticket and not in the prototype** |

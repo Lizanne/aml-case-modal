@@ -280,6 +280,10 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         display: flex;
         flex-direction: column;
         height: 100vh;
+        /* dvh where it exists: on a phone 100vh is measured with the browser's
+           toolbar hidden, so with it showing the bottom of the page sat under
+           it and could not be scrolled to. */
+        height: 100dvh;
         background: var(--page);
       }
       /**
@@ -368,6 +372,20 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
         isolation: isolate;
       }
       /**
+       * While a dialog is open inside it, the stage goes above the chrome.
+       *
+       * isolation makes the stage a stacking context, and a context with no
+       * z-index sits at level 0 - under the player bar, which is z-index 20.
+       * A dialog's own z-index: 60 only counts INSIDE that context, so the
+       * player bar was painted across the middle of the Adjust severity sheet,
+       * and across the scrim on desktop. Raised only for the dialog's
+       * lifetime: the rest of the time the player bar's menus must still open
+       * over the panels.
+       */
+      .stage:has(dialog-shell) {
+        z-index: 60;
+      }
+      /**
        * The page under the panels. Absolute, so it takes no part in the row
        * the panels are laid out in and cannot change a width any of them was
        * given; z-index -1, so it is painted before them.
@@ -376,16 +394,27 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
        * that hands the panels their own scrolling.
        */
       .stage__page {
-        /* The gap between the widget row and the stage, which the page layer
-           reaches up into so that what scrolls out of it fades away under the
-           widgets instead of being cut off on a line nothing is drawn on. */
-        --fade: 16px;
+        /**
+         * The page stops at the stage's own top edge, 16px clear of the
+         * widget row. It used to reach up into that gap and fade out there,
+         * which ended the fade on the widget's bottom border: the card read
+         * as lying on top of the page, with the page sliding under it.
+         *
+         * Now the gap stays empty, and what scrolls off fades out inside the
+         * stage, before it reaches the gap. --fade is 0 at rest, so nothing
+         * at the top of an unscrolled page is dimmed, and grows with the
+         * first 16px of scroll (set by the dashboard) so it never pops in.
+         */
+        --fade: 0px;
         position: absolute;
-        inset: calc(var(--fade) * -1) 0 0;
+        inset: 0;
         z-index: -1;
         overflow-y: auto;
+        /* The page scrolls one way. A table too wide for its card scrolls
+           inside the card; nothing is allowed to move the whole page
+           sideways. */
+        overflow-x: hidden;
         overscroll-behavior: contain;
-        padding-top: var(--fade);
         -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
         mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
         /* Room for the minimised bars, which dock over this corner, and a
@@ -506,8 +535,34 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
            because they scroll away above it. */
         .stage {
           flex: none;
-          height: calc(100vh - var(--top-bar-h) - var(--player-bar-h) - 36px);
-          min-height: 420px;
+          /* The page's own visible height, so a panel scrolled into place
+             fits it exactly. It was 100vh less the app chrome, which ignored
+             whatever else sat above the page and left the panel's last rows
+             below the fold with no way to scroll to them. */
+          height: 100%;
+          /* 600, up from 420: the panel's fixed parts (header, tabs, chips,
+             and a footer of two stacked 48px buttons) now come to about 440,
+             and under that the stream had no room and the footer was cut
+             off. Taller than the window is fine - the page scrolls to it. */
+          min-height: 600px;
+        }
+        /**
+         * A section with no panel over it is just the page: it flows, and the
+         * PAGE scrolls it. As its own scroller it was a scroll area inside a
+         * scroll area, 600px tall in a 490px window, and with overscroll
+         * contained a thumb on it could never move the page to show its end.
+         */
+        .stage:has(> .stage__page):not(:has(> .stage__modal)) {
+          height: auto;
+          min-height: 0;
+        }
+        .stage:has(> .stage__page):not(:has(> .stage__modal)) > .stage__page {
+          position: static;
+          overflow: visible;
+          overscroll-behavior: auto;
+          -webkit-mask-image: none;
+          mask-image: none;
+          z-index: auto;
         }
         /**
          * No scrim on mobile, because there is nothing left to dim: the panel
@@ -523,6 +578,18 @@ import { DevStateSwitcherComponent } from './dev/dev-state-switcher.component';
            width, so the two sizes are one layout at two scales. */
         .dock {
           --dock-inset: 16px;
+          /**
+           * Pinned to the SCREEN on a phone, not to the page.
+           *
+           * It was position: absolute at the bottom of .page - and on a phone
+           * .page is what scrolls, so the bar was placed at the bottom of the
+           * first screenful and then rode up with the content, ending in the
+           * middle of the AML risk card. Fixed, it stays in the corner. Nothing
+           * above it is transformed, so the viewport is its containing block.
+           */
+          position: fixed;
+          bottom: max(var(--dock-inset), env(safe-area-inset-bottom));
+          max-width: calc(100vw - var(--dock-inset) * 2);
         }
 
       }

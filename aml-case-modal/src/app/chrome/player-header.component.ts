@@ -166,6 +166,8 @@ import { MenuTarget, PlayerMenuComponent } from './player-menu.component';
       /* Narrow: the labels go, the targets stay. */
       @media (max-width: 719.98px) {
         .ph {
+          /* One 16px gutter on a phone, everywhere. */
+          padding: 0 16px;
           height: 56px;
         }
         .ph__action {

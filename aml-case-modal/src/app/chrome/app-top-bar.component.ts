@@ -117,6 +117,8 @@ import { MatIconModule } from '@angular/material/icon';
       @media (max-width: 719.98px) {
         .bar {
           gap: 4px;
+          /* One 16px gutter on a phone, everywhere. */
+          padding: 0 16px;
         }
         .bar__brand {
           flex: 0 1 auto;

@@ -41,6 +41,8 @@ const TAB_LABEL: Record<InfoTab, string> = {
         class="info__tabs"
         [selectedIndex]="selectedIndex()"
         (selectedIndexChange)="onTabChange($event)"
+        disablePagination
+        (focusin)="$any($event.target).closest('.mat-mdc-tab')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })"
         animationDuration="0ms"
       >
         @for (tab of store.visibleInfoTabs(); track tab) {

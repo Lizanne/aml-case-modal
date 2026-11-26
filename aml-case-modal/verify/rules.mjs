@@ -463,9 +463,13 @@ for (const vw of [1440, 1200]) {
       single: document.querySelector('.widgets').classList.contains('widgets--single'),
     };
   });
-  check(`${vw}: one card - capped at ${solo.cap} or the row, whichever is smaller`,
-    solo.single && solo.cardW === Math.min(solo.rowW, solo.cap),
-    `${solo.cardW} vs min(${solo.rowW}, ${solo.cap})`);
+  // Fit to content since 24 Nov 2026: on a desktop the card hugs what is in
+  // it, between 400 and the cap; on a phone it still fills the row.
+  const fits = vw >= 720
+    ? solo.cardW >= Math.min(solo.rowW, 400) && solo.cardW <= Math.min(solo.rowW, solo.cap)
+    : solo.cardW === Math.min(solo.rowW, solo.cap);
+  check(`${vw}: one card - as wide as its content, from 400 to ${solo.cap}, never over the row`,
+    solo.single && fits, `${solo.cardW} in a ${solo.rowW} row`);
   check(`${vw}: and docked to the panel's right edge`, solo.sharesRightEdge,
     JSON.stringify(solo));
 

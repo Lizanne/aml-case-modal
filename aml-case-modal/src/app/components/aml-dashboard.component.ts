@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, HostListener } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AmlDashboardStore, DashboardTab, ScoreRow } from '../core/aml-dashboard-store';
-import { RiskBand, RiskBandId } from '../core/aml-risk';
+import { ScoreParameter, RiskBand, RiskBandId } from '../core/aml-risk';
 import { CaseStore } from '../core/case-store';
 import { StampPipe } from '../core/format';
 import { WorkspaceStore } from '../core/workspace-store';
@@ -46,7 +47,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
 @Component({
   selector: 'aml-dashboard',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, PillComponent, StampPipe],
+  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, PillComponent, StampPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="ad" aria-labelledby="ad-title">
@@ -73,19 +74,21 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       <div class="hero card">
         <div class="risk">
           <div class="risk__head">
-            <p class="eyebrow">Current AML risk</p>
+            <h3 class="eyebrow">Current AML risk</h3>
             <!-- How fresh the number is. Relative, because "4 days ago" is the
-                 question being asked; the exact time is on hover and in the
-                 datetime for anything that reads it. -->
+                 question being asked. The exact time is a tooltip on a
+                 focusable element, not a title attribute: a title is reached
+                 by a mouse and nothing else. -->
             @if (store.updatedAt(); as at) {
               <p class="risk__updated">
-                Updated <time [attr.datetime]="at" [title]="at | stamp">{{ since(at) }}</time>
+                Updated
+                <time class="risk__when" tabindex="0" [attr.datetime]="at" [matTooltip]="at | stamp" matTooltipPosition="above">{{ since(at) }}</time>
               </p>
             }
           </div>
           <p class="risk__line">
             <ui-pill class="risk__band" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
-            <span class="risk__score">{{ store.total() }}</span>
+            <span class="risk__score">{{ store.total() | number }}</span>
             <span class="risk__unit">points</span>
           </p>
 
@@ -93,10 +96,10 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                are printed under the bar, so the thresholds need no tooltip. -->
           <div class="scale" role="img" [attr.aria-label]="scaleLabel()">
             <!--
-              A gauge that fills. Bands already passed are full and neutral,
-              the current one fills in its own colour as far as the score has
-              got, and the ones ahead are empty - so "how far through High" is
-              a length, not a dot to be judged against the ends of a bar.
+              A gauge that fills. Only the band the player is in is drawn in
+              colour, filled as far as the score has got; every other band is
+              the track's one grey. Critical has no upper limit, so there it
+              is simply full, with no marker claiming a position in it.
             -->
             <div class="scale__track" [attr.data-band]="store.band().id" [style.--i]="position().index" [style.--t]="position().through">
               @for (band of store.bands; track band.id; let i = $index) {
@@ -118,6 +121,18 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             </div>
           </div>
 
+          <!-- The scale's own caption: how far to the next band is a fact
+               about the scale, so it sits under it. It used to share a line
+               with the "since" date at the foot of the card, which left 45px
+               of nothing between the ranges and the two lines below. -->
+          @if (store.nextBand(); as next) {
+            <p class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</p>
+          } @else {
+            <!-- Critical has no next band. The line's room is kept, so the
+                 card is the same height at every rating. -->
+            <p class="risk__next-room" aria-hidden="true"></p>
+          }
+
           <!-- Two lines, always two: where the rating stands, then the case.
                Run together they wrapped at some widths and not at others, and
                the card's height followed. -->
@@ -128,9 +143,6 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                    the player, and it is quoted in case notes. -->
               @if (store.ratingSince(); as since) {
                 <span class="risk__since">{{ store.band().label }} since {{ since | stamp: 'date' }}</span>
-              }
-              @if (store.nextBand(); as next) {
-                <span class="risk__next">{{ next.start - store.total() }} points to {{ next.label }}</span>
               }
             </p>
             <p class="risk__case">
@@ -143,7 +155,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                        case - reading it is not what the lock guards - and the
                        panel's own band says what can and cannot be done. -->
                   @if (cases.lockState() === 'locked-to-other') {
-                    <span class="case__lock">· locked to {{ cases.lockOwner()?.name }}</span>
+                    · <span class="case__lock">locked to {{ cases.lockOwner()?.name }}</span>
                   }
                 </span>
               } @else {
@@ -175,7 +187,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             <ol class="drivers" aria-labelledby="ad-why">
               @for (row of drivers().slice(0, DRIVERS_SHOWN); track row.parameter.id) {
                 <li>
-                  <button class="text-btn" type="button" (click)="jump(row)">{{ row.parameter.label }}</button>
+                  <button
+                    class="text-btn"
+                    type="button"
+                    [attr.aria-label]="row.parameter.label + ': go to this field in the score-card'"
+                    (click)="jump(row)"
+                  >{{ row.parameter.label }}</button>
                   @if (row.override) {
                     <ui-pill size="sm" tone="info">Overridden</ui-pill>
                   }
@@ -289,8 +306,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                           <tr [id]="'score-' + row.parameter.id" [class.is-overridden]="row.override">
                             <th scope="row">
                               <span class="param">
-                                <span class="param__name">{{ row.parameter.label }}</span>
-                                <button
+                                <!-- The no-break space is load-bearing: it ties the
+                                     icon to the last word, so a name that wraps
+                                     takes the icon down with it and the icon is
+                                     never left on a line of its own. -->
+                                <span class="param__name">{{ row.parameter.label }}</span><span class="param__tail">&nbsp;<button
                                   class="info"
                                   type="button"
                                   [attr.aria-label]="'About ' + row.parameter.label"
@@ -298,7 +318,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                                   matTooltipPosition="above"
                                 >
                                   <mat-icon fontSet="material-icons-outlined" aria-hidden="true">info</mat-icon>
-                                </button>
+                                </button></span>
                               </span>
                               @if (row.override; as override) {
                                 <span class="param__override">
@@ -353,8 +373,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                     }
                     <tfoot>
                       <tr>
-                        <th scope="row" colspan="3">Total</th>
-                        <td class="num"><span class="sum">{{ store.total() }}</span></td>
+                        <th scope="row" colspan="3">
+                          Total
+                          <span class="foot__note">{{ scoring().met }} of {{ scoring().all }} fields are adding points</span>
+                        </th>
+                        <td class="num"><span class="sum">{{ store.total() | number }}</span><span class="pts__of">points</span></td>
                         <td class="act">
                           <ui-pill size="sm" rim [tone]="tone(store.band())">{{ store.band().label }}</ui-pill>
                         </td>
@@ -394,12 +417,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         <!-- -------------------------------------------- case archive -->
         <mat-tab [label]="'Case archive (' + store.archive().length + ')'">
           <section class="card card--tab" aria-label="Case archive">
-            @if (!store.archive().length) {
-              <p class="empty">
-                <span class="empty__title">No closed AML cases</span>
-                Cases for this player appear here once they are resolved.
-              </p>
-            } @else {
+            <!-- Empty or not, this is the table: the headers say what will be
+                 listed, and the first closed case takes the row the message
+                 was holding. -->
             <div class="card__scroll">
               <table class="tbl tbl--archive">
                 <colgroup>
@@ -419,6 +439,20 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                   </tr>
                 </thead>
                 <tbody>
+                  @if (!store.archive().length) {
+                    <tr class="say">
+                      <td colspan="5">
+                        <div class="say__in">
+                        <span class="empty__title">No closed AML cases</span>
+                        <span class="say__more">Cases for this player appear here once they are resolved.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <!-- The quieter of the two: no closed cases is how most
+                         players look, so two rows, not three. -->
+                    <tr class="ghost" aria-hidden="true"><td><span class="ghost__bar" style="width: 64px"></span></td><td><span class="ghost__bar" style="width: 46%"></span></td><td><span class="ghost__bar" style="width: 64px"></span></td><td><span class="ghost__bar" style="width: 44px"></span></td><td><span class="ghost__bar" style="width: 0"></span></td></tr>
+                    <tr class="ghost" aria-hidden="true"><td><span class="ghost__bar" style="width: 64px"></span></td><td><span class="ghost__bar" style="width: 32%"></span></td><td><span class="ghost__bar" style="width: 64px"></span></td><td><span class="ghost__bar" style="width: 52px"></span></td><td><span class="ghost__bar" style="width: 0"></span></td></tr>
+                  }
                   @for (closed of store.archive(); track closed.id) {
                     <tr>
                       <td class="figures nowrap">{{ closed.opened | stamp: 'date' }}</td>
@@ -441,19 +475,12 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                 </tbody>
               </table>
             </div>
-            }
           </section>
         </mat-tab>
 
         <!-- ----------------------------------------------- audit log -->
         <mat-tab label="Audit log">
           <section class="card card--tab" aria-label="Audit log">
-            @if (!store.log().length) {
-              <p class="empty">
-                <span class="empty__title">No AML events yet</span>
-                Score changes, overrides and cases are listed here as they happen.
-              </p>
-            } @else {
             <div class="card__scroll">
               <table class="tbl tbl--audit">
                 <colgroup>
@@ -469,6 +496,19 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
                   </tr>
                 </thead>
                 <tbody>
+                  @if (!store.log().length) {
+                    <tr class="say">
+                      <td colspan="3">
+                        <div class="say__in">
+                        <span class="empty__title">No AML events yet</span>
+                        <span class="say__more">Score changes, overrides and cases are listed here as they happen.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr class="ghost" aria-hidden="true"><td><span class="ghost__bar" style="width: 104px"></span></td><td><span class="ghost__bar" style="width: 52%"></span></td><td><span class="ghost__bar" style="width: 72px"></span></td></tr>
+                    <tr class="ghost" aria-hidden="true"><td><span class="ghost__bar" style="width: 104px"></span></td><td><span class="ghost__bar" style="width: 38%"></span></td><td><span class="ghost__bar" style="width: 96px"></span></td></tr>
+                    <tr class="ghost" aria-hidden="true"><td><span class="ghost__bar" style="width: 104px"></span></td><td><span class="ghost__bar" style="width: 46%"></span></td><td><span class="ghost__bar" style="width: 64px"></span></td></tr>
+                  }
                   @for (event of store.visibleLog(); track event.id) {
                     <tr>
                       <td class="when">{{ event.at | stamp }}</td>
@@ -481,6 +521,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
             </div>
             <!-- A long-standing player has hundreds of these. Ten at a time,
                  newest first, and the count says how far down the list is. -->
+            @if (store.log().length) {
             <p class="more">
               <span>Showing {{ store.visibleLog().length }} of {{ store.log().length }}</span>
               @if (store.logRemaining(); as left) {
@@ -503,12 +544,20 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-size: 14px;
         line-height: 20px;
       }
-      /* No max-width: the widget row above runs the full width of the page,
-         and a dashboard that stopped short of it left the two with different
-         right edges. The rail is a fixed width, so only the main column
-         stretches. */
+      /**
+       * Full width, at any window size: the page runs to the edge the widget
+       * row and the player bar run to. A cap was tried (1280px) and left a
+       * band of empty page down the right of a wide monitor, which read as
+       * the dashboard not belonging to its own page.
+       *
+       * What a wide window must not do is pull things that are read together
+       * apart, so the extra width is handed out, not shared evenly: the rail
+       * takes some (320 to 400px), "What is adding points" stops at 520px so
+       * a field name stays near its points, and the scale and the tables,
+       * which read well long, take the rest.
+       */
       .ad {
-        --rail: 320px;
+        --rail: clamp(320px, 25%, 400px);
         display: grid;
         gap: var(--lds-core-spacing-4, 16px);
       }
@@ -549,10 +598,13 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .ad__doc {
         position: relative;
       }
+      /* Nothing added on the right: the link ends on the page's own edge,
+         and 4px of invisible hit area past it was 4px of sideways scroll on
+         the whole page. */
       .ad__doc::before {
         content: '';
         position: absolute;
-        inset: -10px -4px;
+        inset: -10px 0 -10px -4px;
       }
       .ad__doc mat-icon {
         font-size: 16px;
@@ -599,7 +651,9 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .hero {
         --driver-row: 32px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        /* Half and half until the summary reaches 520px, then the rating
+           side takes whatever more there is. */
+        grid-template-columns: minmax(0, 1fr) minmax(0, min(50%, 520px));
         gap: var(--lds-core-spacing-8, 32px);
         padding: var(--lds-core-spacing-5, 20px);
       }
@@ -630,8 +684,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .drivers li:first-child {
         border-top: 0;
       }
+      /* Regular weight: five semibold links in a column were louder than the
+         rating they explain. The colour and the hover are still the link's. */
       .drivers .text-btn {
         text-align: left;
+        font-weight: 400;
       }
       /* The rows are 32px apart, so the hit area is exactly a row: any taller
          and one field's target would overlap the next. */
@@ -705,24 +762,36 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .risk__foot {
         /* Pinned to the bottom, so it shares an edge with the list beside it. */
         margin-top: auto;
-        padding-top: var(--lds-core-spacing-4, 16px);
+        /* 10, not 16: with the caption above now under the scale, 16 made
+           this half 10px taller than the list beside it. */
+        padding-top: 10px;
         font-variant-numeric: tabular-nums;
       }
       .risk__standing,
       .risk__case {
-        display: flex;
-        gap: var(--lds-core-spacing-2, 8px);
         min-height: 20px;
         margin: 0;
-        white-space: nowrap;
       }
+      /* The case line may wrap. Held to one line it ran 59px across the
+         divider at a 1100px window when the case was locked to someone else;
+         now "locked to ..." drops to a second line as one piece. Every
+         separator on these lines is the same typed middle dot. */
       .risk__case {
         margin-top: 4px;
       }
-      /* A dot between two facts on a line, drawn only when there are two. */
-      .risk__standing > span + span::before {
-        content: '·';
-        margin-right: var(--lds-core-spacing-2, 8px);
+      .case__lock {
+        white-space: nowrap;
+      }
+      .risk__next,
+      .risk__next-room {
+        min-height: 20px;
+        margin: var(--lds-core-spacing-2, 8px) 0 0;
+        color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .risk__when {
+        border-radius: 2px;
+        cursor: default;
       }
 
       /**
@@ -748,9 +817,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
       /* The part of the current band still ahead: the band's own tint, so the
          whole segment reads as the one the player is in. */
+      /* Low keeps the track's grey for the part still ahead. The success
+         tint is too pale to be seen on white, and the outline that used to
+         rescue it made this one band a different shape from the other three. */
       .scale__seg.is-current[data-band='low'] {
-        background: var(--success-bg-subtle);
-        box-shadow: inset 0 0 0 1px var(--line);
+        background: var(--line);
       }
       .scale__seg.is-current[data-band='medium'] {
         background: var(--warn-bg);
@@ -763,8 +834,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         position: absolute;
         inset: 0;
         border-radius: inherit;
-        /* Passed: neutral. One colour on the bar at a time. */
-        background: var(--line-strong);
+        /* Only the current band's fill is drawn. A passed band used to be
+           a darker grey than one not yet reached, which said again what the
+           marker already says and read as two greys that did not match. Now
+           every band the player is not in is the track's one grey. */
+        background: transparent;
         transform-origin: left center;
         transition: transform 240ms cubic-bezier(0.77, 0, 0.175, 1);
       }
@@ -814,6 +888,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         box-shadow:
           0 0 0 2.5px var(--panel),
           0 1px 3px 2px rgba(24, 24, 27, 0.16);
+        transition: opacity 150ms ease-out;
+      }
+      /* Nowhere to point to in a band with no end. */
+      .scale__track[data-band='critical'] .scale__marker {
+        opacity: 0;
       }
       .scale__track[data-band='low'] .scale__marker {
         background: var(--success);
@@ -821,13 +900,13 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .scale__track[data-band='medium'] .scale__marker {
         background: var(--warn);
       }
-      .scale__track[data-band='high'] .scale__marker,
-      .scale__track[data-band='critical'] .scale__marker {
+      .scale__track[data-band='high'] .scale__marker {
         background: var(--danger);
       }
       @media (prefers-reduced-motion: reduce) {
         .scale__rail,
-        .scale__fill {
+        .scale__fill,
+        .scale__marker {
           transition: none;
         }
       }
@@ -998,6 +1077,56 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         font-weight: 600;
         color: var(--foreground-primary);
       }
+      /**
+       * An empty table is still the table.
+       *
+       * The headers stay, the message takes the first row on the first
+       * column's gutter, and under it the rows that are not there yet are
+       * drawn as bars in the line colour, each fainter than the last. So the
+       * card keeps the shape of a short filled table, and says what it is
+       * waiting for by showing it. Nothing here moves: the one moment that
+       * does is the first real row arriving, which is washed (see onFirst).
+       */
+      .tbl .say td {
+        color: var(--foreground-secondary);
+      }
+      /* On a phone the table is wider than its card and scrolls sideways.
+         The message is held to the card's width and stays put, so it is
+         read whole and never has to be scrolled to. */
+      .card--tab .card__scroll {
+        container-type: inline-size;
+      }
+      .say__in {
+        position: sticky;
+        left: var(--lds-core-spacing-5, 20px);
+        width: fit-content;
+        max-width: calc(100cqi - 2 * var(--lds-core-spacing-5, 20px));
+      }
+      .say__more {
+        margin-left: var(--lds-core-spacing-2, 8px);
+      }
+      .tbl .ghost {
+        pointer-events: none;
+        user-select: none;
+      }
+      .tbl .ghost:nth-child(2) {
+        opacity: 0.8;
+      }
+      .tbl .ghost:nth-child(3) {
+        opacity: 0.5;
+      }
+      .tbl .ghost:nth-child(4) {
+        opacity: 0.25;
+      }
+      /* 8px in a 20px line, so a ghost row is exactly a real row's height. */
+      .ghost__bar {
+        display: block;
+        max-width: 100%;
+        height: 8px;
+        margin: 6px 0;
+        border-radius: 4px;
+        background: var(--line);
+      }
       .more {
         display: flex;
         align-items: center;
@@ -1038,8 +1167,10 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .tbl--score {
         min-width: 660px;
       }
+      /* 700, not 620: the fixed columns take 540, and 80px left the trigger
+         narrower than its own header. */
       .tbl--archive {
-        min-width: 620px;
+        min-width: 700px;
       }
       .tbl--audit {
         min-width: 560px;
@@ -1066,10 +1197,25 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       .tbl--score .band + tr > * {
         border-top: 0;
       }
+      /**
+       * The name and its (i) are one run of text, so they share a line.
+       *
+       * As a flex row the icon was pinned to the first line: on a name that
+       * wrapped to two it sat up at the top right, level with nothing. In
+       * the text flow it follows the last word, and because the button is
+       * exactly one line tall (20px on a 20px line) and aligned to the line
+       * box, its centre is the line's centre on every row.
+       */
       .param {
-        display: flex;
-        align-items: flex-start;
-        gap: 2px;
+        display: block;
+      }
+      .param .info {
+        vertical-align: top;
+      }
+      /* No break inside the tail, and none before it: its no-break space
+         glues it to the name's last word. */
+      .param__tail {
+        white-space: nowrap;
       }
       .param__ended,
       .param__override {
@@ -1099,6 +1245,33 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         border-top: 1px solid var(--line);
         font-weight: 600;
       }
+      /**
+       * The score-card's last row is its answer, so it is built as one.
+       *
+       * It closes the table on the section bands' own surface: the bands
+       * open each group with its subtotal, and this is the same kind of row
+       * doing the same job for the whole card. The figure is a step larger
+       * than a row's and carries its unit, the note says how many fields
+       * the sum is made of, and everything sits on one centre line so the
+       * larger figure does not push the label and the pill off it.
+       */
+      .tbl--score tfoot th,
+      .tbl--score tfoot td {
+        padding-top: var(--lds-core-spacing-4, 16px);
+        padding-bottom: var(--lds-core-spacing-4, 16px);
+        background: var(--background-tertiary);
+        vertical-align: middle;
+      }
+      .tbl--score tfoot .sum {
+        font-size: 16px;
+        line-height: 24px;
+      }
+      .foot__note {
+        margin-left: var(--lds-core-spacing-2, 8px);
+        font-weight: 400;
+        color: var(--foreground-secondary);
+        font-variant-numeric: tabular-nums;
+      }
 
       /**
        * With a mouse: the row under the pointer lights, and Override - the
@@ -1110,7 +1283,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
        * a touch screen nothing is ever hidden.
        */
       @media (hover: hover) and (pointer: fine) {
-        .tbl tbody tr:not(.band):hover > * {
+        .tbl tbody tr:not(.band):not(.say):not(.ghost):hover > * {
           background: var(--surface-hover);
         }
         .tbl .reveal {
@@ -1247,7 +1420,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         }
         .info::before,
         .ad__doc::before {
-          inset: -12px;
+          inset: -12px 0 -12px -12px;
         }
         .icon-btn::before {
           inset: -6px;
@@ -1263,7 +1436,10 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
       }
 
       /* ---- narrower --------------------------------------------------- */
-      @media (max-width: 1279.98px) {
+      /* 1320, not 1280: beside a 320px rail the main column needs 680px for
+         the checkpoints table, and between 1280 and 1320 it had 648, so both
+         tables scrolled sideways inside their cards on a common laptop. */
+      @media (max-width: 1319.98px) {
         .grid {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -1301,6 +1477,25 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
        * its exit criteria and the action.
        */
       @media (max-width: 719.98px) {
+        /* One 16px gutter on a phone, everywhere: every card edge that was
+           20px at desktop. */
+        .hero,
+        .card__title,
+        .empty,
+        .empty--side,
+        .more,
+        .events__item {
+          padding-left: var(--lds-core-spacing-4, 16px);
+          padding-right: var(--lds-core-spacing-4, 16px);
+        }
+        .tbl th:first-child,
+        .tbl td:first-child {
+          padding-left: var(--lds-core-spacing-4, 16px);
+        }
+        .tbl th:last-child,
+        .tbl td:last-child {
+          padding-right: var(--lds-core-spacing-4, 16px);
+        }
         .tbl--score {
           display: block;
           min-width: 0;
@@ -1352,8 +1547,11 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
         .tbl--score .band > td:last-child {
           display: none;
         }
+        /* Stacked, the cells no longer tile the row, so the row carries
+           the surface itself. */
         .tbl--score tfoot tr {
           border-top: 1px solid var(--line);
+          background: var(--background-tertiary);
         }
         .tbl--score tfoot .act {
           grid-column: 1 / -1;
@@ -1370,6 +1568,16 @@ const DAY = new Intl.DateTimeFormat('en-GB', {
   ],
 })
 export class AmlDashboardComponent {
+  /**
+   * The dashboard is its own scroller (see .stage__page). What scrolls off
+   * its top fades over a length that grows with the first 16px of scroll,
+   * so an unscrolled page is not dimmed and the fade never appears at once.
+   */
+  @HostListener('scroll', ['$event.target'])
+  onScroll(scroller: HTMLElement): void {
+    scroller.style.setProperty('--fade', Math.min(scroller.scrollTop, 16) + 'px');
+  }
+
   readonly store = inject(AmlDashboardStore);
   readonly cases = inject(CaseStore);
   readonly ws = inject(WorkspaceStore);
@@ -1399,6 +1607,12 @@ export class AmlDashboardComponent {
   readonly DRIVERS_SHOWN = 5;
 
   /** Every field adding points right now, biggest first. */
+  /** How many fields the total is made of, for the table's last row. */
+  readonly scoring = computed(() => {
+    const rows = this.store.sections().flatMap((section) => section.rows);
+    return { met: rows.filter((row) => row.points > 0).length, all: rows.length };
+  });
+
   readonly drivers = computed<ScoreRow[]>(() =>
     this.store
       .sections()
@@ -1416,8 +1630,13 @@ export class AmlDashboardComponent {
    */
   readonly position = computed(() => {
     const band = this.store.band();
-    const end = band.end === null ? band.start * 2 : band.end + 1;
-    const through = Math.min(1, Math.max(0, (this.store.total() - band.start) / (end - band.start)));
+    // A band with no upper limit has no "how far through": it is full. It
+    // used to be measured against twice its start, so 900 points and 2,000
+    // both pinned the marker to the end and read as a maximum reached.
+    const through =
+      band.end === null
+        ? 1
+        : Math.min(1, Math.max(0, (this.store.total() - band.start) / (band.end + 1 - band.start)));
     return { index: this.store.bands.indexOf(band), through };
   });
 
@@ -1429,7 +1648,7 @@ export class AmlDashboardComponent {
 
   readonly scaleLabel = computed(
     () =>
-      `${this.store.total()} points, ${this.store.band().label}. ` +
+      `${this.store.total().toLocaleString('en-GB')} points, ${this.store.band().label}. ` +
       this.store.bands.map((band) => `${band.label}: ${this.range(band, ' to ')}`).join('. ') +
       '.',
   );
@@ -1446,6 +1665,23 @@ export class AmlDashboardComponent {
     setTimeout(() => this.wash(document.getElementById('score-' + notice.parameterId)));
   });
 
+  /**
+   * The first event, or the first closed case, lands in the row the empty
+   * message was holding, and is washed once so the hand-over is seen. Only
+   * on the change from none to some: a table that opens with rows is not
+   * news.
+   */
+  private had = { log: -1, archive: -1 };
+  private readonly onFirst = effect(() => {
+    const now = { log: this.store.log().length, archive: this.store.archive().length };
+    const first = (['log', 'archive'] as const).filter((key) => this.had[key] === 0 && now[key] > 0);
+    this.had = now;
+    for (const key of first) {
+      const table = key === 'log' ? '.tbl--audit' : '.tbl--archive';
+      setTimeout(() => this.wash(document.querySelector<HTMLElement>(`aml-dashboard ${table} tbody tr`)));
+    }
+  });
+
   private wash(row: HTMLElement | null): void {
     row?.animate(
       [{ backgroundColor: 'var(--color-background-info-subdued)' }, { backgroundColor: 'transparent' }],
@@ -1459,6 +1695,14 @@ export class AmlDashboardComponent {
    * and focus left on its Override button - the likeliest next press.
    */
   jump(row: ScoreRow): void {
+    // The score-card is on Overview. From either other tab the row is not in
+    // the page at all, so the link used to do nothing: go there first, then
+    // make the jump once the tab's content has been put back.
+    if (this.store.tab() !== 'overview') {
+      this.store.tab.set('overview');
+      setTimeout(() => this.jump(row), 50);
+      return;
+    }
     const target = document.getElementById('score-' + row.parameter.id);
     if (!target) return;
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;

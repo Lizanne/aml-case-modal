@@ -131,6 +131,8 @@ try {
   await rowShot('02-long-agents-row', i);
   const r2 = await page.evaluate((i) => { const tr = document.querySelectorAll('tbody tr')[i]; return { items: tr.querySelectorAll('.work__item').length, more: tr.querySelector('.work__more')?.textContent.trim() }; }, i);
   check('7002 row: three required only, +10', r2.items === 3 && r2.more === '+10', JSON.stringify(r2));
+  // Scroll first, then click: the popover closes on scroll (see table.mjs).
+  await page.evaluate(() => { const sc = document.querySelector('.table-scroll'); sc.scrollLeft = sc.scrollWidth; }); await page.waitForTimeout(150);
   await page.locator('tbody tr').nth(i).locator('.work__more').click(); await page.waitForTimeout(650);
   const p2 = await page.evaluate(() => {
     const p = document.querySelector('.mat-mdc-menu-panel'); const sc = p.querySelector('.groups');
@@ -223,6 +225,8 @@ try {
   console.log('\n13. Both popovers on one row, in sequence');
   i = await rowOf('7001');
   await page.locator('tbody tr').nth(i).locator('.trig__more').click(); await page.waitForTimeout(400);
+  // Scroll first, then click: the popover closes on scroll (see table.mjs).
+  await page.evaluate(() => { const sc = document.querySelector('.table-scroll'); sc.scrollLeft = sc.scrollWidth; }); await page.waitForTimeout(150);
   await page.locator('tbody tr').nth(i).locator('.work__more').click({ force: true }); await page.waitForTimeout(400);
   await page.locator('tbody tr').nth(i).locator('.work__more').click(); await page.waitForTimeout(500);
   const r13 = await page.evaluate(() => ({ panels: document.querySelectorAll('.mat-mdc-menu-panel').length, work: !!document.querySelector('.mat-mdc-menu-panel.pop--work'), trig: !!document.querySelector('.mat-mdc-menu-panel.pop--trig') }));
@@ -269,7 +273,7 @@ try {
       const after = Math.round(td.getBoundingClientRect().left);
       const shadow = getComputedStyle(td, '::after').opacity;
       sc.scrollLeft = sc.scrollWidth; await new Promise((r) => setTimeout(r, 350));
-      const act = document.querySelector('tbody .cell--actions').getBoundingClientRect(); const box = sc.getBoundingClientRect();
+      const act = document.querySelector('tbody .cell--open').getBoundingClientRect(); const box = sc.getBoundingClientRect();
       return { scrolls: sc.scrollWidth > sc.clientWidth + 1, sticky: cs.position === 'sticky', held: before === after, shadow, actionsReachable: act.right <= box.right + 0.5 && act.left >= box.left - 0.5, playerW: Math.round(td.getBoundingClientRect().width) };
     });
     check(`${label}: table scrolls, Player column holds and shows its edge, Actions reachable`, v.scrolls && v.sticky && v.held && v.shadow === '1' && v.actionsReachable && v.playerW >= 184, JSON.stringify(v));

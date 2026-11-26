@@ -142,33 +142,40 @@ the button left in the tab order and `aria-disabled="true"`.
 The reason it is unavailable is read with it (`aria-describedby`) and shown as
 its tooltip.
 
-## Risk status buttons
+## Risk status and the row actions
 
-`risk-status` in its button form - the Risk flagged / No risk / Action
-required control on a Risk assessment row. Each status keeps its own hue in
-every state; hover deepens the fill rather than greying it. Pressed is the
-hover fill at `scale(0.97)`; focus is the hover fill plus the ring. Labels are
-12px 600, so the AA bar is 4.5.
+`risk-status` is a label only - the Risk flagged / No risk / Action required
+pill on a Risk assessment row. The colours are `ui-pill`'s danger, success
+and warn tones with the subdued rims its dotted form wears - not a palette of
+their own. Labels are 12px 600, so the AA bar is 4.5.
 
-| Status | State | Background | Label | Rim (1px) | Contrast |
-|---|---|---|---|---|---|
-| Risk flagged | Rest | `#FEF2F2` (`--danger-bg`) | `#B91C1C` | `#FECACA` | 5.91 |
-| Risk flagged | Hover / pressed / focus | `#FEE2E2` (`--danger-bg-strong`) | `#B91C1C` | `#FECACA` | 5.30 |
-| No risk | Rest | **none** - the panel's `#FFFFFF` (`#F4F5F7` in the stream) | `#14532D` | `--success` at 32% = `#B3C8BB` on white (1.77) | 9.11 (8.35 on the stream) |
-| No risk | Hover / pressed / focus | `#F0FDF4` (`--success-bg-subtle`) | `#14532D` | as rest | 8.70 |
-| Action required | Rest | `#FEF3C7` (`--warn-bg`) | `#78350F` | `#FDE68A` | 8.15 |
-| Action required | Hover / pressed / focus | `#EDDCAD` (`color-mix` 88% fill, 12% `--warn`) | `#78350F` | `#FDE68A` | 6.67 |
+| Status | Background | Label | Rim (1px) | Contrast |
+|---|---|---|---|---|
+| Risk flagged | `#FEF2F2` (`--danger-bg`) | `#7F1D1D` (`--danger-deep`) | `#FECACA` (`--border-negative-subdued`) | 9.16 |
+| No risk | `#F0FDF4` (`--success-bg-subtle`) | `#14532D` (`--success`) | `#BBF7D0` (`--border-success-subdued`) | 8.70 |
+| Action required | `#FEF3C7` (`--warn-bg`) | `#78350F` (`--warn`) | `#FDE68A` (`--border-warning-subdued`) | 8.15 |
 
-The red and amber rims are deliberately faint (1.12–1.32 against their fills):
-the fill and the word identify the status, the rim only draws its edge. No
-risk has no fill, so its rim does more work and is darker - 1.77:1 on white,
-1.75 on the stream - though the word and tick still carry it.
+The rims are deliberately faint (1.12–1.32 against their fills): the fill and
+the word identify the status, the rim only draws its edge. No hover, no
+press: the pill is not a control.
 
-The label form (no edit glyph, not a button) has the Rest row only.
+The action beside it:
 
-> **Why `color-mix` and not another token.** The amber hover fill and the
-> green rim exist nowhere else yet. If a second surface wants them they become
-> tokens and the mixes go.
+| Action | State | Ink | Ground | Contrast |
+|---|---|---|---|---|
+| Assess | Rest | `#1D4ED8` (`--link`), 14px 600 | the panel's `#FFFFFF` | 6.70 |
+| Assess | Hover | as rest | `--link` state layer, measured `#F6F8FD` | 6.31 |
+| Assess | Focus / pressed | as rest | `--link` state layer, measured `#E4E9FA` | 5.53 |
+| Change assessment | Rest | `#52525B` (`--foreground-secondary`) pencil | `#FFFFFF` | 7.73 |
+| Change assessment | Hover | `#09090B` (`--foreground-primary`) | Material layer, `#F5F5F5` | 18.25 |
+| Change assessment | Pressed | as hover | Material layer + ripple, `#C9C9C9` | 12.01 |
+
+Measured in the browser, not computed. `--primary` was tried first for
+Assess and failed on Material's grey state layer - 4.44 hover, 3.67 focus,
+2.92 pressed - so the label moved to `--link`, the layer took the same hue,
+and the ripple (grey, which took pressed to 4.40) is off; the press is a
+`scale(0.96)`. Neither action appears on the open row: its form is already
+up.
 
 ## Risk assessment info button
 
@@ -187,7 +194,8 @@ Not a button, but a tinted surface text sits on, so it belongs with these.
 | Label | `#09090B` | 16.31 |
 | Value lines | `#52525B` | 6.34 |
 | `Assessing` | `#1E3A8A` (`--color-foreground-on-info`) | 8.49 |
-| The status button | its own fill, unchanged - the pill carries its own ground | as above |
+| The status | its own fill, unchanged - the pill carries its own ground | as above |
+| The row action | absent on the open row | - |
 
 ## Focus returned by a dialog
 

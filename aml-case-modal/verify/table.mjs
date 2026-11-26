@@ -37,11 +37,11 @@ try {
       .map((e) => Math.round(e.getBoundingClientRect().height)))],
     rowHeights: [...new Set([...document.querySelectorAll('.table tbody tr')]
       .map((r) => Math.round(r.getBoundingClientRect().height)))],
-    btnHeights: [...new Set([...document.querySelectorAll('.actions button')]
+    btnHeights: [...new Set([...document.querySelectorAll('.actions button, .cell--open button')]
       .map((e) => Math.round(e.getBoundingClientRect().height)))],
     // Both Actions controls are icon-only and square now, so there is no
     // label to wrap - what matters is that neither has grown off its axis.
-    actionSquares: [...new Set([...document.querySelectorAll('.actions button')].map((e) => {
+    actionSquares: [...new Set([...document.querySelectorAll('.actions button, .cell--open button')].map((e) => {
       const r = e.getBoundingClientRect();
       return `${Math.round(r.width)}x${Math.round(r.height)}`;
     }))],
@@ -54,8 +54,9 @@ try {
       }).filter((v) => v !== null);
       return Math.max(...mids) - Math.min(...mids);
     })),
-    trailing: [...new Set([...document.querySelectorAll('.actions')].map((a) =>
-      Math.round(a.closest('td').getBoundingClientRect().right - a.getBoundingClientRect().right)))],
+    // Leading now: the pair starts on the row's 16px gutter on every row.
+    leading: [...new Set([...document.querySelectorAll('.actions')].map((a) =>
+      Math.round(a.getBoundingClientRect().left - a.closest('td').getBoundingClientRect().left)))],
   }));
   check('every pill in the table is 24px', geom.pillHeights.join() === '24', geom.pillHeights.join());
   /**
@@ -149,8 +150,8 @@ try {
   check('both Actions controls are square and on one 32px axis',
     geom.actionSquares.join() === '32x32', geom.actionSquares.join(' '));
   check('all cells share one vertical axis', geom.axisSpread <= 1.5, String(geom.axisSpread));
-  check('the action group is flush right on every row',
-    geom.trailing.length === 1, geom.trailing.join());
+  check('the action group starts on the 16px gutter on every row',
+    geom.leading.join() === '16', geom.leading.join());
 
   console.log('\nThe page says which queue it is, in the sidebar\'s own words');
   const heading = await page.evaluate(() => {
@@ -254,7 +255,8 @@ try {
   // Transparent is the default for a sticky cell, and the other columns would
   // scroll straight through it.
   check('the Player cells are sticky and painted, header above body',
-    stick.td.pos === 'sticky' && stick.td.left === '0px' && Number(stick.td.z) === 10 &&
+    // 48px: parked beside the sticky lock column that now leads the row.
+    stick.td.pos === 'sticky' && stick.td.left === '48px' && Number(stick.td.z) === 10 &&
     stick.td.bg !== 'rgba(0, 0, 0, 0)' && stick.th.pos === 'sticky' &&
     Number(stick.th.z) > Number(stick.td.z) && stick.th.bg !== 'rgba(0, 0, 0, 0)',
     JSON.stringify(stick));
@@ -264,7 +266,7 @@ try {
   const scrolled = await page.evaluate(async () => {
     const w = document.querySelector('.table-scroll');
     const playerX = () => Math.round(document.querySelector('tbody .cell--player').getBoundingClientRect().left);
-    const nextX = () => Math.round(document.querySelector('tbody td:nth-child(2)').getBoundingClientRect().left);
+    const nextX = () => Math.round(document.querySelector('tbody td:nth-child(3)').getBoundingClientRect().left);
     const before = { player: playerX(), next: nextX() };
     /**
      * Scroll to the END rather than to a chosen number.
@@ -397,7 +399,7 @@ try {
   const clipped = await page.evaluate(() => {
     const out = [];
     for (const el of document.querySelectorAll(
-      '.lock__text, .player-line .linkish, .chip__label, .actions button')) {
+      '.lock__text, .player-line .linkish, .chip__label, .actions button, .cell--open button')) {
       const r = document.createRange();
       r.selectNodeContents(el);
       const want = r.getBoundingClientRect().width;
@@ -422,7 +424,7 @@ try {
       mine: document.querySelectorAll('.lock-av--mine').length,
       other: document.querySelectorAll('.lock-av--other').length,
       open: document.querySelectorAll('.open-case').length,
-      solidFills: [...document.querySelectorAll('.actions button')]
+      solidFills: [...document.querySelectorAll('.actions button, .cell--open button')]
         .filter((b) => getComputedStyle(b).backgroundColor === 'rgb(26, 115, 201)').length,
       shapes: [...new Set([...document.querySelectorAll('.lock-av')].map(disc))],
       // The monogram is decoration: the button's name carries who holds it.
@@ -436,8 +438,18 @@ try {
       otherTip: document.querySelector('.lock-av--other')?.getAttribute('ng-reflect-message'),
       openName: o?.getAttribute('aria-label'),
       openSize: or ? `${Math.round(or.width)}x${Math.round(or.height)}` : null,
-      noLockColumn: ![...document.querySelectorAll('thead th')]
-        .some((h) => h.textContent.trim() === 'Lock'),
+      // The lock leads the row and Open case ends it, pinned to the right
+      // edge (25 Nov 2026, reversing D-07). Neither has a visible header.
+      lockLeads: (() => {
+        const ths = [...document.querySelectorAll('thead th')];
+        const mine = document.querySelector('.lock-av--mine').closest('tr');
+        const first = mine.cells[0], last = mine.cells[mine.cells.length - 1];
+        const cs = getComputedStyle(last);
+        return ths[0].textContent.trim() === 'Lock' && !!ths[0].querySelector('.sr-only') &&
+          ths.at(-1).textContent.trim() === 'Open case' && !!ths.at(-1).querySelector('.sr-only') &&
+          !!first.querySelector('.lock-av') && !first.querySelector('.open-case') &&
+          !!last.querySelector('.open-case') && cs.position === 'sticky' && cs.right === '0px';
+      })(),
       /**
        * Two fixed slots. With a flex row, a case nobody holds pulled its
        * padlock 40px right and the column read as two different columns
@@ -451,15 +463,9 @@ try {
   });
   const c0 = await counts();
 
-  /**
-   * The lock control lives in ACTIONS now - D-07 - as one 32px disc in three
-   * states, sized to match Open case beside it. A whole column to hold one
-   * control was a column of chrome, and the two things an agent does to a row
-   * belong together.
-   */
-  check('the Lock column is gone; its control is a 32px disc in Actions',
-    c0.noLockColumn && c0.shapes.join() === '32x32/50%',
-    `noLockColumn ${c0.noLockColumn} / ${c0.shapes.join()}`);
+  check('the lock leads the row as a 32px disc; Open case ends it, pinned right',
+    c0.lockLeads && c0.shapes.join() === '32x32/50%',
+    `lockLeads ${c0.lockLeads} / ${c0.shapes.join()}`);
   check('the initials are decoration - the name carries the person',
     c0.initialsHidden, String(c0.initialsHidden));
   check('each state names itself in full',
@@ -526,7 +532,8 @@ try {
      * edge pseudo-element that sits outside its padding box and inflates
      * scrollWidth - reading that as a clip is a false positive.
      */
-    const clipped = ths.filter((t) => {
+    // Lock and Open case have no visible label, so there is no text to cut.
+    const clipped = ths.filter((t) => !t.querySelector('.sr-only')).filter((t) => {
       const rg = document.createRange();
       rg.selectNodeContents(t);
       return rg.getBoundingClientRect().width > t.clientWidth - 32 + 0.5;
@@ -569,8 +576,10 @@ try {
       numeric: rest.fontVariantNumeric, underline: rest.textDecorationLine };
     return out;
   });
-  check('the player id keeps the link treatment - #1D4ED8, 600, tabular, underlined',
-    link.colour === 'rgb(29, 78, 216)' && link.weight === '600' &&
+  // 400 since 25 Nov 2026: the name above it is the 600 line now, and two
+  // bold lines would be no hierarchy at all.
+  check('the player id keeps the link treatment - #1D4ED8, tabular, underlined',
+    link.colour === 'rgb(29, 78, 216)' && link.weight === '400' &&
     link.numeric === 'tabular-nums' && link.underline === 'underline',
     JSON.stringify(link));
   await page.hover('.linkish');
@@ -1289,6 +1298,14 @@ try {
       if (info.hasWork) {
         await page.goto(`${BASE}/?view=cases&tab=${tab}`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(500);
+        // Scroll first, THEN click. The popover closes on scroll, and since the
+        // lock and the name took the row's first 80px the count sits past the
+        // right edge at this width - a click that scrolls and presses in one
+        // frame opens the panel and has the scroll event shut it.
+        // To the END of the table, not just "into view": the count can sit
+        // under the pinned Open case column, which counts as in view.
+        await page.evaluate(() => { const sc = document.querySelector('.table-scroll'); sc.scrollLeft = sc.scrollWidth; });
+        await page.waitForTimeout(150);
         await page.locator('tbody tr').nth(i).locator('.work__more').click();
         await page.waitForTimeout(400);
         workPop = await page.evaluate(() => {

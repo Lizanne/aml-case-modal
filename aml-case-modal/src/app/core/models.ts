@@ -189,7 +189,9 @@ export const MODAL_GAP_PX = 16;
 export const SOLO_MAX_PX = 1080;
 
 /**
- * A lone widget card stops here, and docks to the panel's right edge.
+ * A lone widget card stops here, and docks to the panel's right edge. Since
+ * 24 Nov 2026 this is a ceiling, not the width: on a desktop the card is as
+ * wide as its content, between 400px and this (see .widgets--single).
  *
  * Separate from SOLO_MAX_PX and much smaller, because they are capping
  * different things. A panel at 1080 is full of content; a card at 1080 is an

@@ -106,10 +106,11 @@ so it is on screen however far down the list the agent was. `RESYNC_MS` (1500)
 is the simulated duration. Under reduced motion the spinner is hidden; the word
 carries the state.
 
-## Risk status buttons
+## Risk row actions
 
-`background-color` and `border-color` over 120ms `ease-out` on hover, and a
-`scale(0.97)` press. Both are `none` under reduced motion.
+Assess and Change assessment are Material buttons and take Material's state
+layers, nothing added. The status pill beside them never moves: it is a
+label.
 
 ## Reduced motion
 

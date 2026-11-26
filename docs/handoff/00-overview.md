@@ -15,7 +15,7 @@ set), and the widget ticket itself.
 > **Changed 2 Nov 2026 — Risk assessment.** The left panel's Snapshot tab
 > became the **Risk assessment**: grouped player information with a risk on
 > every field that can carry one, assessed by the agent through the workflow,
-> resynced on demand, and finalized before the case can close. A new trigger
+> resynced on demand, and finalised before the case can close. A new trigger
 > no longer blocks anything. Section [11-risk-assessment.md](11-risk-assessment.md)
 > is the full specification; sections 03, 04, 06, 07, 08, 09 and 10 were
 > updated where the change touched them. Where an older sentence in this set
@@ -28,6 +28,8 @@ set), and the widget ticket itself.
 | The Angular prototype in this repo | States, interactions, measurements | **Highest.** Newer than the designs; several rules were found here |
 | Figma — page `Round 2 - AML Case Modal`, section `[Web Desktop]`, frames 00a–13 | Visual reference, and the Notes card under each frame carrying the decision, the outcome and what was rejected. **Predates the Risk assessment**: frames 04 and 10 show the historical snapshot and the amber arrival, both gone | Rationale and intent, except where section 11 supersedes |
 | The PRD *AML Case Risk Assessment* and the PDF *Aml Case Report snapshot example - Final Risk Assesment section* | The Risk assessment requirements; the PDF holds the fields, mock values, definitions and risk logic | Requirements for section 11 |
+| Figma — page 🟢 Local Components, frame `AML / Risk assessment` (node `22922:2377`) | The Risk assessment components, built from the code on 2 Nov 2026 | Visual reference for section 11 |
+| Figma — frame `AML / Risk assessment spec` (node `22922:3128`), and [risk-assessment-spec.html](risk-assessment-spec.html) | Per-component spec sheets: anatomy, variants, tokens, motion, accessibility, do/don't | Component specs for section 11; the code still wins |
 | Figma — handoff section (node `22441:7520`) | The written handoff: Foundations, Flow logic, Interactions and motion, Edge cases, State inventory and open questions | Rationale and intent |
 | `PROTOTYPE.md` | The original build brief | **Superseded.** See the warning below |
 | Figma frame `22452:30540` (`00a Desktop - Unlocked, no owner`) | Measurements | Cross-checked against code |
@@ -76,7 +78,7 @@ states. Switcher states 12–15 are the Risk assessment flow, added 2 Nov 2026.
 | 01 | Locked to you, nothing recorded — four required items | yes |
 | 02 | Assess risk - Open source searches, with attachment errors | yes |
 | 02b | Recording Player contact first, reverse order | yes |
-| 03 | Everything required done, risk assessment finalized | yes |
+| 03 | Everything required done, risk assessment finalised | yes |
 | 04 | Overriding a risk from the Risk assessment | yes |
 | 05 | Adjust severity dialog | yes |
 | 06 | Submit decision dialog | yes |
@@ -88,7 +90,7 @@ states. Switcher states 12–15 are the Risk assessment flow, added 2 Nov 2026.
 | 12 | Resync confirm | yes |
 | 13 | Resyncing overlay | yes |
 | 14 | Resync completed, two risks changed | yes |
-| 15 | Finalize risk assessment | yes |
+| 15 | Finalise risk assessment | yes |
 | — | Starred commentaries tab (Figma 12) | tab built; reach it from any unresolved state |
 | — | Case timeline tab (Figma 13) | tab built; reach it from any unresolved state |
 
@@ -106,7 +108,7 @@ states. Switcher states 12–15 are the Risk assessment flow, added 2 Nov 2026.
 | [08-accessibility.md](08-accessibility.md) | Semantics, keyboard, screen reader, contrast, and the testing checklist |
 | [09-unresolved.md](09-unresolved.md) | The open questions with their build assumptions (eleven original, five from the Risk assessment), and every place the code and the designs disagree |
 | [10-button-colours.md](10-button-colours.md) | Every button family, every state, measured with the state layer composited, with contrast |
-| [11-risk-assessment.md](11-risk-assessment.md) | The Risk assessment: fields, statuses, Resync, Assess risk, Finalize, the required list, and the rules behind them |
+| [11-risk-assessment.md](11-risk-assessment.md) | The Risk assessment: fields, statuses, Resync, Assess risk, Finalise, the required list, and the rules behind them |
 
 ### Verification status
 
@@ -114,7 +116,7 @@ The prototype ships fourteen Playwright verification suites
 (`npm run verify` chains them, in `aml-case-modal/`). `verify:risk` is the
 Risk assessment suite: it walks the whole flow through the real controls - a
 trigger arriving, Resync with its confirm and overlay, the three resync rules,
-assessing from a status, overriding, Finalize, close - plus the draft guard,
+assessing from a status, overriding, Finalise, close - plus the draft guard,
 focus return and the open-row mark. Twelve suites pass. The two that do not
 fail only on items that are open decisions, itemised in
 [09-unresolved.md](09-unresolved.md): three starred-row checks in

@@ -281,6 +281,43 @@ import { PillComponent } from './ui-pill.component';
         grid-template-columns: min(100%, var(--widget-solo-max));
         justify-content: end;
       }
+      /**
+       * On a desktop the lone card is as wide as what is in it.
+       *
+       * At a fixed 640 the usual card was 24px of padding, about 240px of
+       * text, 191px of buttons and 185px of nothing between them: the
+       * actions sat at the far end of the card from the thing they act on.
+       * Now the card hugs its content with 32px between the two (the row's
+       * 8px gap and 24px on the actions), which is about 460px in the
+       * common states.
+       *
+       *   never over 640   the old cap is the ceiling: a long agent name on
+       *                    the lock line still gets one line, then truncates
+       *   never under 400  so a short card is still a card, not a chip
+       *   never over 100%  both bounds give way to a row narrower than them
+       *
+       * Flex, not the grid above, because a grid track cannot be both
+       * content-sized and floored. And no size containment on the card: a
+       * container cannot take its width from its own content, and the one
+       * container query below changes nothing a lone desktop card needs.
+       *
+       * The phone layout is untouched - there the card fills the row.
+       */
+      @media (min-width: 720px) {
+        .widgets--single {
+          display: flex;
+          justify-content: flex-end;
+        }
+        .widgets--single .w {
+          flex: 0 1 auto;
+          min-width: min(100%, 400px);
+          max-width: min(100%, var(--widget-solo-max));
+          container-type: normal;
+        }
+        .widgets--single .w__actions {
+          padding-left: 24px;
+        }
+      }
 
       /* ---- card: 22263:21085 ------------------------------------------- */
       /* Top-aligned, per 24100:8194: the icon and the actions sit level with
@@ -561,6 +598,21 @@ import { PillComponent } from './ui-pill.component';
         color: var(--foreground-primary);
         white-space: nowrap;
         cursor: pointer;
+        touch-action: manipulation;
+        transition: transform 120ms var(--ease-out);
+      }
+      /* Pressed tens of times a day, so short and slight: enough to say the
+         press landed, not enough to watch. */
+      .w__btn:active {
+        transform: scale(0.97);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .w__btn {
+          transition: none;
+        }
+        .w__btn:active {
+          transform: none;
+        }
       }
       .w__btn:hover {
         background: var(--page);

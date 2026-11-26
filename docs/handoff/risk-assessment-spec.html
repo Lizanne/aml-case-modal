@@ -1,0 +1,735 @@
+<title>Risk Assessment Components</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fixed left index on desktop, six stacked component sheets on the right; one column on a phone. */
+:root{
+  --bg:#FFFFFF; --fg:#18181B; --fg-2:#52525B; --fg-3:#8B8B94; --line:#E4E4E7; --line-soft:#F0F0F2;
+  --accent:#1A73C9; --note-bg:#FEF9E7; --note-fg:#78350F; --note-line:#FDE68A;
+  --stage:#FFFFFF; --stage-edge:#E4E4E7; --stage-ground:#F4F5F7;
+  --font-ui:"Source Sans 3","Source Sans Pro","Helvetica Neue",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141416; --fg:#F4F4F5; --fg-2:#B4B4BC; --fg-3:#8B8B94; --line:#2A2A2E; --line-soft:#202024;
+  --accent:#6CB0F0; --note-bg:#2A2410; --note-fg:#FDE68A; --note-line:#4A3F14; --stage-edge:#3A3A40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141416; --fg:#F4F4F5; --fg-2:#B4B4BC; --fg-3:#8B8B94; --line:#2A2A2E; --line-soft:#202024;
+  --accent:#6CB0F0; --note-bg:#2A2410; --note-fg:#FDE68A; --note-line:#4A3F14; --stage-edge:#3A3A40; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--font-ui);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:200px minmax(0,1fr);gap:48px}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr);gap:24px}}
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--font-mono);font-size:.85em}
+
+/* index */
+.index{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:8px}
+@media (max-width:860px){.index{position:static}}
+.index .eyebrow{margin-bottom:12px}
+.index ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.index a{display:block;padding:6px 8px;border-radius:6px;color:var(--fg-2);text-decoration:none;font-size:15px}
+.index a:hover{background:var(--line-soft);color:var(--fg)}
+.index .meta{margin-top:24px;font-size:13px;color:var(--fg-3);line-height:1.5}
+
+/* sheet */
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:600}
+.sheet{padding-block:8px 72px;border-bottom:1px solid var(--line)}
+.sheet:last-of-type{border-bottom:0}
+.sheet > header{padding-block:12px 28px;border-bottom:1px solid var(--line);margin-bottom:40px}
+.sheet h2{font-size:34px;line-height:1.15;margin-top:4px}
+.sheet header p{margin-top:10px;max-width:60ch;color:var(--fg-2)}
+.sheet h3{font-size:20px;line-height:1.3;margin-top:48px;margin-bottom:6px}
+.sheet h3:first-of-type{margin-top:0}
+.lede{color:var(--fg-2);max-width:65ch;margin-bottom:20px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+
+/* stage: the product's own light colours, by design, in both themes */
+.stage{background:var(--stage-ground);border:1px solid var(--stage-edge);border-radius:8px;padding:24px;overflow-x:auto}
+.stage .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#71717A;font-weight:600;margin-bottom:12px}
+.stage .size{font-size:12px;color:#8B8B94;margin-top:10px;font-family:var(--font-mono)}
+.panel{background:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px}
+.parts{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.parts li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:15px;color:var(--fg-2)}
+.parts b{color:var(--fg);font-weight:600}
+.parts .n{width:20px;height:20px;border-radius:50%;background:var(--fg);color:var(--bg);font-size:11px;font-weight:600;display:grid;place-items:center;margin-top:2px}
+.why{margin-top:22px;border-left:2px solid var(--fg);padding:2px 0 2px 14px;font-size:14px;color:var(--fg-2)}
+.why b{display:block;color:var(--fg);margin-bottom:2px}
+.variant{display:grid;grid-template-columns:180px minmax(0,1fr);gap:24px;padding-block:18px;border-top:1px solid var(--line-soft);align-items:start}
+.variant:first-of-type{border-top:0}
+@media (max-width:860px){.variant{grid-template-columns:minmax(0,1fr);gap:10px}}
+.variant h4{font-size:15px}
+.variant .desc{font-size:13px;color:var(--fg-2);margin-top:2px}
+.note{background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-fg);border-radius:8px;padding:14px 16px;font-size:14px;margin-top:28px}
+.note b{display:block;margin-bottom:2px}
+table.spec{width:100%;border-collapse:collapse;font-size:14px}
+table.spec th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:600;padding:0 12px 10px 0;border-bottom:1px solid var(--line)}
+table.spec td{padding:10px 12px 10px 0;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--fg-2)}
+table.spec td:first-child{color:var(--fg)}
+table.spec tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.12);vertical-align:-1px;margin-right:8px}
+.rules{margin:0;padding-left:18px;color:var(--fg-2);font-size:14px;display:grid;gap:8px}
+.rules b{color:var(--fg)}
+.dd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;margin-top:8px}
+@media (max-width:860px){.dd{grid-template-columns:minmax(0,1fr)}}
+.dd h4{font-size:15px;margin-bottom:10px}
+.dd ul{margin:0;padding-left:18px;color:var(--fg-2);font-size:14px;display:grid;gap:8px}
+footer{grid-column:1 / -1;padding-top:40px;color:var(--fg-3);font-size:13px}
+
+/* ===== rendered components: values are the prototype's, verbatim ===== */
+.x{font-family:var(--font-ui);color:#09090B;font-size:14px;line-height:20px}
+.x svg{display:block;flex:none}
+.pill{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:999px;border:1px solid transparent;font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;background:none;font-family:inherit}
+.pill svg{width:14px;height:14px;fill:currentColor}
+.pill.risk{background:#FEF2F2;border-color:#FECACA;color:#7F1D1D}
+.pill.no-risk{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.pill.action{background:#FEF3C7;border-color:#FDE68A;color:#78350F}
+.act{display:inline-flex;justify-content:flex-end;min-width:64px;flex:none}
+.act .assess{display:inline-flex;align-items:center;height:32px;margin:-4px -6px -4px 0;padding:0 8px;border-radius:4px;font-weight:600;letter-spacing:.09em;color:#1D4ED8}
+.act .assess.hover{background:#F6F8FD}.act .assess.focus{background:#E4E9FA;outline:2px solid #1A73C9;outline-offset:0}
+.act .pen{display:inline-grid;place-items:center;width:32px;height:32px;margin:-4px -4px -4px 0;border-radius:50%;color:#52525B}
+.act .pen svg{width:18px;height:18px;fill:currentColor}.act .pen.hover{background:#F5F5F5;color:#09090B}
+.ra{width:419px;max-width:100%}
+.row{padding:10px 20px;border-bottom:1px solid #E4E4E7}
+.row:last-child{border-bottom:0}
+.row.open{background:#DBEAFE}
+.row .head{display:flex;align-items:center;gap:4px;min-height:24px}
+.row .lab{font-weight:600}
+.row .assessing{font-size:12px;line-height:16px;font-weight:600;color:#1E3A8A}
+.row .info{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;color:#52525B;flex:none}
+.row .info svg{width:16px;height:16px;fill:currentColor}
+.row .status{margin-left:auto;padding-left:8px}
+.row .val{display:flex;flex-direction:column;margin-top:2px;color:#52525B;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.row .meta{margin-top:4px;font-size:12px;line-height:16px;color:#52525B}
+.band{display:flex;align-items:center;gap:4px;padding:8px 20px;background:#FAFAFA;border-top:1px solid #E4E4E7;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#09090B}
+.band .count{font-weight:400}
+.band svg{width:16px;height:16px;fill:currentColor}
+.gap24{height:24px}
+.sum{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;font-size:12px;line-height:16px;color:#52525B;font-variant-numeric:tabular-nums}
+.sum .jump{font-weight:600;color:#1D4ED8}
+.sum .jump.hover{color:#1E40AF;text-decoration:underline;text-underline-offset:2px}
+.srt{width:100%;border-collapse:collapse;font-size:14px;line-height:20px;color:#09090B}
+.srt th,.srt td{padding:8px 0;border-bottom:1px solid #E4E4E7;text-align:left;vertical-align:middle;font-weight:400}
+.srt thead th{padding-top:0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#52525B}
+.srt tbody tr:last-child th,.srt tbody tr:last-child td{border-bottom:0}
+.srt .r{text-align:right;white-space:nowrap}
+.dlg{width:min(520px,100%);background:#fff;border-radius:14px;box-shadow:0 18px 48px rgba(24,24,27,.26);color:#09090B}
+.dlg .dh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E4E4E7}
+.dlg .dh h5{margin:0;font-size:20px;line-height:30px;font-weight:600}
+.dlg .close{width:32px;height:32px;border-radius:4px;display:grid;place-items:center;color:#09090B}
+.dlg .close svg{width:16px;height:16px;fill:currentColor}
+.dlg .db{padding:16px 20px}
+.dlg .lead{font-weight:600;margin:4px 0 8px}
+.dlg .detail{color:#52525B;line-height:1.55;margin-bottom:4px}
+.dlg .df{display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid #E4E4E7}
+.btn{height:40px;padding:0 16px;border-radius:4px;display:inline-flex;align-items:center;font-weight:600;font-size:14px;letter-spacing:.02em}
+.btn.text{color:#09090B}
+.btn.primary{background:#1A73C9;color:#fff}
+.btn.outlined{height:32px;border:1px solid rgba(0,0,0,.12);gap:8px;color:#09090B;background:#fff}
+.btn.outlined svg{width:16px;height:16px;fill:currentColor}
+.btn.outlined.off{color:rgba(0,0,0,.38)}
+.overlay{position:relative}
+.overlay .scrim{position:absolute;inset:0;background:rgba(255,255,255,.82);display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:40px;font-weight:600}
+.spin{width:24px;height:24px;border-radius:50%;border:3px solid #DBEAFE;border-top-color:#1A73C9}
+@media (prefers-reduced-motion: no-preference){.spin{animation:spin 1s linear infinite}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+
+<div class="wrap">
+  <nav class="index" aria-label="Components">
+    <div class="eyebrow">Components</div>
+    <ol>
+      <li><a href="#risk-status">Risk status</a></li>
+      <li><a href="#row">Risk assessment row</a></li>
+      <li><a href="#band">Section band</a></li>
+      <li><a href="#summary">Summary line</a></li>
+      <li><a href="#table">Section risk table</a></li>
+      <li><a href="#dialog">Resync dialog</a></li>
+    </ol>
+    <p class="meta">AML Case modal, left panel. Values are read from <code>aml-case-modal/src</code>; nothing here is approximated. Spacing is the LDS core scale (<code>--lds-core-spacing-*</code>). Figma: <em>AML Case Modal</em> › 🟢 Local Components › <em>AML / Risk assessment</em>.</p>
+  </nav>
+
+  <main>
+
+  <!-- ============================================================ 1 RISK STATUS -->
+  <section class="sheet" id="risk-status">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Risk status</h2>
+      <p>The risk on a Risk assessment field. Three signals, never colour alone: a fill, an icon and the word. Always a label - on the row, the chip bar, the placeholder, the outcome card and the finalise table. Never pressable: the row's action sits beside it.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <p class="lede">A 24px inline pill, the same geometry and tokens as <code>ui-pill</code>.</p>
+    <div class="two">
+      <div class="stage">
+        <div class="label">Action required</div>
+        <span class="x pill action"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>Action required</span>
+        <div class="size">118 × 24</div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>Container</b> – 24 tall, <code>0 8px</code> inline (spacing-2), radius 999, 1px rim inside. Gap 4 (spacing-1) between parts.</span></li>
+          <li><span class="n">2</span><span><b>Status icon</b> – 14 × 14, inherits the ink. <code>flag</code> for Risk flagged, <code>check_circle</code> for No risk, <code>help_outline</code> for Action required. Never swapped: the glyph is part of the status.</span></li>
+          <li><span class="n">3</span><span><b>Word</b> – 12/16, 600. The status word. On a required-actions chip it is the field name instead, and the status word moves to the accessible name and the title.</span></li>
+        </ol>
+        <div class="why"><b>Why these colours and no others</b>They are <code>ui-pill</code>'s danger, success and warn tones with the subdued rims its dotted form wears. A status is the same red, green or amber it is in the case header and the cases table, so the Risk assessment adds no colour of its own. An outlined No risk and two hover mixes were tried and dropped for that reason.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <p class="lede">Two properties, Status and Form. Six variants. Nothing else exists: a fourth status or a "neutral" pill is a bug, not an option.</p>
+    <div class="variant">
+      <div><h4>Label</h4><p class="desc">Read, never pressed. The row when the agent cannot assess, the chip bar, the outcome card, the finalise table.</p></div>
+      <div class="stage"><div class="x" style="display:flex;flex-wrap:wrap;gap:12px">
+        <span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk flagged</span>
+        <span class="pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span>
+        <span class="pill action"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>Action required</span>
+      </div><div class="size">118 · 92 · 136 × 24</div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Beside the row's action</h4><p class="desc">Where the agent can assess, the action follows the pill in one 64px slot: <b>Assess</b> on a field still to assess, a pencil (<em>Change assessment</em>) on one already assessed. The pill is the same either way.</p></div>
+      <div class="stage"><div class="x" style="display:flex;flex-direction:column;gap:16px;align-items:flex-end;width:240px">
+        <span style="display:flex;align-items:center;gap:4px"><span class="pill action"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>Action required</span><span class="act"><span class="assess">Assess</span></span></span>
+        <span style="display:flex;align-items:center;gap:4px"><span class="pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span><span class="act"><span class="pen"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span></span></span>
+      </div><div class="size">pills end on one line; the slot is 64 min</div></div>
+    </div>
+    <div class="note"><b>Never a control</b>Not a button and not a form input. Once the status took <code>ui-pill</code>'s colours, the 14px pencil it carried was the only thing saying "press me", and it read as a tag. The pill toggle in the Assess risk form failed for the same reason: one shape with two meanings. The row has an Assess / Change assessment button; the form asks with radios.</div>
+
+    <h3>Design tokens</h3>
+    <p class="lede">Every colour is a semantic token from <code>styles.scss</code>, and every one of them is a <code>ui-pill</code> token. Nothing is computed.</p>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--danger-bg</code> / <code>--border-negative-subdued</code> / <code>--danger-deep</code></td><td><span class="sw" style="background:#FEF2F2"></span>#FEF2F2 · <span class="sw" style="background:#FECACA"></span>#FECACA · <span class="sw" style="background:#7F1D1D"></span>#7F1D1D</td><td>Risk flagged fill, rim, ink (label and icon). 9.16:1</td></tr>
+        <tr><td><code>--success-bg-subtle</code> / <code>--border-success-subdued</code> / <code>--success</code></td><td><span class="sw" style="background:#F0FDF4"></span>#F0FDF4 · <span class="sw" style="background:#BBF7D0"></span>#BBF7D0 · <span class="sw" style="background:#14532D"></span>#14532D</td><td>No risk fill, rim, ink. 8.70:1</td></tr>
+        <tr><td><code>--warn-bg</code> / <code>--border-warning-subdued</code> / <code>--warn</code></td><td><span class="sw" style="background:#FEF3C7"></span>#FEF3C7 · <span class="sw" style="background:#FDE68A"></span>#FDE68A · <span class="sw" style="background:#78350F"></span>#78350F</td><td>Action required fill, rim, ink. 8.15:1</td></tr>
+                        <tr><td><code>--lds-core-spacing-2</code> · <code>-1</code></td><td>8 · 4</td><td>Inline padding · gap between icon and word</td></tr>
+        <tr><td>radius 999 · icon 14 · height 24</td><td>—</td><td>Fixed geometry, not tokenised</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <div class="two">
+      <div class="tw"><table class="spec">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Everything</td><td>None. It is a label</td></tr>
+          <tr><td>Status change</td><td>The word, icon and tint swap instantly when an assessment lands</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li><b>No hover.</b> A label that reacts to the cursor advertises an action that is not there. The action beside it has Material's states.</li>
+      </ul>
+    </div>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Label name</td><td>When the word is not the status (a chip showing the field name), <code>aria-label="&lt;Full label&gt;: &lt;Status&gt;"</code> and <code>title="&lt;Status&gt;"</code>.</td></tr>
+        <tr><td>Icons</td><td><code>aria-hidden="true"</code>. The word carries the meaning; the icon is the second signal, not the first.</td></tr>
+        <tr><td>Colour</td><td>Never alone. Fill + icon + word; three hues, each also carried by its glyph.</td></tr>
+        <tr><td>Contrast</td><td>Every word clears AA on its own fill: 9.16 / 8.70 / 8.15.</td></tr>
+        <tr><td>Focus</td><td>Never focusable. Not in the tab order; the row's action is.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul>
+        <li>Use it wherever a status is read: the row, the chip bar, the placeholder, the outcome card, the finalise table.</li>
+        <li>Put the action beside it on a row - Assess or the pencil - never inside it.</li>
+        <li>Override the word on a chip to the field name; keep the status on the accessible name.</li>
+      </ul></div>
+      <div><h4>Don't</h4><ul>
+        <li>Make it a button or an input. The row has Assess / Change assessment; the form has radios.</li>
+        <li>Give No risk a fill at rest, or swap an icon for a different glyph.</li>
+        <li>Add a fourth status. Informational fields carry no pill at all.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 2 ROW -->
+  <section class="sheet" id="row">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Risk assessment row</h2>
+      <p>One field of the Risk assessment: its label, a definition on demand, its current value and its risk. The full width of the left column, with the panel's gutter as its own padding so a tint can run to the edges.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <p class="lede">A vertical stack: head line, value lines, an optional assessed-by line. The row is 419 wide; content sits on the 20px gutter.</p>
+    <div class="two">
+      <div class="stage"><div class="label">Desktop · Action required</div>
+        <div class="x ra panel"><div class="row">
+          <div class="head"><span class="lab">Document requests</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill action"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>Action required</span><span class="act"><span class="assess">Assess</span></span></div>
+          <div class="val"><span>#10482 · Affordability · Approved</span><span>#11953 · Proof of address · Waiting for review</span></div>
+        </div></div>
+        <div class="size">419 × 85</div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>Row</b> – <code>padding: 10px 20px</code> (spacing-2-5 / spacing-5). 1px <code>--line</code> rule below; the last row of a section has none, because the next band's top rule is the edge.</span></li>
+          <li><span class="n">2</span><span><b>Head</b> – flex, <code>min-height: 24px</code>, gap 4. Label, info, then the status pushed right with <code>margin-left: auto</code>, then the action slot.</span></li>
+          <li><span class="n">3</span><span><b>Label</b> – 14/20, 600, <code>--foreground-primary</code>.</span></li>
+          <li><span class="n">4</span><span><b>Info button</b> – 24px circle, 16px outlined <code>info</code> in secondary ink. Tooltip: the definition, a blank line, then <em>Risk if: …</em>. Shows on hover and on keyboard focus. Hit area 40 × 40.</span></li>
+          <li><span class="n">5</span><span><b>Status</b> – Risk status, always a label. Absent on an informational field.</span></li>
+          <li><span class="n">6</span><span><b>Action</b> – one right-aligned slot, 64 min, while the agent can assess. <b>Assess</b>: <code>mat-button</code>, 32 tall, <code>--link</code> label and state layer, no ripple, <code>scale(0.96)</code> on press. <b>Change assessment</b>: <code>mat-icon-button</code>, 32 × 32, 18px pencil in secondary ink, tooltip. Both pulled back 4px top and bottom so the head stays 24; 40px hit areas. Empty on the open row.</span></li>
+          <li><span class="n">7</span><span><b>Value</b> – one span per line, 14/20 secondary, <code>tabular-nums</code>, <code>overflow-wrap: anywhere</code>. 2px above.</span></li>
+          <li><span class="n">8</span><span><b>Assessed by</b> – 12/16 secondary, <em>Assessed by A. Kowalski · 02 Nov 2026, 08:53</em>. Only once an agent has assessed the field.</span></li>
+        </ol>
+        <div class="why"><b>Why the info button is a button</b>A tooltip on a bare icon is reachable by mouse only. The button puts the definition in the tab order, and its name is <em>About &lt;Field&gt;</em>.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <p class="lede">Two properties, Status and Open. Seven variants: Informational has no Open form, because it cannot be assessed.</p>
+    <div class="variant">
+      <div><h4>Risk flagged · No risk · Action required</h4><p class="desc">The status decides the pill and the action: Assess while it is Action required, the pencil once assessed.</p></div>
+      <div class="stage"><div class="x ra panel">
+        <div class="row"><div class="head"><span class="lab">Linked accounts</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk flagged</span><span class="act"><span class="pen"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span></span></div><div class="val"><span>2 linked accounts</span><span>PID 90214 · Active · John Doe</span><span>PID 90455 · Suspended · Jane Doe</span></div></div>
+        <div class="row"><div class="head"><span class="lab">Employment &amp; occupation</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span><span class="act"><span class="pen"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span></span></div><div class="val"><span>Employed · Bar staff</span></div><p class="meta">Assessed by A. Kowalski · 02 Nov 2026, 08:53</p></div>
+        <div class="row"><div class="head"><span class="lab">Document requests</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill action"><svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>Action required</span><span class="act"><span class="assess">Assess</span></span></div><div class="val"><span>#10482 · Affordability · Approved</span><span>#11953 · Proof of address · Waiting for review</span></div></div>
+      </div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Informational</h4><p class="desc">Account information only. Shown, never assessed, never in the finalise table. No status, no edit.</p></div>
+      <div class="stage"><div class="x ra panel"><div class="row"><div class="head"><span class="lab">Pending withdrawals</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span></div><div class="val"><span>£400.04 total, 2 pending requests</span><span>£399.04 · requested 01 May 2026, 13:00</span><span>£0.96 · requested 01 May 2026, 13:00</span></div></div></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Open</h4><p class="desc">The field whose Assess risk form is open in the workflow. Held until the form is saved or cancelled. Its action slot is empty: the form is already up, and Assessing says so.</p></div>
+      <div class="stage"><div class="x ra panel"><div class="row open"><div class="head"><span class="lab">Latest fraud scores</span><span class="assessing">Assessing</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span><span class="act"></span></div><div class="val"><span>21 · 01 May 2026, 13:00</span><span>44 · 04 May 2026, 13:00</span></div></div></div></div>
+    </div>
+    <div class="note"><b>The tint runs to the panel edges on purpose</b>The row bleeds into the body's gutter (<code>margin: 0 -20px</code>) and pays it back as padding, so content stays on the shared gutter and only the fill moves. 16px narrow. The same trick the section bands and the Past AML cases rows use.</div>
+
+    <h3>Design tokens</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--foreground-primary</code></td><td><span class="sw" style="background:#09090B"></span>#09090B</td><td>Label; info glyph on hover</td></tr>
+        <tr><td><code>--foreground-secondary</code></td><td><span class="sw" style="background:#52525B"></span>#52525B</td><td>Value lines, Assessed by, info glyph at rest. 7.73:1</td></tr>
+        <tr><td><code>--line</code></td><td><span class="sw" style="background:#E4E4E7"></span>#E4E4E7</td><td>1px rule between rows</td></tr>
+        <tr><td><code>--color-background-info</code></td><td><span class="sw" style="background:#DBEAFE"></span>#DBEAFE</td><td>Open row fill. Label 16.31:1, values 6.34:1 on it</td></tr>
+        <tr><td><code>--color-foreground-on-info</code></td><td><span class="sw" style="background:#1E3A8A"></span>#1E3A8A</td><td>"Assessing". 8.49:1</td></tr>
+        <tr><td><code>--colors-alpha-alpha-soft-hover</code></td><td>rgba(0,0,0,.06)</td><td>Info button hover</td></tr>
+        <tr><td><code>--lds-core-spacing-2-5</code> · <code>-5</code> · <code>-4</code></td><td>10 · 20 · 16</td><td>Row block padding · gutter · gutter below 720px</td></tr>
+        <tr><td><code>--lds-core-spacing-1</code></td><td>4</td><td>Head gap; info glyph to status; status to action</td></tr>
+        <tr><td><code>--link</code></td><td><span class="sw" style="background:#1D4ED8"></span>#1D4ED8</td><td>Assess label and state layer. 6.70 rest, 6.31 hover, 5.53 focus and pressed (measured)</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <div class="two">
+      <div class="tw"><table class="spec">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Row, head, value</td><td>None</td></tr>
+          <tr><td>Open tint</td><td>Appears and clears with the form. No fade</td></tr>
+          <tr><td>Info button hover</td><td>None; the tint is instant</td></tr>
+          <tr><td>Assess / pencil</td><td>Material state layers; Assess adds <code>scale(0.96)</code> on press (none under reduced motion)</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li><b>Rows are content, not controls.</b> No hover on the row; a tint on something that cannot be clicked is a lie. The two controls on it hover on their own.</li>
+        <li><b>The open tint is state, not an entrance.</b> It changes when the workflow changes, which the agent caused a moment ago in the other panel.</li>
+      </ul>
+    </div>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Structure</td><td><code>&lt;li&gt;</code> in a <code>&lt;ul&gt;</code> per section; the section is a <code>&lt;section aria-labelledby&gt;</code> its band.</td></tr>
+        <tr><td>Open row</td><td><code>aria-current="true"</code>. The tint alone is colour.</td></tr>
+        <tr><td>Info button</td><td>Real <code>&lt;button&gt;</code>, <code>aria-label="About &lt;Field&gt;"</code>, tooltip on focus as well as hover, 40 × 40 hit area, ring on focus.</td></tr>
+        <tr><td>Status</td><td>A label, read as its word.</td></tr>
+        <tr><td>Action</td><td>Named for verb and field: <em>Assess &lt;Field&gt;</em>, <em>Change assessment of &lt;Field&gt;</em>. The "2 to assess" jump focuses the first Assess. After save or cancel, focus returns to the row's action.</td></tr>
+        <tr><td>Values</td><td>Plain text, selectable. An agent copies a PID out of here.</td></tr>
+        <tr><td>Contrast</td><td>Every text clears AA on white and on the open tint.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul>
+        <li>Give every value line its own span. The data is one fact per line; one wrapped paragraph hides that.</li>
+        <li>Mark the open row the moment its form opens, from its action or from a placeholder, and clear it on save or cancel.</li>
+        <li>Show "Assessed by" only after an assessment. An unassessed field has nobody to name.</li>
+      </ul></div>
+      <div><h4>Don't</h4><ul>
+        <li>Make the row or the pill clickable. The action is the control; the row holds copyable text and its own info button.</li>
+        <li>Put a status on an informational field, or let one be opened.</li>
+        <li>Truncate values. They wrap; the tooltip is for the definition, not for hidden data.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 3 BAND -->
+  <section class="sheet" id="band">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Section band</h2>
+      <p>A section title in the Risk assessment, as a full-bleed band that sticks to the top of the scroll area. A break the eye cannot miss, and a sign of where you are in a 2,000px list.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <p class="lede">The title sits in a band, not above its rows. 24px of clear space above it against a 21px row rhythm.</p>
+    <div class="two">
+      <div class="stage"><div class="label">Desktop · between two sections</div>
+        <div class="x ra panel">
+          <div class="row"><div class="head"><span class="lab">Personal detail changes</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span></div><div class="val"><span>Address updated · 20 Sep 2025</span></div></div>
+          <div class="gap24"></div>
+          <div class="band">Verification risks</div>
+          <div class="row"><div class="head"><span class="lab">Employment &amp; occupation</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span><span class="status pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span><span class="act"><span class="pen"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span></span></div><div class="val"><span>Employed · Bar staff</span></div></div>
+        </div>
+        <div class="size">band 419 × 33</div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>Band</b> – <code>--page</code> fill, <code>padding: 8px 20px</code> (spacing-2 / spacing-5), 1px <code>--line</code> on top only. Bleeds to the panel edges with <code>margin: 0 -20px</code>.</span></li>
+          <li><span class="n">2</span><span><b>Title</b> – 12/16, 600, uppercase, <code>letter-spacing: 0.04em</code>, <code>--foreground-primary</code>. Primary ink, so it outranks the row labels it introduces.</span></li>
+          <li><span class="n">3</span><span><b>Space above</b> – 24px (spacing-6), from the previous section's last row to the band. Against 21px between rows.</span></li>
+          <li><span class="n">4</span><span><b>Sticky</b> – <code>position: sticky; top: -16px</code>, <code>z-index: 1</code>. Negative by the body's own top padding, because a sticky offset is measured from inside it. The Resyncing overlay sits above at z 2.</span></li>
+          <li><span class="n">5</span><span><b>Disclosure</b> (Account information) – the band's content is a button: label, <em>· 6 fields</em> in 400, a trailing 16px chevron. <code>aria-expanded</code>, <code>aria-controls</code>. Label first, so every band's title starts on the same gutter.</span></li>
+        </ol>
+        <div class="why"><b>Why a band and not more space</b>Rows sit 21px apart and a title used to sit 26px above its section in the same ink as the values. Five pixels is not a break. A band is the panel's own vocabulary already: the trigger strip, the tab bar and the open-row tint all run to the edges.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <p class="lede">One property, Kind. Two variants.</p>
+    <div class="variant">
+      <div><h4>Title</h4><p class="desc">Every assessed section.</p></div>
+      <div class="stage"><div class="x ra panel"><div class="band">Deposit &amp; transaction behaviour</div></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Disclosure · collapsed</h4><p class="desc">Account information opens closed. Six status-less rows should not sit between the agent and the first field that needs them.</p></div>
+      <div class="stage"><div class="x ra panel"><div class="band">Account information <span class="count">· 6 fields</span><svg viewBox="0 0 24 24"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg></div></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Disclosure · open</h4><p class="desc">Chevron flips; the rows return below. The state survives a reflow and resets with the case.</p></div>
+      <div class="stage"><div class="x ra panel"><div class="band">Account information <span class="count">· 6 fields</span><svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg></div><div class="row"><div class="head"><span class="lab">Pending withdrawals</span><span class="info"><svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span></div><div class="val"><span>£400.04 total, 2 pending requests</span></div></div></div></div>
+    </div>
+
+    <h3>Design tokens</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--page</code></td><td><span class="sw" style="background:#FAFAFA"></span>#FAFAFA</td><td>Band fill</td></tr>
+        <tr><td><code>--line</code></td><td><span class="sw" style="background:#E4E4E7"></span>#E4E4E7</td><td>1px top rule</td></tr>
+        <tr><td><code>--foreground-primary</code></td><td><span class="sw" style="background:#09090B"></span>#09090B</td><td>Title, count, chevron. 19.9:1</td></tr>
+        <tr><td><code>--colors-alpha-alpha-soft-hover</code></td><td>rgba(0,0,0,.06)</td><td>Disclosure button hover</td></tr>
+        <tr><td><code>--lds-core-spacing-6</code></td><td>24</td><td>Clear space above the band</td></tr>
+        <tr><td><code>--lds-core-spacing-2</code> · <code>-5</code> · <code>-px</code></td><td>8 · 20 · 1</td><td>Block padding · inline padding · rule</td></tr>
+        <tr><td><code>--lds-core-spacing-1</code></td><td>4</td><td>Gap in the disclosure; its button padding, paid back with a negative margin</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <div class="two">
+      <div class="tw"><table class="spec">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Sticky</td><td>Position, not motion. No transition on the pin</td></tr>
+          <tr><td>Disclosure open / close</td><td>Instant. Rows appear; nothing slides</td></tr>
+          <tr><td>Hover</td><td>Instant tint on the disclosure button</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li><b>Nothing animates.</b> A collapse that slides on a list this long reads as the page thinking; the agent opened it to read six lines.</li>
+      </ul>
+    </div>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Heading</td><td>An <code>&lt;h3&gt;</code>; the section is <code>aria-labelledby</code> it.</td></tr>
+        <tr><td>Disclosure</td><td>A <code>&lt;button&gt;</code> inside the <code>&lt;h3&gt;</code> with <code>aria-expanded</code> and <code>aria-controls</code> pointing at the list. Enter and Space toggle.</td></tr>
+        <tr><td>Focus</td><td>2px ring at offset 0 on the button; the band is its own hit area.</td></tr>
+        <tr><td>Sticky and focus</td><td>A focused row scrolling under the band is still read; the band is 33px and the body's scroll-padding accounts for it.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul>
+        <li>Keep the PDF's section order. The band fixes the break; the order is the investigation's.</li>
+        <li>Collapse only informational sections. An assessed section always shows its rows.</li>
+      </ul></div>
+      <div><h4>Don't</h4><ul>
+        <li>Put the chevron first. The disclosure's title must start where every other title does.</li>
+        <li>Add a rule under the band. The first row's own padding is the space; two lines would stack.</li>
+        <li>Raise the title to 14px. It would compete with the field labels, which is the wrong fight.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 4 SUMMARY -->
+  <section class="sheet" id="summary">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Summary line</h2>
+      <p>Under the Risk assessment header: what the panel adds up to, where the eye lands. The first part is a jump to the first field still to assess, and mirrors the count the chip bar carries, which is the point: the two panels are one list.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <div class="two">
+      <div class="stage"><div class="label">Pending</div><div class="x sum"><span class="jump">2 to assess</span><span aria-hidden="true">·</span><span>10 flagged</span><span aria-hidden="true">·</span><span>6 no risk</span></div><div class="size">one line, 16 tall</div></div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>Line</b> – flex, wraps, <code>gap: 0 6px</code> (spacing-1-5), 8px (spacing-2) below the header. 12/16 <code>--foreground-secondary</code>, <code>tabular-nums</code>.</span></li>
+          <li><span class="n">2</span><span><b>Jump</b> – a text <code>&lt;button&gt;</code>: 600, <code>--link</code>; hover <code>--link-hover</code> with an underline at offset 2; focus ring at offset 2, radius 2. Scrolls the first Action required row to the top (<code>block: start</code>) and focuses its status.</span></li>
+          <li><span class="n">3</span><span><b>Dots</b> – <code>·</code>, <code>aria-hidden</code>.</span></li>
+          <li><span class="n">4</span><span><b>Counts</b> – flagged and no risk, plain text. Informational fields are not counted.</span></li>
+        </ol>
+        <div class="why"><b>Why it exists</b>The primary action was the last row of a 2,400px list. The line names it where the eye lands, and the number it shows is the same number the required-actions bar shows on the right.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <div class="variant">
+      <div><h4>Pending</h4><p class="desc">At least one field is Action required.</p></div>
+      <div class="stage"><div class="x sum"><span class="jump">2 to assess</span><span aria-hidden="true">·</span><span>10 flagged</span><span aria-hidden="true">·</span><span>6 no risk</span></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Pending · hover on the jump</h4><p class="desc">Colour and underline, the link's own vocabulary.</p></div>
+      <div class="stage"><div class="x sum"><span class="jump hover">2 to assess</span><span aria-hidden="true">·</span><span>10 flagged</span><span aria-hidden="true">·</span><span>6 no risk</span></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Nothing to assess</h4><p class="desc">Every assessed field is Risk flagged or No risk. Plain text, no link; Finalise is enabled in the workflow.</p></div>
+      <div class="stage"><div class="x sum"><span>Nothing to assess</span><span aria-hidden="true">·</span><span>10 flagged</span><span aria-hidden="true">·</span><span>7 no risk</span></div></div>
+    </div>
+
+    <h3>Design tokens</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--link</code> / <code>--link-hover</code></td><td><span class="sw" style="background:#1D4ED8"></span>#1D4ED8 · <span class="sw" style="background:#1E40AF"></span>#1E40AF</td><td>Jump at rest · hover</td></tr>
+        <tr><td><code>--foreground-secondary</code></td><td><span class="sw" style="background:#52525B"></span>#52525B</td><td>Counts, dots, the no-link state</td></tr>
+        <tr><td><code>--primary</code></td><td><span class="sw" style="background:#1A73C9"></span>#1A73C9</td><td>Focus ring</td></tr>
+        <tr><td><code>--lds-core-spacing-1-5</code> · <code>-2</code></td><td>6 · 8</td><td>Gap between parts · space above the line</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <div class="two">
+      <div class="tw"><table class="spec">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Jump scroll</td><td><code>scrollIntoView({ block: 'start', behavior: 'smooth' })</code></td></tr>
+          <tr><td>Reduced motion</td><td><code>behavior: 'auto'</code></td></tr>
+          <tr><td>Counts</td><td>Change in place, no tween. Tabular figures keep the line from shifting</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li><b>The scroll is the only motion</b>, and it is the browser's. The focus that follows it is what tells a keyboard user where they landed.</li>
+      </ul>
+    </div>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Jump</td><td>A real <code>&lt;button&gt;</code>. After the scroll, the row lands below its section band and focus goes to its Assess button, or to its info button when the agent cannot assess.</td></tr>
+        <tr><td>Dots</td><td><code>aria-hidden</code>; a screen reader hears the three counts in sequence.</td></tr>
+        <tr><td>Contrast</td><td>Link 7.0:1, secondary 7.73:1 on white.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul><li>Derive the three numbers from the same state the chip bar reads; they must never disagree.</li><li>Keep it one line of 12px. It is a summary, not a header.</li></ul></div>
+      <div><h4>Don't</h4><ul><li>Count informational fields. They have no status to count.</li><li>Link the flagged or no-risk counts. There is nothing specific to jump to.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 5 TABLE -->
+  <section class="sheet" id="table">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Section risk table</h2>
+      <p>The finalise table: every assessed section, Risk or No risk. A section is Risk if any field in it is Risk flagged. Live in the Finalise risk assessment form, frozen on the "Risk assessment finalised" card.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <div class="two">
+      <div class="stage"><div class="label">On the finalise card</div>
+        <table class="x srt">
+          <thead><tr><th>Section</th><th class="r">Result</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Verification risks</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr>
+            <tr><th scope="row">Login &amp; geography risks</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr>
+            <tr><th scope="row">Payment methods</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr>
+            <tr><th scope="row">Deposit &amp; transaction behaviour</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr>
+            <tr><th scope="row">Product &amp; gameplay analysis</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr>
+            <tr><th scope="row">Open source intelligence</th><td class="r"><span class="pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span></td></tr>
+          </tbody>
+        </table>
+        <div class="size">fills its container · 6 rows × 41</div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>Table</b> – a real <code>&lt;table&gt;</code>, <code>border-collapse</code>, full width of the form or card. Caption <em>Risk by section</em>, visually hidden.</span></li>
+          <li><span class="n">2</span><span><b>Column headers</b> – <em>Section</em> and <em>Result</em>, 12/16 600 uppercase 0.04em, <code>--foreground-secondary</code>, 8px below, 1px rule.</span></li>
+          <li><span class="n">3</span><span><b>Row header</b> – the section, <code>th scope="row"</code>, 14/20 400 <code>--foreground-primary</code>, <code>padding: 8px 12px 8px 0</code>.</span></li>
+          <li><span class="n">4</span><span><b>Result</b> – Risk status label, right-aligned, with the word shortened to <em>Risk</em>. No risk keeps its word.</span></li>
+          <li><span class="n">5</span><span><b>Rules</b> – 1px <code>--line</code> under each row, none after the last.</span></li>
+        </ol>
+        <div class="why"><b>Why Account information is not in it</b>Its fields are informational and carry no risk to report. A row reading "No risk" there would be a claim nobody made.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <p class="lede">One component, two homes. The data decides the rows; nothing about the table changes between them.</p>
+    <div class="variant">
+      <div><h4>In the Finalise form</h4><p class="desc">Live. Reflects the Risk assessment as it stands, under the heading <em>Risk by section</em> and the hint <em>A section is a risk if any field in it is.</em></p></div>
+      <div class="stage" style="padding:16px"><div class="x" style="font-weight:600;margin-bottom:4px">Risk by section</div><div class="x" style="font-size:12px;color:#52525B;margin-bottom:12px">A section is a risk if any field in it is.</div><table class="x srt"><thead><tr><th>Section</th><th class="r">Result</th></tr></thead><tbody><tr><th scope="row">Verification risks</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr><tr><th scope="row">Open source intelligence</th><td class="r"><span class="pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span></td></tr></tbody></table></div>
+    </div>
+    <div class="variant">
+      <div><h4>On the finalised card</h4><p class="desc">Frozen. The table as it stood when Finalise was recorded, 12px under the note. Immutable with the card.</p></div>
+      <div class="stage"><div class="x panel" style="padding:16px;border-radius:12px"><div style="font-size:16px;line-height:24px;font-weight:600">Risk assessment finalised</div><div style="color:#52525B;margin:8px 0 12px">Linked accounts, VPN use and the deposit pattern carry risk. Identity and documents are clear.</div><table class="srt"><thead><tr><th>Section</th><th class="r">Result</th></tr></thead><tbody><tr><th scope="row">Payment methods</th><td class="r"><span class="pill risk"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>Risk</span></td></tr><tr><th scope="row">Open source intelligence</th><td class="r"><span class="pill no-risk"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>No risk</span></td></tr></tbody></table></div></div>
+    </div>
+
+    <h3>Design tokens</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--foreground-primary</code></td><td><span class="sw" style="background:#09090B"></span>#09090B</td><td>Section names</td></tr>
+        <tr><td><code>--foreground-secondary</code></td><td><span class="sw" style="background:#52525B"></span>#52525B</td><td>Column headers</td></tr>
+        <tr><td><code>--line</code></td><td><span class="sw" style="background:#E4E4E7"></span>#E4E4E7</td><td>Row rules</td></tr>
+        <tr><td><code>--lds-core-spacing-2</code> · <code>-3</code></td><td>8 · 12</td><td>Cell block padding · gap before the result</td></tr>
+        <tr><td>Risk status tokens</td><td>—</td><td>The result pill, see Risk status</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <p class="lede">None. In the form the rows re-render when an assessment lands; on the card nothing ever changes.</p>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Semantics</td><td><code>&lt;table&gt;</code> with a <code>&lt;caption&gt;</code>, <code>th scope="col"</code> on both headers, <code>th scope="row"</code> per section, so it reads <em>Payment methods, Risk</em>.</td></tr>
+        <tr><td>Result</td><td>The pill's word is read; the icon is hidden. "Risk" and "No risk" are the whole content of the cell.</td></tr>
+        <tr><td>Caption</td><td><em>Risk by section</em>; on the card, <em>Risk by section, as finalised</em>.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul><li>Compute a section's result from its fields every time. Nothing stores it.</li><li>Carry the table on the finalise card exactly as it was saved, even if a later resync would change it.</li></ul></div>
+      <div><h4>Don't</h4><ul><li>Add Account information, or any informational section.</li><li>Replace the table with a list. The two-column reading, section then result, is the point.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 6 DIALOG -->
+  <section class="sheet" id="dialog">
+    <header>
+      <div class="eyebrow">Components</div>
+      <h2>Resync dialog</h2>
+      <p>Asked before every resync of the Risk assessment. It names the cost in one line: some actions might need to be recorded again. Nothing is lost by confirming, so it is not a danger dialog, and the primary is the safe default.</p>
+    </header>
+
+    <h3>Anatomy</h3>
+    <div class="two">
+      <div class="stage"><div class="label">Desktop</div>
+        <div class="x dlg">
+          <div class="dh"><h5>Resync risk assessment?</h5><span class="close"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></span></div>
+          <div class="db"><p class="lead">Some actions might need to be recorded again.</p><p class="detail">Every value is regenerated. Where a field's risk changes, it goes back to Action required and has to be assessed again before the risk assessment can be finalised.</p></div>
+          <div class="df"><span class="btn text">Cancel</span><span class="btn primary">Resync</span></div>
+        </div>
+        <div class="size">min(520px, 100%)</div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Parts</div>
+        <ol class="parts">
+          <li><span class="n">1</span><span><b>dialog-shell</b> – <code>width: min(520px, 100%)</code>, radius 14, <code>--panel</code> fill, shadow <code>0 18px 48px rgba(24,24,27,.26)</code>, over the full-viewport scrim. Header, body and footer each <code>padding: 16px 20px</code>, rules between.</span></li>
+          <li><span class="n">2</span><span><b>Heading</b> – <em>Resync risk assessment?</em>, 20/30 600. Labels the dialog.</span></li>
+          <li><span class="n">3</span><span><b>Close</b> – 32 × 32, radius 4, 16px glyph. The controls tier, shared with the header's window controls.</span></li>
+          <li><span class="n">4</span><span><b>Lead</b> – 14/20 600 <code>--foreground-primary</code>, <code>margin: 4px 0 8px</code>. The cost, in the words the notes used.</span></li>
+          <li><span class="n">5</span><span><b>Detail</b> – 14/1.55 <code>--foreground-secondary</code>. What regenerates and what goes back to Action required.</span></li>
+          <li><span class="n">6</span><span><b>Actions</b> – right-aligned, gap 8, default density (40). <em>Cancel</em> is a text button; <em>Resync</em> is the primary and takes initial focus.</span></li>
+        </ol>
+        <div class="why"><b>Why focus starts on Resync</b>Force unlock starts on Cancel because it is destructive for someone else. A resync destroys nothing: earlier assessments stay in the workflow, only re-work is possible. The safe default is the primary.</div>
+      </div>
+    </div>
+
+    <h3>Variants</h3>
+    <p class="lede">One dialog. What changes is what follows it.</p>
+    <div class="variant">
+      <div><h4>Before · Resync in the header</h4><p class="desc">Always visible on an open case. <code>disabledInteractive</code> when it cannot run: Material's disabled look and <code>aria-disabled</code>, still focusable, the reason on <code>aria-describedby</code> and the tooltip. A press shows the reason for 2s.</p></div>
+      <div class="stage"><div class="x" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><span class="btn outlined"><svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>Resync</span><span class="btn outlined off"><svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>Resync</span><span style="font-size:12px;color:#52525B">available · unavailable (focusable)</span></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>After · Resyncing overlay</h4><p class="desc">Confirm covers the Risk assessment body, not its header, with <code>--panel</code> at 82%, a 24px spinner and the word, sticky to the top of the visible area, for <code>RESYNC_MS</code> (1500). The body is <code>aria-busy</code>.</p></div>
+      <div class="stage"><div class="x ra panel overlay"><div class="row"><div class="head"><span class="lab">Employment &amp; occupation</span></div><div class="val"><span>Employed · Bar staff</span></div></div><div class="row"><div class="head"><span class="lab">Latest fraud scores</span></div><div class="val"><span>21 · 01 May 2026, 13:00</span></div></div><div class="scrim"><span class="spin"></span>Resyncing</div></div></div>
+    </div>
+    <div class="variant">
+      <div><h4>Then · a workflow entry</h4><p class="desc"><em>Resync completed</em> as an event row: <em>No changes.</em> or <em>Updated values: … Risk associated with … changed - manual action needed.</em> No snackbar, no banner. The stream is the record.</p></div>
+      <div class="stage"><div class="x" style="padding:0 16px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-weight:600">Resync completed</span><span style="font-size:12px;color:#52525B">A. Kowalski · 02 Nov 2026, 11:20</span></div><div style="color:#52525B;margin-top:4px">Updated values: Pending withdrawals, Latest fraud scores, VPN usage, Active payment methods, Deposit spike. Risk associated with Latest fraud scores and Deposit spike changed - manual action needed.</div></div></div>
+    </div>
+
+    <h3>Design tokens</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Applied to</th></tr></thead>
+      <tbody>
+        <tr><td><code>--panel</code></td><td><span class="sw" style="background:#FFFFFF"></span>#FFFFFF</td><td>Dialog fill; the overlay at 82%</td></tr>
+        <tr><td><code>--line</code></td><td><span class="sw" style="background:#E4E4E7"></span>#E4E4E7</td><td>Header and footer rules</td></tr>
+        <tr><td><code>--foreground-primary</code> / <code>--foreground-secondary</code></td><td><span class="sw" style="background:#09090B"></span>#09090B · <span class="sw" style="background:#52525B"></span>#52525B</td><td>Heading, lead, Cancel · detail</td></tr>
+        <tr><td><code>--primary</code></td><td><span class="sw" style="background:#1A73C9"></span>#1A73C9</td><td>Resync fill, white label; the spinner. The prototype's primary, not the brand accent</td></tr>
+        <tr><td><code>--lds-core-spacing-4</code> · <code>-5</code> · <code>-2</code></td><td>16 · 20 · 8</td><td>Block padding · inline padding · action gap</td></tr>
+        <tr><td>radius 14 · close 32/4 · actions 40</td><td>—</td><td>dialog-shell's own tiers</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Motion</h3>
+    <div class="two">
+      <div class="tw"><table class="spec">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Open / close</td><td>dialog-shell's, unchanged</td></tr>
+          <tr><td>Resync duration</td><td><code>RESYNC_MS</code> = 1500ms, simulated</td></tr>
+          <tr><td>Spinner</td><td>Material, 24px, stroke 3. Hidden under reduced motion; the word stays</td></tr>
+          <tr><td>Overlay in / out</td><td>Instant. It is a state, and it is announced</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li><b>Over 400ms needs an indicator.</b> 1.5s of silence reads as broken; the overlay and the live region cover it.</li>
+        <li><b>No success toast.</b> The overlay coming down and the entry appearing in the stream are the confirmation.</li>
+      </ul>
+    </div>
+
+    <h3>Accessibility</h3>
+    <div class="tw"><table class="spec">
+      <thead><tr><th>Concern</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Dialog</td><td>Labelled by its heading; focus trapped; Escape closes; the scrim click is inert; initial focus on Resync.</td></tr>
+        <tr><td>Focus return</td><td>Back to the Resync button in the header. It is <code>disabledInteractive</code> while the resync runs, so it holds focus; a global rule keeps Material's focus layer off unless the focus is keyboard-visible.</td></tr>
+        <tr><td>Live region</td><td>The Risk assessment's <code>role="status" aria-live="polite"</code> reads <em>Resyncing risk assessment</em>, then <em>Resync completed. &lt;summary&gt;</em>.</td></tr>
+        <tr><td>Busy</td><td><code>aria-busy="true"</code> on the section body for the duration.</td></tr>
+        <tr><td>Unavailable Resync</td><td>Focusable, <code>aria-disabled="true"</code>, reason on <code>aria-describedby</code>; a press shows the reason rather than doing nothing.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Do / Don't</h3>
+    <div class="dd">
+      <div><h4>Do</h4><ul><li>Ask every time. A resync can send assessed fields back to Action required, and the agent should know before, not after.</li><li>Keep the lead to the one sentence. The detail carries the mechanics.</li></ul></div>
+      <div><h4>Don't</h4><ul><li>Style Resync as danger. Nothing is destroyed.</li><li>Hide the header's Resync when it cannot run, or let it disappear once resyncing starts. It stays, it says why, and it keeps focus.</li><li>Show a historical view afterwards. New values replace the old; the workflow entry is the record.</li></ul></div>
+    </div>
+  </section>
+
+  </main>
+  <footer>© 2026 Lottomart · AML Case modal · Risk assessment components · generated from the prototype on 2 Nov 2026</footer>
+</div>

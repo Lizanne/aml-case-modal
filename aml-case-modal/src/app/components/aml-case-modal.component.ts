@@ -188,6 +188,12 @@ import { WorkflowPanelComponent } from './workflow-panel.component';
           border-right: 0;
           box-shadow: none;
         }
+        /* One 16px gutter on a phone, everywhere. Declared with the class
+           twice so it outranks the base rule that follows it. */
+        .segments.segments {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
       }
       /* Full-bleed, two equal halves - the segmented control is the primary
          navigation in this mode, not a secondary toggle. */

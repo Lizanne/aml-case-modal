@@ -29,7 +29,7 @@ const panel = page.locator('aml-case-modal');
 const dialog = page.locator('score-override-dialog');
 const menuButton = page.locator('player-header .ph__action', { hasText: 'Menu' });
 const text = (sel) => page.locator(sel).first().innerText();
-const total = async () => Number(await text('aml-dashboard .risk__score'));
+const total = async () => Number((await text('aml-dashboard .risk__score')).replace(/,/g, ''));
 const row = (name) => page.locator('aml-dashboard .tbl--score tbody tr', { hasText: name }).first();
 
 console.log('\nGetting there');
@@ -176,13 +176,28 @@ const h1 = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRec
 await dialog.getByRole('radio', { name: 'Until the override is revoked' }).check();
 const h2 = await dialog.locator('.panel').evaluate((e) => e.getBoundingClientRect().height);
 check('choosing the other duration does not change the dialog\'s height', h1 === h2, [h1, h2]);
-await dialog.locator('.days__input').focus();
-check('focusing the days field chooses days', await dialog.getByRole('radio', { name: 'For a number of days' }).isChecked());
+// Tabbing through the form must not change the answer. The field used to
+// choose "For N days" on focus, so Points > Reason by keyboard overwrote
+// "Until revoked" on the way past.
+await dialog.getByRole('radio', { name: '75 points' }).focus();
+const stops = [];
+for (let i = 0; i < 2; i++) {
+  await page.keyboard.press('Tab');
+  stops.push(await page.evaluate(() => document.activeElement.tagName + (document.activeElement.classList.contains('days__input') ? '.days' : '')));
+}
+check('with "Until revoked" chosen, Tab goes radio > Reason and skips the idle days field',
+  stops.join(' ') === 'INPUT TEXTAREA' && await dialog.getByRole('radio', { name: 'Until the override is revoked' }).isChecked(), stops);
+await dialog.locator('.days__input').click();
+check('pressing into the days field chooses days', await dialog.getByRole('radio', { name: 'For a number of days' }).isChecked());
 check('Save waits for a reason', await save.isDisabled());
 await dialog.locator('textarea').fill('Customer disclosed a council seat on a call.');
 check('then is available', await save.isEnabled());
+await dialog.locator('.days__input').fill('');
+check('an empty field mid-edit blocks Save but is not yet called an error',
+  (await save.isDisabled()) && (await dialog.locator('.days__error').count()) === 0);
 await dialog.locator('.days__input').fill('0');
-check('zero days is refused, with a message', (await save.isDisabled()) && (await dialog.locator('.days__error').count()) === 1);
+await dialog.locator('textarea').focus();
+check('zero days is refused, with a message once the field is left', (await save.isDisabled()) && (await dialog.locator('.days__error').count()) === 1);
 await dialog.locator('.days__input').fill('14');
 // The stepper arrows fire a native change, which used to bubble into the
 // radio group and unset it - taking the field away mid-click.
@@ -233,6 +248,9 @@ check('Undo puts the override back as it was: points, span and reason',
 check('and the toast then says restored, with nothing further to undo',
   /^Override restored\./.test(await toast.locator('.toast__text').innerText()) && (await toast.getByRole('button', { name: 'Undo' }).count()) === 0);
 await toast.getByRole('button', { name: 'Dismiss' }).click();
+check('Dismiss starts it leaving, out of reach of the pointer', await toast.evaluate((el) => el.classList.contains('toast--leaving') && getComputedStyle(el).pointerEvents === 'none').catch(() => false));
+// The exit is 150ms; the toast is in the DOM until it has finished.
+await page.waitForTimeout(300);
 check('Dismiss removes it', (await toast.count()) === 0);
 await row('Sanctioned individual').getByRole('button', { name: /Edit override/ }).click();
 await dialog.getByRole('button', { name: 'Revoke override' }).click();
@@ -437,7 +455,13 @@ await open('R-03');
 check('the risk card says when the score last changed, with the exact time behind it',
   /^Updated \d+ (day|month)s? ago$/.test((await text('aml-dashboard .risk__updated')).replace(/\s+/g, ' ').trim()) &&
   /\d{4}-\d{2}-\d{2}T/.test((await page.locator('aml-dashboard .risk__updated time').getAttribute('datetime')) ?? '') &&
-  /\d{2} \w{3} \d{4}, \d{2}:\d{2}/.test((await page.locator('aml-dashboard .risk__updated time').getAttribute('title')) ?? ''));
+  (await page.locator('aml-dashboard .risk__updated time').getAttribute('tabindex')) === '0');
+// The exact time is a tooltip that the keyboard reaches too, not a title.
+await page.locator('aml-dashboard .ad__doc').focus();
+await page.keyboard.press('Tab');
+await page.waitForTimeout(500);
+check('focusing "Updated" shows the exact time', /\d{2} \w{3} \d{4}, \d{2}:\d{2}/.test((await page.locator('.mat-mdc-tooltip').allInnerTexts()).join(' ')));
+await page.keyboard.press('Escape');
 await open('R-06');
 check('a player who has never scored has no "Updated" line', (await page.locator('aml-dashboard .risk__updated').count()) === 0);
 const systemChange = page.getByRole('button', { name: 'System change' });
@@ -546,6 +570,50 @@ check('at 360 the score-card stacks: Override is on screen without scrolling sid
   stacked.right <= stacked.edge && !stacked.scrolls && stacked.opacity === '1', stacked);
 await page.locator('#score-domestic-pep').scrollIntoViewIfNeeded();
 await shot('dash-360');
+
+// A summary link from another tab: the score-card is on Overview, so the link
+// has to take the agent there before it can land on the row.
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?section=aml-risks`, { waitUntil: 'networkidle' });
+for (const name of [/Case archive/, /Audit log/]) {
+  await page.getByRole('tab', { name }).click();
+  await page.waitForTimeout(150);
+  await page.locator('aml-dashboard .why button.text-btn').first().click();
+  await page.waitForTimeout(900);
+  const landed = await page.evaluate(() => ({
+    tab: document.querySelector('aml-dashboard [role=tab][aria-selected=true]')?.textContent.trim(),
+    row: document.activeElement?.closest('tr')?.id ?? '',
+  }));
+  check(`a summary link from ${name.source} opens Overview and lands on its row`,
+    landed.tab === 'Overview' && landed.row.startsWith('score-'), landed);
+}
+
+// On a wide monitor the page still runs edge to edge; the width goes to the
+// parts that read well long, not to the gap between a field and its points.
+await page.setViewportSize({ width: 1920, height: 1000 });
+await page.goto(`${BASE}/?section=aml-risks`, { waitUntil: 'networkidle' });
+const wide = await page.evaluate(() => {
+  const box = (s) => document.querySelector(s).getBoundingClientRect();
+  return { gap: box('.stage').right - box('aml-dashboard .hero').right, left: box('aml-dashboard .hero').left - box('.stage').left, why: box('aml-dashboard .why').width, rail: box('aml-dashboard .grid__side').width };
+});
+check('at 1920 the dashboard is still full width, the summary stops at 520 and the rail grows to 400',
+  Math.abs(wide.gap) <= 1 && Math.abs(wide.left) <= 1 && wide.why <= 521 && Math.abs(wide.rail - 400) <= 1, wide);
+
+// The page scrolls one way. Measured with the guard off, so a real overflow
+// is caught here and not just hidden.
+for (const width of [1920, 1440, 1320, 1280, 1024, 768]) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto(`${BASE}/?section=aml-risks`, { waitUntil: 'networkidle' });
+  const side = await page.evaluate(() => {
+    const scroller = document.querySelector('aml-dashboard');
+    scroller.style.overflowX = 'auto';
+    const over = scroller.scrollWidth - scroller.clientWidth;
+    scroller.style.overflowX = '';
+    const cards = [...document.querySelectorAll('aml-dashboard .card__scroll')].map((c) => c.scrollWidth - c.clientWidth);
+    return { over, cards: Math.max(0, ...cards) };
+  });
+  check(`${width}: nothing scrolls sideways, page or table`, side.over <= 0 && side.cards <= 1, side);
+}
 
 console.log(`\npage errors: ${pageErrors.length}`);
 pageErrors.slice(0, 3).forEach((e) => console.log('  !', e.slice(0, 200)));

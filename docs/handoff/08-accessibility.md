@@ -133,9 +133,9 @@ click is inert, Escape closes.
 > **replaces** the list role on the element, orphaning the `<li>` children and
 > breaking list semantics. `aria-live` announces without overwriting the role.
 
-A risk status button's name says the field, the status and the verb -
-`Linked accounts: Risk flagged. Assess risk` - because the visible word alone
-does not say that pressing it changes anything. The info button is `About
+A risk status is a label, read as its word. The row's action names the
+field and the verb: `Assess Document requests`, `Change assessment of Linked
+accounts` - the visible `Assess` and the pencil alone do not say which field. The info button is `About
 <Field>`, and its tooltip shows on keyboard focus, not only on hover.
 
 ## Focus is handed back, never dropped
@@ -200,7 +200,7 @@ Side-nav items are `min-height: 44px`.
 
 The Risk assessment's two small controls keep their 24px look and take a
 larger hit area through a `::before` pseudo-element: the info button 40 × 40,
-the status button 40px tall. The extra lands in the row's own padding, so
+the row action (Assess or the pencil, both 32 tall) 40px tall. The extra lands in the row's own padding, so
 neighbouring rows do not overlap.
 
 ## Motion
@@ -240,9 +240,9 @@ flashes.
 - [ ] Lock status announces on change
 - [ ] Attachment errors announce **and** the list keeps its `li` children
 - [ ] Textareas announce as required in all three forms
-- [ ] A status button announces field, status and `Assess risk`
+- [ ] A row action announces its verb and its field; a status is never a button
 - [ ] Confirming a resync announces `Resyncing risk assessment`, then the summary
-- [ ] The finalize table reads as a table: section row headers, Risk / No risk
+- [ ] The finalise table reads as a table: section row headers, Risk / No risk
 
 ### Visual
 - [ ] Zoom to 200% — layout usable at every threshold in

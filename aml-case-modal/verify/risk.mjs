@@ -97,10 +97,10 @@ check('the first assessed field is in view without scrolling', await page.evalua
   const row = document.querySelector('risk-assessment [data-field="employment-occupation"]').getBoundingClientRect();
   return row.bottom <= body.bottom;
 }));
-await accToggle.click(); await page.waitForTimeout(200);
+await accToggle.click(); await page.waitForTimeout(400);
 check('it opens on click, rows return', (await accToggle.getAttribute('aria-expanded')) === 'true' && (await page.locator('risk-assessment .ra-sec').first().locator('.ra-row').count()) === 6);
 check('Account information shows no status', (await page.locator('risk-assessment .ra-sec').first().locator('risk-status').count()) === 0);
-await accToggle.click(); await page.waitForTimeout(200);
+await accToggle.click(); await page.waitForTimeout(400);
 const sum = await text('risk-assessment .ra-sum');
 // The summary is sections now, in the pills' inks: "4 sections risk · 0 no risk" (feedback 12 Nov 2026).
 check('the summary counts the sections', /2 to assess\s*·\s*4 sections risk\s*·\s*0 no risk/.test(sum), sum);
@@ -265,7 +265,7 @@ check('a field to assess carries an Assess risk link, named for its field', (awa
   (await field('document-requests').locator('.ra-act--assess').innerText()).trim() === 'Assess risk');
 check('informational fields have no action', (await page.locator('risk-assessment .ra-row').filter({ hasNot: page.locator('risk-status') }).locator('.ra-act').count()) === 0);
 if ((await page.locator('risk-assessment .ra-toggle').getAttribute('aria-expanded')) !== 'true') {
-  await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(300);
+  await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(400);
 }
 check('three fields link to their player list, in the same tab, a bare word with no glyph', await page.evaluate(() => {
   const want = { 'document-requests': 'Documents', 'linked-accounts': 'Linked accounts', 'personal-detail-changes': 'Changes' };
@@ -335,6 +335,15 @@ await page.waitForTimeout(200);
 await page.locator('resync-dialog button.confirm').click();
 await page.waitForTimeout(250);
 check('the section is overlaid with Resyncing', (await page.locator('risk-assessment .ra-overlay').count()) === 1 && /Resyncing/.test(await page.locator('risk-assessment .ra-overlay').innerText()));
+// The bands are full-bleed, a gutter wider than the body on each side. The
+// veil has to reach as far, or the ends of every band show through it.
+check('the overlay covers the section bands edge to edge', await page.evaluate(() => {
+  const veil = document.querySelector('risk-assessment .ra-overlay').getBoundingClientRect();
+  return [...document.querySelectorAll('risk-assessment .ra-sec__title')].every((band) => {
+    const b = band.getBoundingClientRect();
+    return veil.left <= b.left + 0.5 && veil.right >= b.right - 0.5;
+  });
+}));
 check('the section is aria-busy', (await page.locator('risk-assessment .ra-body').getAttribute('aria-busy')) === 'true');
 check('Resync is disabled while it runs', await resyncOff());
 await page.waitForTimeout(1700);
@@ -351,9 +360,9 @@ check('value changed, risk not: status kept', (await statusOf('vpn-usage')) === 
 check('the new value replaces the old', /112 · 05 May 2026/.test(await field('latest-fraud-scores').innerText()) && /4 active cards/.test(await field('active-payment-methods').innerText()));
 check('no history is shown', !/3 active cards/.test(await field('active-payment-methods').innerText()));
 // Behind the disclosure, so open it to read it.
-await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(200);
+await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(400);
 check('informational values update too', /£1,250.04 total/.test(await field('pending-withdrawals').innerText()));
-await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(200);
+await page.locator('risk-assessment .ra-toggle').click(); await page.waitForTimeout(400);
 const c2 = (await chips()).map((c) => c.label);
 check('both join the required list', c2.some((l) => l.startsWith('Assess risk - Latest fraud scores')) && c2.some((l) => l.startsWith('Assess risk - Deposit spike')), c2.join('|'));
 check('the announcement says what happened', /Resync completed\. Updated values/.test(await page.locator('risk-assessment .ra-live').innerText()));

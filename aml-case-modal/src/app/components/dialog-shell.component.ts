@@ -1,4 +1,4 @@
-import { A11yModule } from '@angular/cdk/a11y';
+import { A11yModule, InputModalityDetector } from '@angular/cdk/a11y';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -85,6 +85,32 @@ let dialogSeq = 0;
         position: absolute;
         inset: 0;
         background: rgba(24, 24, 27, 0.42);
+        animation: dialog-scrim 150ms ease-out;
+      }
+      /**
+       * The dialog arrives; it does not pop. Centre origin, because a dialog
+       * belongs to the viewport rather than to the button that opened it.
+       * From 0.96, never from nothing. Entrance only: closing is the agent's
+       * own act and the page behind is what they want next, so it is instant.
+       *
+       * Keyframes with no "to", so the panel ends on transform: none and is
+       * not a containing block for anything fixed once it has settled.
+       */
+      @keyframes dialog-scrim {
+        from {
+          opacity: 0;
+        }
+      }
+      @keyframes dialog-in {
+        from {
+          opacity: 0;
+          transform: scale(0.96);
+        }
+      }
+      @keyframes dialog-sheet {
+        from {
+          transform: translateY(100%);
+        }
       }
       .panel {
         position: relative;
@@ -97,6 +123,7 @@ let dialogSeq = 0;
         border-radius: 14px;
         box-shadow: 0 18px 48px rgba(24, 24, 27, 0.26);
         overflow: hidden;
+        animation: dialog-in 200ms var(--ease-out);
       }
       .panel__head {
         display: flex;
@@ -141,6 +168,9 @@ let dialogSeq = 0;
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
+        /* Scrolling past the end of the form must not start scrolling the
+           page behind the scrim. */
+        overscroll-behavior: contain;
         padding: 16px 20px;
       }
       .panel__foot {
@@ -180,11 +210,17 @@ let dialogSeq = 0;
         }
         .panel {
           width: auto;
-          /* Flush at the bottom, 16px of gutter at the sides - the same
-             gutter the page and the modal use. */
-          margin: 0 16px;
+          /* Edge to edge. With 16px of page down each side and none
+             underneath it was neither a card floating clear of the screen
+             nor a sheet attached to it. */
+          /* dvh, with vh as the fallback: on a phone 90vh is measured against
+             the screen with the browser's toolbar hidden, so with it showing
+             the sheet's buttons sat under the toolbar. */
           max-height: 90vh;
+          max-height: 90dvh;
           border-radius: 14px 14px 0 0;
+          /* A sheet comes up from the edge it is attached to. */
+          animation: dialog-sheet 300ms var(--ease-drawer);
           /* The sheet is the query container for its own footer, so the
              stacking rule is about the sheet's width rather than a viewport
              width that happens to imply it. */
@@ -196,8 +232,20 @@ let dialogSeq = 0;
         .panel__body {
           padding: 0 16px 4px;
         }
+        /* Clear of the home indicator on a phone with no home button. */
         .panel__foot {
-          padding: 16px;
+          padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+        }
+      }
+      /* 32px to look at, 44px to hit, on anything pressed with a finger. */
+      @media (pointer: coarse) {
+        .panel__close {
+          position: relative;
+        }
+        .panel__close::before {
+          content: '';
+          position: absolute;
+          inset: -6px;
         }
       }
 
@@ -208,6 +256,14 @@ let dialogSeq = 0;
        * is the correct reading order for a dialog's actions and must not
        * change to satisfy a layout).
        */
+      /* Reduced motion keeps the fade and drops the travel. After the phone
+         rule, so it wins there too. */
+      @media (prefers-reduced-motion: reduce) {
+        .panel {
+          animation: dialog-scrim 150ms ease-out;
+        }
+      }
+
       @container (max-width: 400px) {
         .panel__foot {
           flex-direction: column-reverse;
@@ -235,6 +291,7 @@ export class DialogShellComponent implements AfterViewInit, OnDestroy {
   @Output() dismiss = new EventEmitter<void>();
 
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly modality = inject(InputModalityDetector);
 
   readonly headingId = `dialog-heading-${++dialogSeq}`;
 
@@ -247,9 +304,16 @@ export class DialogShellComponent implements AfterViewInit, OnDestroy {
       : null;
     // Falls back to the panel itself rather than to the Close button, so focus
     // is inside the trap even when a named target is missing.
-    (target ?? this.host.nativeElement.querySelector<HTMLElement>('.panel'))?.focus({
-      preventScroll: true,
-    });
+    // The ring is for someone who arrived by keyboard. Opened by a tap, a
+    // click, or by landing on a dev state with the dialog already up, the
+    // focus is still moved - it just is not drawn until a key is pressed.
+    // A field you type in is the exception: its focus border says where the
+    // typing will go, whatever opened the dialog.
+    const el = target ?? this.host.nativeElement.querySelector<HTMLElement>('.panel');
+    const typed = !!el?.matches('textarea, input:not([type=radio]):not([type=checkbox])');
+    const options: FocusOptions & { focusVisible?: boolean } = { preventScroll: true };
+    if (!typed) options.focusVisible = this.modality.mostRecentModality === 'keyboard';
+    el?.focus(options);
   }
 
   onEscape(event: Event): void {

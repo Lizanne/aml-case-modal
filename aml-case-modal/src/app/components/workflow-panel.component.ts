@@ -272,7 +272,8 @@ import { RequiredChipsComponent } from './required-chips.component';
            it, and the visual bottom stays 20px. Verified: the last stream item
            is not clipped with the footer stacked and the stream at its end. */
         .stream {
-          padding: 20px;
+          /* 16px at the sides: one gutter on a phone, everywhere. */
+          padding: 20px 16px;
           scroll-padding-bottom: var(--footer-h, 0px);
         }
       }

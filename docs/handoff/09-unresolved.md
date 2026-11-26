@@ -72,7 +72,7 @@ table's popover, which still flags arrivals.
 ### 7 · Extras and Submit
 
 **Built as:** once every required item is done - the required assessments,
-Player contact and Finalize risk assessment - extra actions **never re-gate
+Player contact and Finalise risk assessment - extra actions **never re-gate
 Submit**. An open draft does not disable it either.
 
 **Status:** built as assumed. Not confirmed.
@@ -90,7 +90,7 @@ recommendation**, not scope.
 
 **Not in this epic.** The constraint that follows from it: nothing built here
 may drop data an export would need. Timeline entries, commentaries, every
-assessment and resync as workflow entries, the finalized section table and
+assessment and resync as workflow entries, the finalised section table and
 severity-at-resolution are all retained for that reason.
 
 **Requested:** acknowledgement as a future ticket.
@@ -140,16 +140,16 @@ The PDF's mock value is `???`. **Built as:** the line `No searches recorded`.
 
 The 2 Nov notes name Contact player as an existing required action and add to
 the list rather than removing it. **Built as:** required on every case,
-alongside the assessments and Finalize. **Confirmed as far as the handover
+alongside the assessments and Finalise. **Confirmed as far as the handover
 specifies;** the notes do not say whether every AML case needs it.
 
-### 15 · What a finalized assessment allows
+### 15 · What a finalised assessment allows
 
-The notes say only that the case cannot close until Finalize is done. **Built
-as:** Finalize locks the assessment - statuses stop being clickable and Resync
-is unavailable - because a resync after finalizing could reopen Action required
-fields under a finalized summary, and nothing says what should happen then.
-**Needs:** confirmation, or the rule for resync-after-finalize.
+The notes say only that the case cannot close until Finalise is done. **Built
+as:** Finalise locks the assessment - statuses stop being clickable and Resync
+is unavailable - because a resync after finalising could reopen Action required
+fields under a finalised summary, and nothing says what should happen then.
+**Needs:** confirmation, or the rule for resync-after-finalise.
 
 ### 16 · The section list
 
@@ -326,7 +326,7 @@ folding it into a handoff commit.
 
 `core/scenarios.ts` defines **eighteen** scenarios, 00a through 15. Switcher
 states **12–15 are the Risk assessment flow** (resync confirm, resyncing, resync
-completed, finalize), added 2 Nov 2026. Figma's frames **12 (starred
+completed, finalise), added 2 Nov 2026. Figma's frames **12 (starred
 commentaries)** and **13 (case timeline)** are tabs, reachable from any
 unresolved state, with no switcher entry of their own.
 

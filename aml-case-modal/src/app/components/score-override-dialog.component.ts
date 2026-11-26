@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -34,7 +35,7 @@ type Span = 'days' | 'revoked';
 @Component({
   selector: 'score-override-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent, PillComponent],
+  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatRadioModule, DialogShellComponent, PillComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (row; as row) {
@@ -80,11 +81,11 @@ type Span = 'days' | 'revoked';
               <dt>Player total</dt>
               <dd>
                 @if (newTotal() !== store.total()) {
-                  <span class="effect__from">{{ store.total() }}</span>
+                  <span class="effect__from">{{ store.total() | number }}</span>
                   <mat-icon class="effect__arrow" aria-hidden="true">arrow_forward</mat-icon>
                   <span class="sr-only">changes to</span>
                 }
-                <span class="effect__to what__total">{{ newTotal() }}</span>
+                <span class="effect__to what__total">{{ newTotal() | number }}</span>
                 <span class="effect__unit">points</span>
                 @if (newTotal() === store.total()) {
                   <span class="effect__same">unchanged</span>
@@ -126,7 +127,15 @@ type Span = 'days' | 'revoked';
           <mat-radio-group class="choices choices--stack" [value]="span()" (change)="onSpan($event)">
             <!-- One line: "For [30] days". The field is always there, so
                  choosing the other answer does not change the dialog's height
-                 and send it jumping up the screen. -->
+                 and send it jumping up the screen.
+
+                 While the other answer is chosen the field is out of the Tab
+                 order. It used to choose this answer on FOCUS, so tabbing
+                 from Points to Reason passed through it and changed "Until
+                 revoked" to "For 30 days" without a key being pressed on it.
+                 A pointer can still press into it, which chooses this answer;
+                 a keyboard chooses "For" with the arrow keys, and the field
+                 is then the next stop. -->
             <div class="days" [class.days--idle]="span() !== 'days'">
               <mat-radio-button value="days" aria-label="For a number of days">For</mat-radio-button>
               <input
@@ -136,16 +145,19 @@ type Span = 'days' | 'revoked';
                 min="1"
                 max="365"
                 aria-label="Number of days"
-                [attr.aria-invalid]="span() === 'days' && !daysValid() ? 'true' : null"
-                [attr.aria-describedby]="span() === 'days' && !daysValid() ? 'days-error' : null"
+                [attr.tabindex]="span() === 'days' ? null : -1"
+                [attr.aria-invalid]="daysError() ? 'true' : null"
+                [attr.aria-describedby]="daysError() ? 'days-error' : null"
                 [value]="days()"
-                (focus)="span.set('days')"
-                (input)="days.set($any($event.target).valueAsNumber)"
+                (click)="span.set('days')"
+                (focus)="daysLeft.set(false)"
+                (blur)="daysLeft.set(true)"
+                (input)="span.set('days'); days.set($any($event.target).valueAsNumber)"
                 (change)="$event.stopPropagation()"
               />
               <span class="days__unit" aria-hidden="true">days</span>
             </div>
-            @if (span() === 'days' && !daysValid()) {
+            @if (daysError()) {
               <p class="days__error" id="days-error" role="alert">Enter a whole number from 1 to 365</p>
             }
             <mat-radio-button value="revoked">Until the override is revoked</mat-radio-button>
@@ -421,6 +433,15 @@ export class ScoreOverrideDialogComponent {
     const n = this.days();
     return Number.isInteger(n) && n >= 1 && n <= 365;
   });
+
+  /**
+   * The field has been left. The error waits for that: someone clearing "30"
+   * to type "45" passes through an empty field, and being told off mid-word
+   * is noise. Save is disabled on daysValid alone, so nothing invalid can be
+   * saved in the meantime.
+   */
+  readonly daysLeft = signal(false);
+  readonly daysError = computed(() => this.span() === 'days' && !this.daysValid() && this.daysLeft());
 
   readonly valid = computed(
     () => this.reason().trim().length > 0 && (this.span() === 'revoked' || this.daysValid()),

@@ -8,6 +8,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CaseStore } from '../core/case-store';
+import { WorkspaceStore } from '../core/workspace-store';
 import { CasesStore } from '../core/cases-store';
 import { CASES_TABS, CasesTab, NavStore, QUEUE_COPY } from '../core/nav-store';
 import { CaseRecord, TriggerRef, lockStatusLine, relativeAge, WorkItem } from '../core/models';
@@ -120,6 +121,8 @@ import { WorkPopoverComponent } from './work-popover.component';
           [selectedIndex]="selectedTabIndex()"
           (selectedIndexChange)="onTabChange($event)"
           [mat-stretch-tabs]="false"
+          disablePagination
+          (focusin)="$any($event.target).closest('.mat-mdc-tab')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })"
           animationDuration="0ms"
         >
           @for (t of tabs; track t.id) {
@@ -161,6 +164,7 @@ import { WorkPopoverComponent } from './work-popover.component';
         <div
           class="table-scroll"
           [class.is-scrolled]="scrolledX()"
+          [class.is-clipped-end]="clippedEnd()"
           (scroll)="onScroll($event)"
           cdkScrollable
           tabindex="0"
@@ -169,16 +173,21 @@ import { WorkPopoverComponent } from './work-popover.component';
         >
           <table class="table">
             <colgroup>
+              <col class="col-lock" />
               <col class="col-player" />
               <col class="col-sev" />
               <col class="col-triggers" />
               <col class="col-prio" />
               <col class="col-sla" />
               <col class="col-work" />
-              <col class="col-actions" />
+              <col class="col-open" />
             </colgroup>
             <thead>
               <tr>
+                <!-- No visible labels on the two control columns: a word would
+                     be wider than the 32px control under it. Both are named
+                     for a screen reader. -->
+                <th scope="col" class="cell--lock"><span class="sr-only">Lock</span></th>
                 <th scope="col" class="cell--player">Player</th>
                 <th scope="col">Severity</th>
                 <th scope="col">Triggered by</th>
@@ -243,15 +252,78 @@ import { WorkPopoverComponent } from './work-popover.component';
                   </span>
                 </th>
                 <th scope="col">Work</th>
-                <th scope="col" class="cell--actions">Actions</th>
+                <th scope="col" class="cell--open"><span class="sr-only">Open case</span></th>
               </tr>
             </thead>
             <tbody>
               @for (c of rows(); track c.id) {
                 <tr>
-                  <!-- Player id links to details; status sits beside it. -->
+                  <!--
+                    The lock leads the row (25 Nov 2026, reversing D-07). Who
+                    holds a case is the first thing an agent needs to know
+                    about it, and alone here the disc reads as that fact.
+                  -->
+                  <td class="cell--lock">
+                    <span class="actions">
+                    @switch (c.lock.state) {
+                      @case ('locked-to-me') {
+                        <!-- An avatar, not a padlock: who holds it is the
+                             fact, and the monogram says it in the space a
+                             glyph was using to say less. -->
+                        <button
+                          class="lock-av lock-av--mine"
+                          type="button"
+                          aria-pressed="true"
+                          [matTooltip]="lockTip(c) + ' · Click to unlock'"
+                          [attr.aria-label]="lockTip(c) + ', click to unlock'"
+                          (click)="cases.unlock(c.id)"
+                        >
+                          <span aria-hidden="true">{{ initials(cases.me().name) }}</span>
+                        </button>
+                      }
+                      @case ('locked-to-other') {
+                        <button
+                          class="lock-av lock-av--other"
+                          type="button"
+                          [matTooltip]="lockTip(c)"
+                          [attr.aria-label]="lockedToLabel(c)"
+                          (click)="cases.requestForceUnlock(c.id)"
+                        >
+                          <span aria-hidden="true">{{ initials(c.lock.owner?.name) }}</span>
+                        </button>
+                      }
+                      @default {
+                        <button
+                          class="lock-av lock-av--free"
+                          type="button"
+                          matTooltip="Lock case"
+                          aria-label="Lock case"
+                          (click)="cases.lock(c.id)"
+                        >
+                          <!-- Material lock_open, the glyph the modal draws. It is a fill, not a
+                               stroke, so the colour rides on fill="currentColor" and the stroke
+                               attributes the old outline icon needed would only thicken it. -->
+                          <svg
+                            class="lock-av__svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 17.5C13.1 17.5 14 16.6 14 15.5C14 14.4 13.1 13.5 12 13.5C10.9 13.5 10 14.4 10 15.5C10 16.6 10.9 17.5 12 17.5ZM18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5H8.9C8.9 4.79 10.29 3.4 12 3.4C13.71 3.4 15.1 4.79 15.1 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM18 20.5H6V10.5H18V20.5Z" />
+                          </svg>
+                        </button>
+                      }
+                    }
+                    </span>
+                  </td>
+
+                  <!-- Who, then how to find them: the name is what an agent
+                       recognises, the id is what they search by and click. -->
                   <td class="cell--player">
                     <span class="player-line">
+                      <span class="player-name" [title]="c.player.name">{{ c.player.name }}</span>
+                      <span class="player-meta">
                       <a
                         class="linkish"
                         [href]="playerHref()"
@@ -262,9 +334,10 @@ import { WorkPopoverComponent } from './work-popover.component';
                       <!-- Text, not a pill. The status is a fact about the
                            player, not a badge to scan for - and a pill on
                            every row made the column read as two columns. -->
-                      <span class="player-status" [title]="c.player.status">{{
-                        statusLabel(c.player.status)
-                      }}</span>
+                      <span class="player-status" [title]="c.player.status"
+                        >{{ statusLabel(c.player.status) }}</span
+                      >
+                      </span>
                     </span>
                   </td>
 
@@ -438,66 +511,15 @@ import { WorkPopoverComponent } from './work-popover.component';
                       }
                     </span>
                   </td>
-
                   <!--
-                    Two controls on one 32px axis: the lock, then the way in.
-                    The lock left its own column - D-07 - because a whole
-                    column to hold one 32px control was a column of chrome,
-                    and the two things an agent does to a row belong together.
+                    The way in: the row's one action, at the end of the row
+                    where row actions live, and PINNED to the right edge so it
+                    is in view the moment the row is locked - a plain last
+                    column appeared off screen on a laptop. Picked 25 Nov 2026
+                    from five placements; beside the lock, joined to it, after
+                    the name and beside the id were rejected.
                   -->
-                  <td class="cell--actions">
-                    <span class="actions">
-                      @switch (c.lock.state) {
-                        @case ('locked-to-me') {
-                          <!-- An avatar, not a padlock: who holds it is the
-                               fact, and the monogram says it in the space a
-                               glyph was using to say less. -->
-                          <button
-                            class="lock-av lock-av--mine"
-                            type="button"
-                            aria-pressed="true"
-                            [matTooltip]="lockTip(c) + ' · Click to unlock'"
-                            [attr.aria-label]="lockTip(c) + ', click to unlock'"
-                            (click)="cases.unlock(c.id)"
-                          >
-                            <span aria-hidden="true">{{ initials(cases.me().name) }}</span>
-                          </button>
-                        }
-                        @case ('locked-to-other') {
-                          <button
-                            class="lock-av lock-av--other"
-                            type="button"
-                            [matTooltip]="lockTip(c)"
-                            [attr.aria-label]="lockedToLabel(c)"
-                            (click)="cases.requestForceUnlock(c.id)"
-                          >
-                            <span aria-hidden="true">{{ initials(c.lock.owner?.name) }}</span>
-                          </button>
-                        }
-                        @default {
-                          <button
-                            class="lock-av lock-av--free"
-                            type="button"
-                            matTooltip="Lock case"
-                            aria-label="Lock case"
-                            (click)="cases.lock(c.id)"
-                          >
-                            <!-- Material lock_open, the glyph the modal draws. It is a fill, not a
-                                 stroke, so the colour rides on fill="currentColor" and the stroke
-                                 attributes the old outline icon needed would only thicken it. -->
-                            <svg
-                              class="lock-av__svg"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              aria-hidden="true"
-                              focusable="false"
-                            >
-                              <path d="M12 17.5C13.1 17.5 14 16.6 14 15.5C14 14.4 13.1 13.5 12 13.5C10.9 13.5 10 14.4 10 15.5C10 16.6 10.9 17.5 12 17.5ZM18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5H8.9C8.9 4.79 10.29 3.4 12 3.4C13.71 3.4 15.1 4.79 15.1 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM18 20.5H6V10.5H18V20.5Z" />
-                            </svg>
-                          </button>
-                        }
-                      }
-
+                  <td class="cell--open">
                       @if (c.lock.state === 'locked-to-me') {
                         <!-- Rule 4: only on a row locked to me. Icon only -
                            the tooltip and the accessible name carry the words,
@@ -514,13 +536,7 @@ import { WorkPopoverComponent } from './work-popover.component';
                         >
                           <mat-icon aria-hidden="true">open_in_new</mat-icon>
                         </button>
-                      } @else {
-                        <!-- Holds the slot open. Without it the lock would
-                             slide right on every row that is not yours, and
-                             the column would be two widths. -->
-                        <span class="actions__slot" aria-hidden="true"></span>
                       }
-                    </span>
                   </td>
                 </tr>
               }
@@ -755,9 +771,20 @@ import { WorkPopoverComponent } from './work-popover.component';
        * the truncation the normal case rather than the fallback it is meant to
        * be - and the id is the one value in the row you cannot infer.
        */
+      /* The row's 16px leading gutter and the lock. The trailing gutter is
+         the Player cell's own left padding. */
+      .col-lock {
+        width: 48px;
+      }
+      /* One 32px control and 16px either side. */
+      .col-open {
+        width: 64px;
+      }
+      /* 232: a 15-digit id is 108, the dot 12, and the 80 left over holds
+         the common statuses; a longer one ellipses with its title. */
       .col-player {
         min-width: 184px;
-        width: 200px;
+        width: 232px;
       }
       /**
        * One line, and the NAME is the part that gives.
@@ -889,10 +916,6 @@ import { WorkPopoverComponent } from './work-popover.component';
          the column is empty on every row that is not mine. */
       /* 120 is the brief's floor: two 32px controls, an 8px gap and the
          cell's 32 of padding is 104. */
-      .col-actions {
-        min-width: 120px;
-        width: 128px;
-      }
 
       /**
        * The divider is on the ROW, not the cell, so it runs edge to edge
@@ -1269,14 +1292,9 @@ import { WorkPopoverComponent } from './work-popover.component';
        */
       .actions {
         display: grid;
-        grid-template-columns: 32px 32px;
+        grid-template-columns: 32px;
         align-items: center;
-        justify-content: end;
-        gap: 8px;
-      }
-      .actions__slot {
-        width: 32px;
-        height: 32px;
+        justify-content: start;
       }
       /**
        * Open case arrives rather than appears. Removal is instant - the
@@ -1407,8 +1425,23 @@ import { WorkPopoverComponent } from './work-popover.component';
        * 0-0-1 to 0-1-1 - and quietly started winning, silently un-aligning
        * whatever relied on a bare modifier class.
        */
-      .table .cell--actions {
-        text-align: right;
+      .table .cell--lock {
+        padding-right: 0;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      /* A button on a 20px line would sit on the baseline and grow the row. */
+      /* Held to the trailing edge: on a wide screen the table stretches, the
+         column with it, and the button drifted off the 16px margin. */
+      .table .cell--open {
+        line-height: 0;
+        text-align: end;
       }
       /**
        * The FLEX LIVES IN A WRAPPER, never on the td.
@@ -1426,6 +1459,68 @@ import { WorkPopoverComponent } from './work-popover.component';
        * sits one above the body so it stays on top at the corner where the two
        * stickies meet.
        */
+      /* On a phone the held column goes back to 200, its width before the
+         name arrived: at 232 it left under 90px of a 390px screen for everything
+         else. The status gives first, then the name; both keep a title. */
+      @media (max-width: 719.98px) {
+        .col-player {
+          width: 200px;
+        }
+        /* One 16px gutter on a phone, and the page supplies it. */
+        .cases {
+          padding-left: 0;
+          padding-right: 0;
+        }
+      }
+      /* The lock holds with the Player column at EVERY width, phones
+         included (Liz, 25 Nov 2026): who holds the case and whose case it is
+         stay together while the rest scrolls. */
+      .table .cell--lock {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: var(--surface-default);
+      }
+      .table thead .cell--lock {
+        z-index: 11;
+        background: var(--surface-header);
+      }
+      /* tr in the selector so this outranks the left: 0 declared below. */
+      .table tr .cell--player {
+        left: 48px;
+      }
+      /* Open case is pinned only with room: on a phone a third fixed column
+         would leave nothing to scroll the rest through. */
+      @media (min-width: 720px) {
+        .table .cell--open {
+          position: sticky;
+          right: 0;
+          z-index: 10;
+          background: var(--surface-default);
+        }
+        .table thead .cell--open {
+          z-index: 11;
+          background: var(--surface-header);
+        }
+        /* The same hand-painted edge as the Player column's, mirrored - and
+           only while something is hidden behind it. */
+        .table .cell--open::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: 4px;
+          transform: translateX(-100%);
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0));
+          opacity: 0;
+          transition: opacity 100ms ease;
+          pointer-events: none;
+        }
+        .table-scroll.is-clipped-end .cell--open::before {
+          opacity: 1;
+        }
+      }
       .table .cell--player {
         position: sticky;
         left: 0;
@@ -1512,6 +1607,34 @@ import { WorkPopoverComponent } from './work-popover.component';
         display: flex;
         flex-direction: column;
         min-width: 0;
+      }
+      .player-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        color: var(--foreground-primary);
+      }
+      /* The id and the status share the second line; the status is the part
+         that gives. */
+      .player-meta {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+      }
+      .player-meta .linkish {
+        flex: none;
+        font-weight: 400;
+      }
+      /* The separator is drawn, not written: it is punctuation between two
+         values, and in the text it would be read out and copied with them. */
+      .player-status::before {
+        content: '·';
+        margin-right: 4px;
       }
       .player-status {
         min-width: 0;
@@ -1703,7 +1826,8 @@ import { WorkPopoverComponent } from './work-popover.component';
         .trig__more,
         .pop__link,
         .table tbody td,
-        .table .cell--player::after {
+        .table .cell--player::after,
+        .table .cell--open::before {
           transition: none;
         }
       }
@@ -1715,6 +1839,7 @@ export class CasesTableComponent {
   readonly cases = inject(CasesStore);
   readonly nav = inject(NavStore);
   private readonly modal = inject(CaseStore);
+  private readonly ws = inject(WorkspaceStore);
   readonly tabs = CASES_TABS;
 
   /** Drives the Refresh glyph's 360deg turn - see refresh(). */
@@ -1899,13 +2024,21 @@ export class CasesTableComponent {
     return '?view=player';
   }
 
-  /** Player details, same tab, per §5. The modal deep link is a separate act. */
+  /**
+   * Player details, same tab, per §5 - and ONLY the player (25 Nov 2026).
+   *
+   * The id used to land on the player page with the case modal already open,
+   * which made it a second Open case that worked on every row, locked or not.
+   * The case arrives closed, as its card; Open case is the one way from the
+   * table into it.
+   */
   openPlayer(event: MouseEvent, c: CaseRecord): void {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
     // Load the case first: the player header reads the modal store, so without
     // this the details page would open on whichever case was there before.
     this.modal.loadCase(c.id);
+    this.ws.close('aml');
     this.nav.showPlayer();
   }
 
@@ -1918,8 +2051,13 @@ export class CasesTableComponent {
    */
   readonly scrolledX = signal(false);
 
+  /** The mirror of scrolledX: columns are hidden behind the pinned Open case. */
+  readonly clippedEnd = signal(true);
+
   onScroll(event: Event): void {
-    this.scrolledX.set((event.target as HTMLElement).scrollLeft > 0);
+    const el = event.target as HTMLElement;
+    this.scrolledX.set(el.scrollLeft > 0);
+    this.clippedEnd.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
   }
 
   /**

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -134,9 +134,9 @@ import { RiskStatusComponent } from './risk-status.component';
                      same gutter whether or not it is a disclosure. -->
                 <span class="ra-sec__label">{{ group.section }}</span>
                 <span class="ra-toggle__count">· {{ group.fields.length }} fields</span>
-                <mat-icon class="ra-toggle__icon" aria-hidden="true">{{
-                  store.accountInfoExpanded() ? 'expand_less' : 'expand_more'
-                }}</mat-icon>
+                <!-- One chevron that turns, not two that swap: the turn is
+                     what says the same control now does the opposite. -->
+                <mat-icon class="ra-toggle__icon" aria-hidden="true">expand_more</mat-icon>
               </button>
             </h3>
           } @else {
@@ -148,7 +148,16 @@ import { RiskStatusComponent } from './risk-status.component';
               <risk-status class="ra-sec__status" size="sm" [status]="sectionStatus(group)" />
             </h3>
           }
-          @if (!isInformational(group) || store.accountInfoExpanded()) {
+          @if (!isInformational(group) || infoRendered()) {
+          <!-- The fold only does anything on the informational block. It is
+               inert while it closes, so focus cannot land in rows that are
+               on their way out. -->
+          <div
+            class="ra-fold"
+            [class.ra-fold--anim]="isInformational(group)"
+            [class.ra-fold--open]="!isInformational(group) || store.accountInfoExpanded()"
+            [attr.inert]="isInformational(group) && !store.accountInfoExpanded() ? '' : null"
+          >
           <ul class="ra-list" [id]="sectionId(group.section) + '-list'">
             @for (field of shownFields(group); track field.def.id) {
               <!--
@@ -243,6 +252,7 @@ import { RiskStatusComponent } from './risk-status.component';
               </li>
             }
           </ul>
+          </div>
           }
         </section>
         }
@@ -463,6 +473,51 @@ import { RiskStatusComponent } from './risk-status.component';
         width: 16px;
         height: 16px;
         line-height: 16px;
+        transition: transform 200ms var(--ease-out);
+      }
+      .ra-toggle[aria-expanded='true'] .ra-toggle__icon {
+        transform: rotate(180deg);
+      }
+      /**
+       * The informational block opens rather than appears: the sections
+       * below it move down by six rows, and a 200ms slide is what lets the
+       * eye keep hold of the one it was reading.
+       *
+       * A grid row from 0fr to 1fr, because that animates to the content's
+       * own height without measuring it. Transitions, not keyframes, so a
+       * second press mid-way turns it round from where it is. The start of
+       * the opening comes from @starting-style, since the block is created
+       * already open; a browser without it simply opens at once.
+       */
+      .ra-fold--anim {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        transition:
+          grid-template-rows 200ms var(--ease-out),
+          opacity 200ms var(--ease-out);
+      }
+      .ra-fold--anim > .ra-list {
+        min-height: 0;
+        overflow: hidden;
+      }
+      .ra-fold--anim.ra-fold--open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+      }
+      @starting-style {
+        .ra-fold--anim.ra-fold--open {
+          grid-template-rows: 0fr;
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ra-fold--anim {
+          transition: opacity 200ms ease-out;
+        }
+        mat-icon.ra-toggle__icon {
+          transition: none;
+        }
       }
       .ra-toggle__count {
         font-weight: 400;
@@ -682,7 +737,12 @@ import { RiskStatusComponent } from './risk-status.component';
        */
       .ra-overlay {
         position: absolute;
-        inset: 0;
+        /* Out to the panel's edges, not the body's. The section bands (and
+           the open row) are full-bleed: they reach a gutter past the body on
+           each side, so a veil that stopped at the body left the end of
+           every band showing at full strength - two grey boxes down the left
+           edge and two down the right. */
+        inset: 0 calc(-1 * var(--ra-gutter));
         /* Above the sticky bands. */
         z-index: 2;
         background: color-mix(in srgb, var(--panel) 82%, transparent);
@@ -721,8 +781,30 @@ import { RiskStatusComponent } from './risk-status.component';
     `,
   ],
 })
-export class RiskAssessmentComponent {
+export class RiskAssessmentComponent implements OnDestroy {
   readonly store = inject(CaseStore);
+
+  /**
+   * Whether the informational rows are in the DOM. True as soon as the block
+   * is opened; false 200ms after it is closed, which is the length of the
+   * close. The rows are gone, not hidden, once it has finished.
+   */
+  readonly infoRendered = signal(this.store.accountInfoExpanded());
+  private foldTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly onFold = effect(
+    () => {
+      const open = this.store.accountInfoExpanded();
+      if (this.foldTimer) clearTimeout(this.foldTimer);
+      this.foldTimer = null;
+      if (open) this.infoRendered.set(true);
+      else this.foldTimer = setTimeout(() => this.infoRendered.set(false), 200);
+    },
+    { allowSignalWrites: true },
+  );
+
+  ngOnDestroy(): void {
+    if (this.foldTimer) clearTimeout(this.foldTimer);
+  }
   readonly tooltip = riskTooltip;
 
   @ViewChild('resyncTip') private resyncTip?: MatTooltip;

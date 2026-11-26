@@ -143,6 +143,20 @@ let previewSeq = 0;
         /* Darker than a dialog's. A dialog wants its form read against the
            page it belongs to; a preview wants the page gone. */
         background: rgba(24, 24, 27, 0.62);
+        animation: preview-scrim 150ms ease-out;
+      }
+      /* Same arrival as a dialog, a touch less scale: the panel is larger, so
+         the same ratio would travel further. */
+      @keyframes preview-scrim {
+        from {
+          opacity: 0;
+        }
+      }
+      @keyframes preview-in {
+        from {
+          opacity: 0;
+          transform: scale(0.97);
+        }
       }
       .panel {
         position: relative;
@@ -155,6 +169,7 @@ let previewSeq = 0;
         border-radius: 14px;
         box-shadow: 0 18px 48px rgba(24, 24, 27, 0.32);
         overflow: hidden;
+        animation: preview-in 200ms var(--ease-out);
       }
       .panel__head {
         flex: none;
@@ -253,6 +268,8 @@ let previewSeq = 0;
           max-width: none;
           max-height: none;
           border-radius: 0;
+          /* Full screen has no edges to grow from: fade only. */
+          animation: preview-scrim 150ms ease-out;
         }
         .panel__body {
           flex: 1 1 auto;
@@ -260,6 +277,11 @@ let previewSeq = 0;
         .image {
           max-width: 100%;
           max-height: 100%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .panel {
+          animation: preview-scrim 150ms ease-out;
         }
       }
     `,

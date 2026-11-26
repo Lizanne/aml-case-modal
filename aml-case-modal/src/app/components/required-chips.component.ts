@@ -90,6 +90,14 @@ import { PillComponent } from './ui-pill.component';
         padding: 12px 20px;
         gap: 8px;
       }
+      /* One 16px gutter on a phone, everywhere. */
+      @media (max-width: 719.98px) {
+        .chip-bar,
+        .chip-bar--narrow {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+      }
       /* mat-icon.<class>, not just .<class>: Material's own .mat-icon rule sets
          24px at the same class specificity, so the element tag is what wins. */
       mat-icon.chip__icon {

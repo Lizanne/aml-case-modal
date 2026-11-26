@@ -12,6 +12,13 @@
  *   - Text on tinted backgrounds uses the darkest tone of the same family.
  * ------------------------------------------------------------------------ */
 :root {
+  /**
+   * Motion. One curve for things arriving or leaving, one for a sheet coming
+   * up from the bottom edge. The built-in ease-out is too soft to read as
+   * deliberate at 150-200ms; these start fast and settle.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --foreground-primary: #09090B;
   /**
    * Secondary and muted text both, since they were folded: the two were
@@ -440,6 +447,23 @@ summary:focus-visible,
   border-radius: 8px;
 }
 
+/* Material draws its grey focus disc on ANY focus, including the focus a
+   dialog places on its first radio when it opens. Keep it for the keyboard,
+   like the ring above. */
+.mat-mdc-radio-button
+  .mdc-radio__native-control:focus:not(:focus-visible)
+  + .mdc-radio__background::before {
+  opacity: 0 !important;
+}
+
+/* Room for that ring on the label's side. The label ended exactly where the
+   radio's box did, so the ring was drawn through its last letter
+   ("Complianc|e" in the Adjust severity sheet). 8px, the same clearance the
+   circle has on the other side. */
+.mat-mdc-radio-button .mdc-form-field > label {
+  padding-right: 8px;
+}
+
 /* --------------------------------------------------------------------------
  * Pills, chips, tags and badges are all <ui-pill> now - see
  * components/ui-pill.component.ts. The global .pill block that used to live
@@ -593,6 +617,45 @@ summary:focus-visible,
   min-width: 0;
 }
 
+/**
+ * No pagination arrows, ever. Both tab groups set `disablePagination`.
+ *
+ * Material decides whether to paginate by measuring the labels once, and it
+ * only measures again when the header itself resizes. On the deployed build
+ * that first measurement ran before the web font had loaded: the fallback
+ * font's labels were wider than the bar, the arrows went up, and nothing ever
+ * took them down - four tabs needing 356px in a 419px bar, with arrows.
+ *
+ * Where the tabs truly do not fit (a 320-360px phone), the bar scrolls
+ * sideways instead. The arrows cost 64px of a bar that is already short, and
+ * a swipe is what a hand does to a row that runs off the edge anyway. A tab
+ * that takes focus, by key or by a tap on its visible sliver, is scrolled
+ * fully into view by a focusin handler on each tab group - the browser's own
+ * focus scroll did not move a partly visible tab. The scrollbar is hidden: it
+ * would sit on the active-tab line.
+ *
+ * The HEADER scrolls, not the label container inside it. Material pins the
+ * container's scrollLeft back to 0 every time a tab takes focus (it expects
+ * to move the list by transform), so a scrolling container snapped to the
+ * start on each arrow key. The container is let out to its content width and
+ * the header, which Material never touches, does the scrolling.
+ */
+/* Through the group: a bare .mat-mdc-tab-header loses to Material's own
+   overflow: hidden, same specificity and later in the cascade. */
+.mat-mdc-tab-group > .mat-mdc-tab-header {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.mat-mdc-tab-group > .mat-mdc-tab-header::-webkit-scrollbar {
+  display: none;
+}
+.mat-mdc-tab-header .mat-mdc-tab-label-container {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
 /* --------------------------------------------------------------------------
  * Radios select in the primary blue, not the accent.
  *
@@ -706,4 +769,74 @@ button .mat-icon,
   white-space: pre-line;
   text-align: left;
   max-width: 280px;
+}
+
+/* --------------------------------------------------------------------------
+ * Buttons on a phone (Liz, 25 Nov 2026): 48px tall, 16px text, a 20px icon,
+ * 8px 20px of padding. Every labelled button, Material's and the hand-built
+ * ones, from this one block - so the next button added is right without
+ * anyone remembering to make it so.
+ *
+ * !important, and deliberately: components size their own buttons in scoped
+ * rules that outrank anything global, and this is the one place the spec is
+ * meant to win outright.
+ *
+ * Icon-only controls (close, refresh, the table's lock and Open case),
+ * inline text links and the case modal's Workflow stream are not in it: 8px 20px of padding is a labelled
+ * button's measure.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 719.98px) {
+  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(workflow-panel .stream *):not(.head__main *),
+  .w__btn,
+  .add-btn:not(workflow-panel .stream *):not(.head__main *),
+  .toast__undo {
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 8px 20px !important;
+    font-size: 16px !important;
+    line-height: 24px !important;
+  }
+  .mdc-button.mat-mdc-button-base:not(.open-case):not(.cases__refresh):not(workflow-panel .stream *):not(.head__main *) .mat-icon,
+  .w__btn .mat-icon,
+  .w__btn svg,
+  .add-btn:not(workflow-panel .stream *):not(.head__main *) .mat-icon {
+    flex: none;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 20px !important;
+    line-height: 20px !important;
+  }
+
+  /**
+   * The exception: the case modal's Workflow stream, and the lock button in
+   * its header (.head__main) (Liz, 25 Nov 2026).
+   *
+   * Its buttons stay 32px to look at - Assess risk and Record sit inside
+   * cards beside a title, and at 48px the button outgrew the card it was in.
+   * They are excluded above by :not(), so they keep their own desktop
+   * measures rather than a second copy of them here. What they still owe a
+   * thumb is the target: 44px, drawn outside the 32px box.
+   */
+  workflow-panel .stream .mdc-button.mat-mdc-button-base,
+  workflow-panel .stream .add-btn,
+  .head__main .mdc-button.mat-mdc-button-base {
+    position: relative;
+  }
+  workflow-panel .stream .mdc-button.mat-mdc-button-base::before,
+  workflow-panel .stream .add-btn::before,
+  .head__main .mdc-button.mat-mdc-button-base::before {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+  /* The header's minimise and close: 32px squares 12px apart, so 6px all
+     round gives each a 44px target and the two just meet without overlapping. */
+  .head__main .head__close {
+    position: relative;
+  }
+  .head__main .head__close::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
 }

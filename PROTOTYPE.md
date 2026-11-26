@@ -83,36 +83,37 @@ between them scrolls. The left panel scrolls independently.
   cancel - this answers the PRD's question of how the left panel signals
   which workflow action is open. A Resyncing overlay covers the section
   while it regenerates.
-- `risk-status` — the status label/button. Icon + word; Risk flagged and
-  Action required filled, No risk an outline so the panel is not a wall of
-  colour.
-- `section-risk-table` — the finalize table: section, Risk / No risk.
+- `risk-status` — the status, always a label. Icon + word, in `ui-pill`'s
+  danger, success and warn tones with their subdued rims - no colour of its
+  own.
+- `section-risk-table` — the finalise table: section, Risk / No risk.
 - `resync-dialog` — "Resync risk assessment?" / "Some actions might need to be
   recorded again." Cancel / Resync.
 - `workflow-panel` — chip bar, stream, footer.
-- `required-chips` — one chip per required item. Contact player and Finalize
+- `required-chips` — one chip per required item. Contact player and Finalise
   are pending/done; an assessment's chip is the field's risk status pill
   (Action required / No risk / Risk flagged) with the field name as its word,
   so the chip bar and the Risk assessment say the same thing about a field.
 - `outcome-card` — title, actor + timestamp, note, attachment chips (frozen).
   Immutable once saved. No View snapshot button any more. An assessment card
-  shows the new status and "Was …" when it changed one; a finalize card
+  shows the new status and "Was …" when it changed one; a finalise card
   carries the section table.
 - `event-row` — two-line entries: severity change, manual case created,
   "New trigger added - <type>" (warning icon), "Resync completed".
 - `action-placeholder` — dashed card "Contact player — not recorded" +
-  Record; "<Field>" + its risk status pill + Assess; "Finalize risk
-  assessment" + Finalize. Finalize stays visible, disabled, with the
+  Record; "<Field>" + its risk status pill + Assess; "Finalise risk
+  assessment" + Finalise. Finalise stays visible, disabled, with the
   fields still left named under it.
 - `record-form` — inline in the stream (replaces the placeholder, never a
   dialog). Three variants: Record (note, attachments, lock choice); Assess
   risk - <field> (adds "Your assessment" after the attachments: radios
-  Risk flagged / No risk, stacked like the lock choice); Finalize risk
+  Risk flagged / No risk, stacked like the lock choice); Finalise risk
   assessment (section table + note, no attachments).
 - `attachment-list` — wrapping chips with name + size + remove (drafting only);
   inline per-file errors (wrong type, oversize) that never clear valid files.
 - `add-action-menu` — Contact player, Add a note. Each opens the same
-  record-form. Assessing a field is done from its status instead.
+  record-form. Assessing a field is done from its row's Assess / Change
+  assessment button instead.
 - `severity-dialog` — pill pair old→new, Escalation/De-escalation badge,
   reason textarea, warn note "lock is lifted on severity change".
 - `decision-dialog` — green requirements-met note, one textarea, button label
@@ -136,10 +137,10 @@ between them scrolls. The left panel scrolls independently.
      Document requests (the two fields that are always manual). A resync can
      add more.
    - Contact player.
-   - Finalize risk assessment, last: visible but disabled while any field is
+   - Finalise risk assessment, last: visible but disabled while any field is
      Action required.
    Submit decision stays disabled until all of them are done. Only a case
-   with a finalized risk assessment can be closed.
+   with a finalised risk assessment can be closed.
 5. Recording an outcome requires a text note; attachments optional (PDF and
    images only, multiple allowed); the agent must explicitly choose keep
    locked / unlock afterwards (radio, no default action styling).
@@ -153,13 +154,13 @@ between them scrolls. The left panel scrolls independently.
    outcome, sets status RESOLVED.
 10. Resolved: fully read-only. Tabs reduced to Risk assessment + Timeline. No
     chips, no placeholders, no Add action, no footer. The Risk assessment
-    shows as finalized, with no clickable statuses.
+    shows as finalised, with no clickable statuses.
 11. New system trigger mid-case (revised 2 Nov 2026): no forced refresh, no
     amber, no NEW marker, no out-of-sync state, nothing blocked. A workflow
     entry is added: warning icon + "New trigger added - <type>". The next
     resync picks up what it changed. (Simulate with the dev button.)
 12. Resync (always visible in the Risk assessment header; needs the lock;
-    disabled once the assessment is finalized):
+    disabled once the assessment is finalised):
     - asks first: "Resync risk assessment?" / "Some actions might need to be
       recorded again."
     - the section is overlaid with "Resyncing" while the system regenerates it
@@ -176,10 +177,10 @@ between them scrolls. The left panel scrolls independently.
     opens Assess risk - <field>: note, attachments, Your assessment (radios
     Risk flagged / No risk), lock choice. Saving records it in the workflow and updates the field.
     Document requests and Open source searches are always manual.
-14. Finalize risk assessment: note, no attachments, and a table of sections
+14. Finalise risk assessment: note, no attachments, and a table of sections
     with Risk or No risk - a section is Risk if any field in it is.
     Informational fields (Account information) are not in it. Once
-    finalized, statuses stop being clickable and Resync is disabled.
+    finalised, statuses stop being clickable and Resync is disabled.
 
 ## Risk assessment
 
@@ -200,11 +201,11 @@ fraud scores (a score of 112) and Deposit spike (1) change value and risk.
 
 00a unlocked · 00b locked-to-other + force-unlock confirm · 01 locked, empty ·
 02 recording (with attachment errors) · 02b recording clean, reverse order ·
-03 everything required done, risk assessment finalized · 04 overriding a risk
+03 everything required done, risk assessment finalised · 04 overriding a risk
 from the Risk assessment · 05 severity dialog · 06 decision dialog · 07
 resolved · 08 add-action menu open · 09 dual/narrow segmented layout · 10 new
 trigger arrived, triggers expanded · 11 past AML cases · 12 resync confirm ·
-13 resyncing · 14 resync completed, two risks changed · 15 finalize risk
+13 resyncing · 14 resync completed, two risks changed · 15 finalise risk
 assessment.
 
 ## Open questions — build against these assumptions, flag them in code comments
@@ -222,11 +223,11 @@ assessment.
 7. Contact player stays a required action alongside the assessments.
    Confirmed 2 Nov 2026 as far as the handover specifies: it is an existing
    required workflow action, and the change adds the Document requests
-   assessment and Finalize risk assessment rather than removing it. Still
+   assessment and Finalise risk assessment rather than removing it. Still
    open: the notes do not confirm whether Contact player is required on
    EVERY AML case.
-8. After Finalize the assessment is locked: statuses stop being clickable and
-   Resync is disabled. The change did not say what a resync after finalizing
+8. After Finalise the assessment is locked: statuses stop being clickable and
+   Resync is disabled. The change did not say what a resync after finalising
    should do, so it is not allowed.
 9. The "Link to player doc reqs section" in the PDF is not built: there is no
    documents section in the prototype to link to.

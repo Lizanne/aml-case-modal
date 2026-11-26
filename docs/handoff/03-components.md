@@ -162,9 +162,9 @@ The Risk assessment tab and its parts. Specified in full in
 
 | Component | What it is |
 |---|---|
-| `risk-assessment` | Header (Generated stamp, always-visible Resync), a summary line with a jump to the first field to assess, optional Finalized line, seven sections of rows with Account information collapsed by default, the Resyncing overlay, a live region |
-| `risk-status` | The status: a label, or a button for the lock owner that opens Assess risk. 24 tall, 14px icon + word; Risk flagged and Action required filled with a subdued rim, No risk an outline; the button adds an edit glyph and a 40px hit area |
-| `section-risk-table` | The finalize table: section, Risk / No risk. A real `<table>`, used in the Finalize form and on its card |
+| `risk-assessment` | Header (Generated stamp, always-visible Resync), a summary line with a jump to the first field to assess, optional Finalised line, seven sections of rows with Account information collapsed by default, the Resyncing overlay, a live region |
+| `risk-status` | The status, always a label: 24 tall, 14px icon + word, in `ui-pill`'s danger, success and warn tones with their subdued rims. Never pressable - the row's Assess / Change assessment button beside it is the action |
+| `section-risk-table` | The finalise table: section, Risk / No risk. A real `<table>`, used in the Finalise form and on its card |
 | `resync-dialog` | `Resync risk assessment?` / `Some actions might need to be recorded again.` Cancel, primary Resync (focused) |
 
 ---
@@ -201,9 +201,9 @@ rather than sitting in the work's rhythm.
 
 Four kinds of item, in this order: one chip per **required assessment** (the
 two manual fields, plus any a resync sent back), **Contact player**, then
-**Finalize risk assessment**.
+**Finalise risk assessment**.
 
-**Two kinds of chip.** Contact player and Finalize keep the two-state pill:
+**Two kinds of chip.** Contact player and Finalise keep the two-state pill:
 **pending** (outlined, hollow circle, muted) and **done** (filled success,
 tick). **An assessment chip is the field's risk status pill** - the same
 `risk-status` component as the field's row in the Risk assessment, same fill,
@@ -233,13 +233,13 @@ required` as its accessible name. A done assessment therefore reads **No risk**
 | Note | 14px / 1.55, `overflow-wrap: anywhere` |
 | Footer | Attachments only, rendered only when there are any; `margin-top: 16px` |
 | Assessment line | Under the title: the `risk-status` label, then `Was <previous>` 12/16 secondary when the agent changed it |
-| Finalize table | `section-risk-table`, `margin-top: 12px` |
+| Finalise table | `section-risk-table`, `margin-top: 12px` |
 
 **There is no View snapshot.** The snapshot became the Risk assessment, which
 shows current values only; what an assessment decided is on its own card and
 what a resync changed is on the Resync completed entry.
 
-Three variants: standard, **assessment** (status + `Was …`), **finalize**
+Three variants: standard, **assessment** (status + `Was …`), **finalise**
 (the section table), and the decision card (green fill). The selected /
 viewing variant is gone with View snapshot; its `--color-background-info`
 fill moved to the Risk assessment row whose form is open.
@@ -339,12 +339,12 @@ Three kinds, one component:
 
 | Kind | Title | Button | Accessible name |
 |---|---|---|---|
-| Assessment | `<Field>` + the field's **risk status pill** (`Action required`) | `Assess` (`edit_note`) | `Assess <Field>` |
+| Assessment | `<Field>` + the field's **risk status pill** (`Action required`) | `Assess` (`fact_check`) | `Assess <Field>` |
 | Contact | `Contact player - not recorded` | `Record` | `Record Contact player` |
-| Finalize | `Finalize risk assessment` | `Finalize` (`task_alt`) | its label |
+| Finalise | `Finalise risk assessment` | `Finalise` (`task_alt`) | its label |
 
 Two states: **enabled** (locked to you) and **disabled** (with a one-line reason
-beneath the title). Finalize has a third reason: not available yet - `Assess
+beneath the title). Finalise has a third reason: not available yet - `Assess
 <A> and <B> first.` - and **stays in view, disabled**, until every field is
 assessed. Replaced *in place* by the inline record form. `data-key` carries
 the required item's key so focus can return to it.
@@ -367,7 +367,7 @@ Three variants of one form:
 |---|---|---|---|
 | Record | `Record <action>` | note, attachments, lock choice | `Save outcome` |
 | Assess risk | `Assess risk - <Field>` | note, attachments, **Your assessment** - radios `Risk flagged` / `No risk`, stacked like the lock choice (after the attachments), lock choice | `Save assessment` |
-| Finalize | `Finalize risk assessment` | **the section table**, note, lock choice - no attachments | `Finalize` |
+| Finalise | `Finalise risk assessment` | **the section table**, note, lock choice - no attachments | `Finalise` |
 
 Note textarea (required), attachment list, keep-locked / unlock radio with **no
 default styling on either**, then Cancel and Save. Footer `gap: 8px`; Cancel is

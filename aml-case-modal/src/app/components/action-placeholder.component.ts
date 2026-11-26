@@ -77,6 +77,14 @@ import { RiskStatusComponent } from './risk-status.component';
       }
       .slot__text {
         flex: 1;
+        min-width: 0;
+      }
+      /* The button keeps its width and its label on one line; the title
+         beside it is what wraps. A button is not the thing that yields: on a
+         phone it was squeezed until "Assess risk" broke over two lines. */
+      .slot > button {
+        flex: none;
+        white-space: nowrap;
       }
       .slot__title {
         display: flex;

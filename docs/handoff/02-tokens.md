@@ -94,14 +94,15 @@ existed for the status pills:
 
 | Status | Fill | Rim | Ink |
 |---|---|---|---|
-| Risk flagged | `--danger-bg` | `--border-negative-subdued` | `--danger` |
-| No risk | none (outline form); `--success-bg-subtle` on hover | `--success` at 32% | `--success` |
+| Risk flagged | `--danger-bg` | `--border-negative-subdued` | `--danger-deep` |
+| No risk | `--success-bg-subtle` | `--border-success-subdued` | `--success` |
 | Action required | `--warn-bg` | `--border-warning-subdued` | `--warn` |
 
-Hover deepens the fill in its own hue: `--danger-bg-strong` for risk,
-`color-mix(in oklch, --warn-bg 88%, --warn)` for action required, and the
-subtle fill for no risk. A token for the mixed values would be the right next
-step if they are reused anywhere else.
+These are `ui-pill`'s danger, success and warn tones with the rims its
+dotted form wears - the same tokens, so a status is the same red, green or
+amber it is in the case header and the table. The pill is never a control,
+so it has no hover. No colour exists here that the pill does not already
+have.
 
 | Token | Used for |
 |---|---|
@@ -196,7 +197,7 @@ Declared in `aml-case-modal/src/app/core/models.ts`:
 
 **One primary per surface**, given to whichever action moves the agent forward:
 `Lock case` when unlocked, `Open case` when locked to you, `Record` /
-`Assess` / `Finalize` in a placeholder, `Submit decision` in the footer,
+`Assess` / `Finalise` in a placeholder, `Submit decision` in the footer,
 `Resync` in the resync confirm. The Risk assessment's own Resync is outlined -
 it is always on screen, and a primary that is always on screen is not one.
 

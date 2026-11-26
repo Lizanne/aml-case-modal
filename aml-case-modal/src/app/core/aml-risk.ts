@@ -36,7 +36,12 @@ export interface ScoreParameter {
   points: number;
   /** Exit criteria: the days of history the metric looks at. null = none. */
   exitDays: number | null;
-  /** The (i) explanation. Placeholder copy until compliance supplies it. */
+  /**
+   * The (i) explanation: the "Tooltip" column of the ticket's Excel
+   * (APP-17691, 5c), word for word. The one change is "at lest" to "at
+   * least", and a full stop on the PEP line. It is compliance copy, so it is
+   * not reworded here.
+   */
   info: string;
 }
 
@@ -50,31 +55,29 @@ const p = (
 ): ScoreParameter => ({ id, category, label, points, exitDays, info });
 
 export const SCORE_PARAMETERS: readonly ScoreParameter[] = [
-  p('linked-household', 'Profile', 'Linked account (household link)', 25, null, 'Another account shares this household: the same address or surname at the address.'),
-  p('linked-similar', 'Profile', 'Linked account (similar details)', 50, null, 'Another account has closely matching personal details.'),
-  p('domestic-pep', 'Profile', 'Domestic PEP', 75, null, 'Screening matched the player to a UK politically exposed person.'),
-  p('international-pep', 'Profile', 'International PEP', 125, null, 'Screening matched the player to a politically exposed person outside the UK.'),
-  p('sanctioned', 'Profile', 'Sanctioned individual', 500, null, 'Screening matched the player to a sanctions list.'),
-  p('occupation', 'Profile', 'Occupation associated with risk', 50, null, 'The declared occupation is on the higher-risk occupation list.'),
-  p('age-under-25', 'Profile', 'Player age under 25', 25, null, 'The player is under 25.'),
-  p('age-75-plus', 'Profile', 'Player age 75+', 25, null, 'The player is 75 or older.'),
-  p('par-link', 'Payments', 'PAR link', 50, null, 'A payment instrument on this account is also used on another account.'),
-  p('ip-black-list', 'Jurisdiction', 'IP address from a black list country', 50, 90, 'The player logged in from a country on the black list.'),
-  p('ip-grey-list', 'Jurisdiction', 'IP address from a grey list country', 25, 30, 'The player logged in from a country on the grey list.'),
-  p('high-deposit', 'Affordability', 'High single deposit: £2,000', 20, 30, 'A single deposit of £2,000 or more.'),
-  p('high-deposit-3x', 'Affordability', 'High single deposit: £2,000, 3 times in 7 days', 50, 90, 'Three single deposits of £2,000 or more inside any 7 day period.'),
-  p('crash-games', 'Product risk', 'Crash games used', 10, 90, 'The player has played a crash game.'),
-  p('roulette', 'Product risk', 'Roulette', 10, 90, 'The player has played roulette.'),
-  p('blackjack', 'Product risk', 'Blackjack', 10, 90, 'The player has played blackjack.'),
-  p('withdraw-no-bet', 'Activity / Behaviour', 'Withdrawing without betting', 20, 30, 'A withdrawal was requested with no bets placed since the deposit.'),
-  p('withdraw-no-bet-3x', 'Activity / Behaviour', 'Withdrawing without betting, 3 times in 7 days', 50, 90, 'Three withdrawals without betting inside any 7 day period.'),
-  p('stacking', 'Activity / Behaviour', 'Stacking deposits', 20, 30, 'Several deposits made in quick succession.'),
-  p('stacking-3x', 'Activity / Behaviour', 'Stacking deposits, 3 times in 7 days', 50, 90, 'Deposit stacking seen three times inside any 7 day period.'),
-  p('multi-payment', 'Activity / Behaviour', 'Multiple payment types in one session', 25, 30, 'More than one payment type was used to deposit in the same session.'),
-  // UNCONFIRMED: the name is cut off in the ticket's screenshot. "3 times in 7
-  // days" follows the pattern of the other pairs; check against the Excel.
-  p('multi-payment-3x', 'Activity / Behaviour', 'Multiple payment types in one session, 3 times in 7 days', 50, 90, 'Multiple payment types in one session, seen three times inside any 7 day period.'),
-  p('not-staked', 'Activity / Behaviour', 'Deposits not staked through in full', 25, 30, 'Deposited funds were withdrawn without being staked through in full.'),
+  p('linked-household', 'Profile', 'Linked account (household link)', 25, null, 'Fixed number of points for at least one link.'),
+  p('linked-similar', 'Profile', 'Linked account (similar details)', 50, null, 'Fixed number of points for at least one link.'),
+  p('domestic-pep', 'Profile', 'Domestic PEP', 75, null, 'Can be only updated manually as on override here or as auto action on AML Case being resolved.'),
+  p('international-pep', 'Profile', 'International PEP', 125, null, 'Can be only updated manually as on override here or as auto action on AML Case being resolved.'),
+  p('sanctioned', 'Profile', 'Sanctioned individual', 500, null, 'Can be only updated manually as on override here or as auto action on AML Case being resolved.'),
+  p('occupation', 'Profile', 'Occupation associated with risk', 50, null, 'Check confluence doc to see list of occupations associated with risk.'),
+  p('age-under-25', 'Profile', 'Player age under 25', 25, null, 'Checked daily.'),
+  p('age-75-plus', 'Profile', 'Player age 75+', 25, null, 'Checked daily.'),
+  p('par-link', 'Payments', 'PAR link', 50, null, 'Fixed number of points for at least one link.'),
+  p('ip-black-list', 'Jurisdiction', 'IP address from a black list country', 50, 90, 'Check confluence doc to see list of black list risk countries.'),
+  p('ip-grey-list', 'Jurisdiction', 'IP address from a grey list country', 25, 30, 'Check confluence doc to see list of grey list risk countries.'),
+  p('high-deposit', 'Affordability', 'High single deposit: £2,000', 20, 30, 'Checked daily.'),
+  p('high-deposit-3x', 'Affordability', 'High single deposit: £2,000, 3 times in 7 days', 50, 90, 'Checked daily.'),
+  p('crash-games', 'Product risk', 'Crash games used', 10, 90, 'At least one play. Updated daily.'),
+  p('roulette', 'Product risk', 'Roulette', 10, 90, 'At least one play. Updated daily.'),
+  p('blackjack', 'Product risk', 'Blackjack', 10, 90, 'At least one play. Updated daily.'),
+  p('withdraw-no-bet', 'Activity / Behaviour', 'Withdrawing without betting', 20, 30, 'Withdrawals that mirror recent deposits without any stakes being placed between. Updated daily.'),
+  p('withdraw-no-bet-3x', 'Activity / Behaviour', 'Withdrawing without betting, 3 times in 7 days', 50, 90, 'Withdrawals that mirror recent deposits without any stakes being placed between. Updated daily.'),
+  p('stacking', 'Activity / Behaviour', 'Stacking deposits', 20, 30, 'Instances where ≥ 3 deposits take place without any gameplay or staking occurring between deposits. Updated daily.'),
+  p('stacking-3x', 'Activity / Behaviour', 'Stacking deposits, 3 times in 7 days', 50, 90, 'Instances where ≥ 3 deposits take place without any gameplay or staking occurring between deposits. Updated daily.'),
+  p('multi-payment', 'Activity / Behaviour', 'Multiple payment types in one session', 25, 30, 'Checked daily.'),
+  p('multi-payment-3x', 'Activity / Behaviour', 'Multiple payment types in one session, 3 times in 7 days', 50, 90, 'Checked daily.'),
+  p('not-staked', 'Activity / Behaviour', 'Deposits not staked through in full', 25, 30, 'If ratio for requested period is <=1 then points are assigned.'),
 ];
 
 /* ------------------------------------------------------------------ bands */
